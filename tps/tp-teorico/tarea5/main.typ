@@ -327,6 +327,68 @@ El rendimiento maximo es la relación entre el tiempo en que el emisor transmite
 
 $ U = frac("Crédito disponible", "Tiempo total de ciclo") = W / T_"ciclo" = 7 / 9 ≈ "0,7778" ≈ "77,78%" $
 
+=== Ejercicio 20.4
+
+Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un ser
+vicio de red fiable ordenado):
+#set enum(numbering: "a.")
++ Cierre de la conexión: activo/pasivo.
++ Cierre de la conexión: activo/activo.
++ Rechazo de la conexión.
++ Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.
+
+==== Respuesta
+
+*a. Cierre de la conexión: activo/pasivo.*
+
+#figure(
+  image("assets/20.4_a.jpg", width: 50%),
+  caption: [Escenario cierre de la conexión activo/pasivo.],
+)
+
+*b. Cierre de la conexión: activo/activo.*
+
+#figure(
+  image("assets/20.4_b.jpg", width: 50%),
+  caption: [Escenario cierre de la conexión activo/activo.],
+)
+
+*c. Rechazo de la conexión.*
+
+#figure(
+  image("assets/20.4_c.jpg", width: 50%),
+  caption: [Escenario rechazo de la conexión.],
+)
+
+*d. Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.*
+
+#figure(
+  image("assets/20.4_d.jpg", width: 50%),
+  caption: [Escenario cancelación de la conexión.],
+)
+
+
+
+=== Ejercicio 20.5
+
+Con un servicio de red fiable y ordenado, ¿son estrictamente necesarios los números de
+secuencia de los segmentos? ¿Qué capacidad se pierde sin ellos?
+
+==== Respuesta
+
+Los números de secuencia no son estrictamente necesarios, como se nos dice que el servicio de red es fiable y ordenado nos garantiza que se han enviado todos los segmentos, sin duplicados y en el mismo orden en que se enviaron.
+Sin números de secuencia se pierde la capacidad de desacoplar el reconocimiento de la asignación de crédito, porque los mensajes ACK/Crédito no podrían referirse de forma inequívoca a segmentos concretos.
+
+
+=== Ejercicio 20.6
+
+Considere un servicio de red orientado a conexión que sufre un reinicio. ¿Cómo podría ser
+tratado por un protocolo de transporte que suponga que el servicio de red es fiable excepto
+en el caso de un reinicio?
+
+==== Respuesta
+
+Si se supone que la red es fiable excepto cuando hay un reinicio, en ese momento pueden perderse los segmentos que estén en tránsito. Para manejarlo, el protocolo de transporte debería hacer que el emisor guarde los datos enviados hasta que sean reconocidos. Cuando se notifica un reinicio, las entidades de transporte se resincronizan, informandose mutuamente cuál fue el número de secuencia del último segmento recibido y se retransmite lo que falte. 
 
 === Ejercicio 20.7
 
