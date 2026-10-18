@@ -328,6 +328,59 @@ El rendimiento maximo es la relación entre el tiempo en que el emisor transmite
 $ U = frac("Crédito disponible", "Tiempo total de ciclo") = W / T_"ciclo" = 7 / 9 ≈ "0,7778" ≈ "77,78%" $
 
 
+=== Ejercicio 20.7
+
+==== Consigna
+
+La discusión de la política de retransmisión hizo referencia a tres problemas asociados con
+el cálculo dinámico del valor del temporizador. ¿Qué modificaciones sobre la política ayu
+darían a aliviar estos problemas?
+
+==== Respuesta
+
+Los problemas asociados con el cálculo dinámico (tomando la media convencional) del temporizador son: 
+
+1. El cálculo se realiza entre el tiempo de salida y de llegada, sin embargo no se tiene en cuenta el retraso que tiene el receptor al enviar la respuesta.
+2. El calculo que se realiza sobre los ACK no contempla si es de la llamada principal o de la retransmisión por lo tanto no garantiza que el tiempo medido sea fiel.
+3. Tomar la media simple no representa los cambios en el tráfico de la red, es decir: Si la red estaba cargada al momento de hacer el cálculo, la estimación es fiel para una red cargada. En el caso de que la red se alivie esta estimación resulta ser muy grande y genera pérdidas de rendimiento. Para el caso de una red aliviada a la hora de hacer el cálculo, el problema es análogo.
+
+
+Modificaciones: 
+
+- Para solucionar el problema 1, hay que estimar con el algoritmo de Jacobson la desviación media del RTT y no solo su media.
+  De esta manera el temporizador se amplía cuando las mediciones son muy dispersas y se ajusta cuando se estabilizan.
+
+- Mediante el algoritmo de Karn se puede solucionar el problema número 2. Este algoritmo resuelve el problema utilizando las
+las siguientes reglas:
+1. No utilizar el RTT medido para un segmento retransmitido para actualizar SRTT y SDEV.
+2. Calcular el RTO de decaimiento utilizando la ecuación: $RTO= q*RTO$ cuando se produzca una re transmisión. 
+3. Utilizar el valor del RTO de decaimiento para segmentos sucesivos hasta que llegue una confirmación para un segmento que no se haya retransmitido. 
+   
+Cuando se recibe una confirmación para un segmento que no se ha retransmitido, se activa de nuevo el algoritmo de Jacobson para calcular valores futuros de RTO.
+
+- Para solucionar el problema número 3, se utiliza:
+  - Promediado exponencial: se le da más peso a las observaciones recientes, por lo que sigue los cambios más rápido que la media simple.
+  - Decaimiento exponencial del RTO: ante cada retransmisión se multiplica el RTO por una constante ($RTO = q·RTO$, normalmente $q = 2$). Si el vencimiento del temporizador se debe a congestión, esperar más tiempo antes de reintentar evita que todas las fuentes retransmitan a la vez y agraven la congestión.
+
+=== Ejercicio 20.8
+
+==== Consigna
+
+Considere un protocolo de transporte que usa un servicio de red orientado a conexión. Su
+ponga que ese protocolo de transporte utiliza un esquema de asignación de créditos para el
+control de flujo y que el protocolo de red usa un esquema de ventana deslizante. ¿Qué
+relación, si existe, debería haber entre la ventana dinámica del protocolo de transporte y la
+ventana fija del protocolo de red?
+
+==== Respuesta
+
+La ventana de red actúa como mecanismo de contrapresión sobre el transporte: si la entidad receptora llena 
+su memoria temporal y rechaza datos del servicio de red, la ventana deslizante no avanza, el nivel de red del
+emisor agota su ventana y deja de aceptar segmentos del transporte emisor. Por lo tanto, la cantidad que puede 
+enviarse está acotada por la menor de ambas ventanas. Sin embargo, este mecanismo es tosco: si hay varias 
+conexiones de transporte multiplexadas sobre una conexión de red, el control se aplica sobre el agregado. 
+El crédito de transporte, ajustado dinámicamente al espacio libre del receptor, permite controlar cada conexión 
+individualmente y evita tener que recurrir al rechazo en el nivel de red, que debería quedar como último recurso.
 
 // Bibliografía. Si hay referencias bibliográficas se renderiza.
 // Si no, solamente con full: true se renderiza la bibliografía completa, aunque no haya referencias en el texto
