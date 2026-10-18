@@ -327,12 +327,124 @@ El rendimiento maximo es la relación entre el tiempo en que el emisor transmite
 
 $ U = frac("Crédito disponible", "Tiempo total de ciclo") = W / T_"ciclo" = 7 / 9 ≈ "0,7778" ≈ "77,78%" $
 
+=== Ejercicio 20.4
+==== Respuesta
+
+*a. Cierre de la conexión: activo/pasivo.*
+
+#figure(
+  image("assets/20.4_a.jpg", width: 50%),
+  caption: [Escenario cierre de la conexión activo/pasivo.],
+)
+
+*b. Cierre de la conexión: activo/activo.*
+
+#figure(
+  image("assets/20.4_b.jpg", width: 50%),
+  caption: [Escenario cierre de la conexión activo/activo.],
+)
+
+*c. Rechazo de la conexión.*
+
+#figure(
+  image("assets/20.4_c.jpg", width: 50%),
+  caption: [Escenario rechazo de la conexión.],
+)
+
+*d. Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.*
+
+#figure(
+  image("assets/20.4_d.jpg", width: 50%),
+  caption: [Escenario cancelación de la conexión.],
+)
+
+
+
+=== Ejercicio 20.5
+
+Con un servicio de red fiable y ordenado, ¿son estrictamente necesarios los números de
+secuencia de los segmentos? ¿Qué capacidad se pierde sin ellos?
+
+==== Respuesta
+
+Los números de secuencia no son estrictamente necesarios, como se nos dice que el servicio de red es fiable y ordenado nos garantiza que se han enviado todos los segmentos, sin duplicados y en el mismo orden en que se enviaron.
+Sin números de secuencia se pierde la capacidad de desacoplar el reconocimiento de la asignación de crédito, porque los mensajes ACK/Crédito no podrían referirse de forma inequívoca a segmentos concretos.
+
+
+=== Ejercicio 20.6
+
+Considere un servicio de red orientado a conexión que sufre un reinicio. ¿Cómo podría ser
+tratado por un protocolo de transporte que suponga que el servicio de red es fiable excepto
+en el caso de un reinicio?
+
+==== Respuesta
+
+Si se supone que la red es fiable excepto cuando hay un reinicio, en ese momento pueden perderse los segmentos que estén en tránsito. Para manejarlo, el protocolo de transporte debería hacer que el emisor guarde los datos enviados hasta que sean reconocidos. Cuando se notifica un reinicio, las entidades de transporte se resincronizan, informandose mutuamente cuál fue el número de secuencia del último segmento recibido y se retransmite lo que falte.
+
+=== Ejercicio 20.7
+
+==== Consigna
+
+La discusión de la política de retransmisión hizo referencia a tres problemas asociados con
+el cálculo dinámico del valor del temporizador. ¿Qué modificaciones sobre la política ayu
+darían a aliviar estos problemas?
+
+==== Respuesta
+
+Los problemas asociados con el cálculo dinámico (tomando la media convencional) del temporizador son:
+
+1. El cálculo se realiza entre el tiempo de salida y de llegada, sin embargo no se tiene en cuenta el retraso que tiene el receptor al enviar la respuesta.
+2. El calculo que se realiza sobre los ACK no contempla si es de la llamada principal o de la retransmisión por lo tanto no garantiza que el tiempo medido sea fiel.
+3. Tomar la media simple no representa los cambios en el tráfico de la red, es decir: Si la red estaba cargada al momento de hacer el cálculo, la estimación es fiel para una red cargada. En el caso de que la red se alivie esta estimación resulta ser muy grande y genera pérdidas de rendimiento. Para el caso de una red aliviada a la hora de hacer el cálculo, el problema es análogo.
+
+
+Modificaciones:
+
+- Para solucionar el problema 1, hay que estimar con el algoritmo de Jacobson la desviación media del RTT y no solo su media.
+  De esta manera el temporizador se amplía cuando las mediciones son muy dispersas y se ajusta cuando se estabilizan.
+
+- Mediante el algoritmo de Karn se puede solucionar el problema número 2. Este algoritmo resuelve el problema utilizando las
+las siguientes reglas:
+1. No utilizar el RTT medido para un segmento retransmitido para actualizar SRTT y SDEV.
+2. Calcular el RTO de decaimiento utilizando la ecuación: $RTO= q*RTO$ cuando se produzca una re transmisión.
+3. Utilizar el valor del RTO de decaimiento para segmentos sucesivos hasta que llegue una confirmación para un segmento que no se haya retransmitido.
+
+Cuando se recibe una confirmación para un segmento que no se ha retransmitido, se activa de nuevo el algoritmo de Jacobson para calcular valores futuros de RTO.
+
+- Para solucionar el problema número 3, se utiliza:
+  - Promediado exponencial: se le da más peso a las observaciones recientes, por lo que sigue los cambios más rápido que la media simple.
+  - Decaimiento exponencial del RTO: ante cada retransmisión se multiplica el RTO por una constante ($RTO = q·RTO$, normalmente $q = 2$). Si el vencimiento del temporizador se debe a congestión, esperar más tiempo antes de reintentar evita que todas las fuentes retransmitan a la vez y agraven la congestión.
+
+=== Ejercicio 20.8
+
+==== Consigna
+
+Considere un protocolo de transporte que usa un servicio de red orientado a conexión. Su
+ponga que ese protocolo de transporte utiliza un esquema de asignación de créditos para el
+control de flujo y que el protocolo de red usa un esquema de ventana deslizante. ¿Qué
+relación, si existe, debería haber entre la ventana dinámica del protocolo de transporte y la
+ventana fija del protocolo de red?
+
+==== Respuesta
+
+La ventana de red actúa como mecanismo de contrapresión sobre el transporte: si la entidad receptora llena
+su memoria temporal y rechaza datos del servicio de red, la ventana deslizante no avanza, el nivel de red del
+emisor agota su ventana y deja de aceptar segmentos del transporte emisor. Por lo tanto, la cantidad que puede
+enviarse está acotada por la menor de ambas ventanas. Sin embargo, este mecanismo es tosco: si hay varias
+conexiones de transporte multiplexadas sobre una conexión de red, el control se aplica sobre el agregado.
+El crédito de transporte, ajustado dinámicamente al espacio libre del receptor, permite controlar cada conexión
+individualmente y evita tener que recurrir al rechazo en el nivel de red, que debería quedar como último recurso.
 
 === Ejercicio 20.9
+
+==== Consigna
+
 En una red que tiene un tamaño máximo de paquete de 128 bytes, un tiempo de vida má-
 ximo de 30 s y un número de secuencia de paquetes de 8 bits, ¿cuál es la máxima tasa de
 transmisión de datos por conexión?
+
 ==== Respuesta
+
 Para evitar ambigüedades en el receptor (donde paquete viejo podría confundirse con uno nuevo que reutilice el mismo número de secuencia), el emisor no debe agotar ni reiniciar el espacio de números de secuencia en un tiempo menor al tiempo de vida máximo del paquete ($30$ s).  La conexión puede enviar como máximo $256$ paquetes en un intervalo de $30$ segundos.
 
 Cálculo de bytes totales transmitibles en $30$segundos:
@@ -343,7 +455,11 @@ $ "Tasa" = 1.092,27 "B/s" times 8 "bits/byte" approx 8.738,13 "bps" approx 8,74 
 La máxima tasa de transmisión por conexión para garantizar la unicidad de los números de secuencia es de #text(weight: "bold")[8,74 kbps] (o $1.092,27$ B/s).
 
 === Ejercicio 20.10
+
+==== Consigna
+
 ¿Es posible que se produzca un bloqueo mutuo utilizando un diálogo en dos pasos en lugar de un diálogo en tres pasos? Dé un ejemplo o demuéstrelo en caso contrario.
+
 ==== Respuesta
 
 Sí porque un intercambio de dos pasos es susceptible a bloqueos mutuos (deadlock) o estados de conexión semiabierta no deseados producidos por paquetes retrasados o duplicados en la red.
@@ -358,6 +474,43 @@ Ejemplo:
 - Apertura inmediata en 2 pasos: Al utilizar un protocolo de 2 pasos, el Host B responde inmediatamente con una confirmación(ACK) y pasa en ese instante al estado de conexión abierta.
 
 - Momento del bloqueo: El Host A recibe el ACK de una conexión que ya estaba descartada por lo que ignora la respuesta o la rechaza. Mientras que el Host B asume firmemente que la conexión está activa y queda en estado de espera activa, aguardando que A transmita datos.
+
+Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un ser
+vicio de red fiable ordenado):
+#set enum(numbering: "a.")
++ Cierre de la conexión: activo/pasivo.
++ Cierre de la conexión: activo/activo.
++ Rechazo de la conexión.
++ Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.
+
+=== Ejercicio 20.11
+
+==== Consigna
+
+A continuación, se enumeran cuatro estrategias que se pueden utilizar para proporcionar a un usuario de transporte las direcciones de un usuario de transporte destino. Para cada una, describa una analogía con el usuario del servicio de correo postal.
+
++ Conocer la dirección de antemano.
++ Hacer uso de una dirección «bien conocida».
++ Utilizar un servidor de nombres.
++ El destinatario se genera al realizar la solicitud.
+
+==== Respuesta
+
++ *Conocer la dirección de antemano:* el usuario TS emisor ya tiene configurada la dirección del destino, porque se trata de un proceso de uso limitado que no es público.
+
+  *Analogía postal:* le escribimos a un amigo o familiar cuya dirección ya tenemos anotada en la agenda. No hace falta buscarla ni preguntarla, y la conocen sólo quienes tienen trato con esa persona.
+
++ *Dirección «bien conocida»:* a los servicios de uso común se les asigna una dirección fija y conocida por todos (por ejemplo, FTP o SMTP).
+
+  *Analogía postal:* la dirección del Correo Central, de una oficina pública o de un organismo como la municipalidad. Cualquiera sabe dónde enviar una carta sin tener que averiguarlo antes.
+
++ *Servidor de nombres:* el usuario pide el servicio por un nombre genérico; el servidor de nombres busca en su directorio y devuelve la dirección, con la que luego se establece la conexión. Sirve para servicios que cambian de lugar de vez en cuando.
+
+  *Analogía postal:* consultar la guía telefónica o un servicio de informes: damos el nombre de la persona o empresa y nos devuelven su dirección actual. Si se mudó, el directorio se actualiza y nosotros seguimos usando el mismo nombre.
+
++ *El destinatario se genera al realizar la solicitud:* se envía la petición a una dirección bien conocida, donde un proceso privilegiado del sistema crea el proceso destino y devuelve su dirección.
+
+  *Analogía postal:* le escribimos a la oficina de una empresa pidiéndole un servicio puntual (por ejemplo, que nos hagan un trabajo a medida). La empresa asigna a un empleado que antes no existía para nuestro pedido y nos responde con la dirección o el contacto de esa persona, a quien escribimos desde ese momento.
 
 
 // Bibliografía. Si hay referencias bibliográficas se renderiza.
