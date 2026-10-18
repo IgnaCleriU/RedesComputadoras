@@ -328,6 +328,15 @@ El rendimiento maximo es la relación entre el tiempo en que el emisor transmite
 $ U = frac("Crédito disponible", "Tiempo total de ciclo") = W / T_"ciclo" = 7 / 9 ≈ "0,7778" ≈ "77,78%" $
 
 === Ejercicio 20.4
+
+Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un ser
+vicio de red fiable ordenado):
+#set enum(numbering: "a.")
++ Cierre de la conexión: activo/pasivo.
++ Cierre de la conexión: activo/activo.
++ Rechazo de la conexión.
++ Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.
+
 ==== Respuesta
 
 *a. Cierre de la conexión: activo/pasivo.*
