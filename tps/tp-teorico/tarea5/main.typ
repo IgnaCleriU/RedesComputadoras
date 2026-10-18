@@ -444,6 +444,36 @@ conexiones de transporte multiplexadas sobre una conexión de red, el control se
 El crédito de transporte, ajustado dinámicamente al espacio libre del receptor, permite controlar cada conexión 
 individualmente y evita tener que recurrir al rechazo en el nivel de red, que debería quedar como último recurso.
 
+=== Ejercicio 20.11
+
+==== Consigna
+
+A continuación, se enumeran cuatro estrategias que se pueden utilizar para proporcionar a un usuario de transporte las direcciones de un usuario de transporte destino. Para cada una, describa una analogía con el usuario del servicio de correo postal.
+
++ Conocer la dirección de antemano.
++ Hacer uso de una dirección «bien conocida».
++ Utilizar un servidor de nombres.
++ El destinatario se genera al realizar la solicitud.
+
+==== Respuesta
+
++ *Conocer la dirección de antemano:* el usuario TS emisor ya tiene configurada la dirección del destino, porque se trata de un proceso de uso limitado que no es público.
+
+  *Analogía postal:* le escribimos a un amigo o familiar cuya dirección ya tenemos anotada en la agenda. No hace falta buscarla ni preguntarla, y la conocen sólo quienes tienen trato con esa persona.
+
++ *Dirección «bien conocida»:* a los servicios de uso común se les asigna una dirección fija y conocida por todos (por ejemplo, FTP o SMTP).
+
+  *Analogía postal:* la dirección del Correo Central, de una oficina pública o de un organismo como la municipalidad. Cualquiera sabe dónde enviar una carta sin tener que averiguarlo antes.
+
++ *Servidor de nombres:* el usuario pide el servicio por un nombre genérico; el servidor de nombres busca en su directorio y devuelve la dirección, con la que luego se establece la conexión. Sirve para servicios que cambian de lugar de vez en cuando.
+
+  *Analogía postal:* consultar la guía telefónica o un servicio de informes: damos el nombre de la persona o empresa y nos devuelven su dirección actual. Si se mudó, el directorio se actualiza y nosotros seguimos usando el mismo nombre.
+
++ *El destinatario se genera al realizar la solicitud:* se envía la petición a una dirección bien conocida, donde un proceso privilegiado del sistema crea el proceso destino y devuelve su dirección.
+
+  *Analogía postal:* le escribimos a la oficina de una empresa pidiéndole un servicio puntual (por ejemplo, que nos hagan un trabajo a medida). La empresa asigna a un empleado que antes no existía para nuestro pedido y nos responde con la dirección o el contacto de esa persona, a quien escribimos desde ese momento.
+  
+
 // Bibliografía. Si hay referencias bibliográficas se renderiza.
 // Si no, solamente con full: true se renderiza la bibliografía completa, aunque no haya referencias en el texto
 #bibliography("bibliografia.bib", full: true)
