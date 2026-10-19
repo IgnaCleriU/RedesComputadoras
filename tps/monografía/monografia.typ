@@ -1,5 +1,5 @@
-// Carátula de la monografía.
-// Compilar: `typst compile caratula.typ` (Typst 0.15.x, ver mise.toml en la raíz del repo).
+// Monografía. Por ahora solo tiene la carátula: al agregar contenido, poner un `#pagebreak()` después de ella.
+// Compilar: `typst compile monografia.typ "WireGuardians-MONOGRAFÍA.pdf"` (Typst 0.15.x, ver mise.toml en la raíz del repo).
 // Estilo tomado de las tareas (plantilla barcala): New Computer Modern, A4, logos arriba.
 
 #let titulo = "MQTT y Protocol Buffers"
@@ -20,13 +20,9 @@
 
 #let dominio-mail = "mi.unc.edu.ar"
 
-#let meses = (
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-)
 #let hoy = datetime.today()
 
-#set document(title: "Monografía: carátula", author: integrantes.map(i => i.nombre))
+#set document(title: "Monografía: " + titulo, author: integrantes.map(i => i.nombre))
 #set page(paper: "a4", margin: (x: 2cm, top: 1.8cm, bottom: 2cm))
 #set text(font: "New Computer Modern", size: 12pt, lang: "es", region: "AR")
 #set par(justify: false, spacing: 0pt, leading: 0.65em)
@@ -108,7 +104,7 @@
 #line(length: 100%, stroke: 0.5pt)
 #v(0.5cm)
 
-// Lugar y fecha
+// Año
 #align(center)[
-  Córdoba, #meses.at(hoy.month() - 1) de #hoy.year()
+  #hoy.year()
 ]
