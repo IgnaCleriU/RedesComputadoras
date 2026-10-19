@@ -66,7 +66,7 @@
     ),
   ),
 
-  titulo: [Preguntas de repaso --- Capítulo 20],
+  titulo: [Preguntas de repaso + ejercicios extra --- Capítulo 20],
   resumen: [*_Objetivo_ --- Resolver las preguntas de repaso del Capítulo 20 de @stallings2004, sobre protocolos de transporte: direccionamiento, multiplexación, control de flujo por créditos, establecimiento de conexión y los protocolos TCP y UDP.*],
 
   fecha: datetime.today().display("[year]-[month]-[day]"),
@@ -294,6 +294,8 @@ Desventajas:
 
 === Ejercicio 20.2
 
+==== Consigna
+
 La discusión sobre control de flujo con un servicio de red fiable, referido como mecanismo de contrapresión, utiliza un protocolo de control de flujo de una capa inferior. Discuta las desventajas de esta estrategia.
 
 ==== Respuesta
@@ -312,6 +314,8 @@ Esta estrategia tiene desventajas como:
 
 === Ejercicio 20.3
 
+==== Consigna
+
 Dos entidades de transporte se comunican a través de una red fiable. Supongamos que el tiempo normalizado para transmitir un segmento es igual a 1. Supongamos que el retardo de propagación extremo a extremo vale 3 y que la entrega de un segmento recibido al usuario de transporte requiere un tiempo de 2. El emisor tiene inicialmente concedido un crédito de siete segmentos. El receptor utiliza un criterio de control de flujo conservador y actualiza su asignación de créditos en cuanto puede. ¿Cuál es el máximo rendimiento alcanzable?
 
 ==== Respuesta
@@ -329,8 +333,9 @@ $ U = frac("Crédito disponible", "Tiempo total de ciclo") = W / T_"ciclo" = 7 /
 
 === Ejercicio 20.4
 
-Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un ser
-vicio de red fiable ordenado):
+==== Consigna
+
+Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un servicio de red fiable ordenado):
 #set enum(numbering: "a.")
 + Cierre de la conexión: activo/pasivo.
 + Cierre de la conexión: activo/activo.
@@ -371,6 +376,8 @@ vicio de red fiable ordenado):
 
 === Ejercicio 20.5
 
+==== Consigna
+
 Con un servicio de red fiable y ordenado, ¿son estrictamente necesarios los números de
 secuencia de los segmentos? ¿Qué capacidad se pierde sin ellos?
 
@@ -381,6 +388,8 @@ Sin números de secuencia se pierde la capacidad de desacoplar el reconocimiento
 
 
 === Ejercicio 20.6
+
+==== Consigna
 
 Considere un servicio de red orientado a conexión que sufre un reinicio. ¿Cómo podría ser
 tratado por un protocolo de transporte que suponga que el servicio de red es fiable excepto
@@ -395,8 +404,7 @@ Si se supone que la red es fiable excepto cuando hay un reinicio, en ese momento
 ==== Consigna
 
 La discusión de la política de retransmisión hizo referencia a tres problemas asociados con
-el cálculo dinámico del valor del temporizador. ¿Qué modificaciones sobre la política ayu
-darían a aliviar estos problemas?
+el cálculo dinámico del valor del temporizador. ¿Qué modificaciones sobre la política ayudarían a aliviar estos problemas?
 
 ==== Respuesta
 
@@ -428,8 +436,7 @@ Cuando se recibe una confirmación para un segmento que no se ha retransmitido, 
 
 ==== Consigna
 
-Considere un protocolo de transporte que usa un servicio de red orientado a conexión. Su
-ponga que ese protocolo de transporte utiliza un esquema de asignación de créditos para el
+Considere un protocolo de transporte que usa un servicio de red orientado a conexión. Suponga que ese protocolo de transporte utiliza un esquema de asignación de créditos para el
 control de flujo y que el protocolo de red usa un esquema de ventana deslizante. ¿Qué
 relación, si existe, debería haber entre la ventana dinámica del protocolo de transporte y la
 ventana fija del protocolo de red?
@@ -448,8 +455,7 @@ individualmente y evita tener que recurrir al rechazo en el nivel de red, que de
 
 ==== Consigna
 
-En una red que tiene un tamaño máximo de paquete de 128 bytes, un tiempo de vida má-
-ximo de 30 s y un número de secuencia de paquetes de 8 bits, ¿cuál es la máxima tasa de
+En una red que tiene un tamaño máximo de paquete de 128 bytes, un tiempo de vida máximo de 30 s y un número de secuencia de paquetes de 8 bits, ¿cuál es la máxima tasa de
 transmisión de datos por conexión?
 
 ==== Respuesta
@@ -483,14 +489,6 @@ Ejemplo:
 - Apertura inmediata en 2 pasos: Al utilizar un protocolo de 2 pasos, el Host B responde inmediatamente con una confirmación(ACK) y pasa en ese instante al estado de conexión abierta.
 
 - Momento del bloqueo: El Host A recibe el ACK de una conexión que ya estaba descartada por lo que ignora la respuesta o la rechaza. Mientras que el Host B asume firmemente que la conexión está activa y queda en estado de espera activa, aguardando que A transmita datos.
-
-Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un ser
-vicio de red fiable ordenado):
-#set enum(numbering: "a.")
-+ Cierre de la conexión: activo/pasivo.
-+ Cierre de la conexión: activo/activo.
-+ Rechazo de la conexión.
-+ Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.
 
 === Ejercicio 20.11
 
