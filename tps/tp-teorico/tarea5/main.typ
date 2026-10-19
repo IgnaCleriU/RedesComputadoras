@@ -415,14 +415,14 @@ Modificaciones:
 - Mediante el algoritmo de Karn se puede solucionar el problema número 2. Este algoritmo resuelve el problema utilizando las
 las siguientes reglas:
 1. No utilizar el RTT medido para un segmento retransmitido para actualizar SRTT y SDEV.
-2. Calcular el RTO de decaimiento utilizando la ecuación: $RTO= q*RTO$ cuando se produzca una re transmisión.
+2. Calcular el RTO de decaimiento utilizando la ecuación: $"RTO"= q*"RTO"$ cuando se produzca una re transmisión.
 3. Utilizar el valor del RTO de decaimiento para segmentos sucesivos hasta que llegue una confirmación para un segmento que no se haya retransmitido.
 
 Cuando se recibe una confirmación para un segmento que no se ha retransmitido, se activa de nuevo el algoritmo de Jacobson para calcular valores futuros de RTO.
 
 - Para solucionar el problema número 3, se utiliza:
   - Promediado exponencial: se le da más peso a las observaciones recientes, por lo que sigue los cambios más rápido que la media simple.
-  - Decaimiento exponencial del RTO: ante cada retransmisión se multiplica el RTO por una constante ($RTO = q·RTO$, normalmente $q = 2$). Si el vencimiento del temporizador se debe a congestión, esperar más tiempo antes de reintentar evita que todas las fuentes retransmitan a la vez y agraven la congestión.
+  - Decaimiento exponencial del RTO: ante cada retransmisión se multiplica el RTO por una constante ($"RTO" = q dot "RTO"$, normalmente $q = 2$). Si el vencimiento del temporizador se debe a congestión, esperar más tiempo antes de reintentar evita que todas las fuentes retransmitan a la vez y agraven la congestión.
 
 === Ejercicio 20.8
 
