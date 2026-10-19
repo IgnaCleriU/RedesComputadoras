@@ -65,10 +65,10 @@
       email: "jorge.mendez@mi.unc.edu.ar",
     ),
   ),
-  
+
   titulo: [Preguntas de repaso --- Capítulo 20],
   resumen: [*_Objetivo_ --- Resolver las preguntas de repaso del Capítulo 20 de @stallings2004, sobre protocolos de transporte: direccionamiento, multiplexación, control de flujo por créditos, establecimiento de conexión y los protocolos TCP y UDP.*],
-  
+
   fecha: datetime.today().display("[year]-[month]-[day]"),
 )
 
@@ -388,7 +388,7 @@ en el caso de un reinicio?
 
 ==== Respuesta
 
-Si se supone que la red es fiable excepto cuando hay un reinicio, en ese momento pueden perderse los segmentos que estén en tránsito. Para manejarlo, el protocolo de transporte debería hacer que el emisor guarde los datos enviados hasta que sean reconocidos. Cuando se notifica un reinicio, las entidades de transporte se resincronizan, informandose mutuamente cuál fue el número de secuencia del último segmento recibido y se retransmite lo que falte. 
+Si se supone que la red es fiable excepto cuando hay un reinicio, en ese momento pueden perderse los segmentos que estén en tránsito. Para manejarlo, el protocolo de transporte debería hacer que el emisor guarde los datos enviados hasta que sean reconocidos. Cuando se notifica un reinicio, las entidades de transporte se resincronizan, informandose mutuamente cuál fue el número de secuencia del último segmento recibido y se retransmite lo que falte.
 
 === Ejercicio 20.7
 
@@ -400,14 +400,14 @@ darían a aliviar estos problemas?
 
 ==== Respuesta
 
-Los problemas asociados con el cálculo dinámico (tomando la media convencional) del temporizador son: 
+Los problemas asociados con el cálculo dinámico (tomando la media convencional) del temporizador son:
 
 1. El cálculo se realiza entre el tiempo de salida y de llegada, sin embargo no se tiene en cuenta el retraso que tiene el receptor al enviar la respuesta.
 2. El calculo que se realiza sobre los ACK no contempla si es de la llamada principal o de la retransmisión por lo tanto no garantiza que el tiempo medido sea fiel.
 3. Tomar la media simple no representa los cambios en el tráfico de la red, es decir: Si la red estaba cargada al momento de hacer el cálculo, la estimación es fiel para una red cargada. En el caso de que la red se alivie esta estimación resulta ser muy grande y genera pérdidas de rendimiento. Para el caso de una red aliviada a la hora de hacer el cálculo, el problema es análogo.
 
 
-Modificaciones: 
+Modificaciones:
 
 - Para solucionar el problema 1, hay que estimar con el algoritmo de Jacobson la desviación media del RTT y no solo su media.
   De esta manera el temporizador se amplía cuando las mediciones son muy dispersas y se ajusta cuando se estabilizan.
@@ -415,9 +415,9 @@ Modificaciones:
 - Mediante el algoritmo de Karn se puede solucionar el problema número 2. Este algoritmo resuelve el problema utilizando las
 las siguientes reglas:
 1. No utilizar el RTT medido para un segmento retransmitido para actualizar SRTT y SDEV.
-2. Calcular el RTO de decaimiento utilizando la ecuación: $RTO= q*RTO$ cuando se produzca una re transmisión. 
-3. Utilizar el valor del RTO de decaimiento para segmentos sucesivos hasta que llegue una confirmación para un segmento que no se haya retransmitido. 
-   
+2. Calcular el RTO de decaimiento utilizando la ecuación: $RTO= q*RTO$ cuando se produzca una re transmisión.
+3. Utilizar el valor del RTO de decaimiento para segmentos sucesivos hasta que llegue una confirmación para un segmento que no se haya retransmitido.
+
 Cuando se recibe una confirmación para un segmento que no se ha retransmitido, se activa de nuevo el algoritmo de Jacobson para calcular valores futuros de RTO.
 
 - Para solucionar el problema número 3, se utiliza:
@@ -436,13 +436,61 @@ ventana fija del protocolo de red?
 
 ==== Respuesta
 
-La ventana de red actúa como mecanismo de contrapresión sobre el transporte: si la entidad receptora llena 
+La ventana de red actúa como mecanismo de contrapresión sobre el transporte: si la entidad receptora llena
 su memoria temporal y rechaza datos del servicio de red, la ventana deslizante no avanza, el nivel de red del
-emisor agota su ventana y deja de aceptar segmentos del transporte emisor. Por lo tanto, la cantidad que puede 
-enviarse está acotada por la menor de ambas ventanas. Sin embargo, este mecanismo es tosco: si hay varias 
-conexiones de transporte multiplexadas sobre una conexión de red, el control se aplica sobre el agregado. 
-El crédito de transporte, ajustado dinámicamente al espacio libre del receptor, permite controlar cada conexión 
+emisor agota su ventana y deja de aceptar segmentos del transporte emisor. Por lo tanto, la cantidad que puede
+enviarse está acotada por la menor de ambas ventanas. Sin embargo, este mecanismo es tosco: si hay varias
+conexiones de transporte multiplexadas sobre una conexión de red, el control se aplica sobre el agregado.
+El crédito de transporte, ajustado dinámicamente al espacio libre del receptor, permite controlar cada conexión
 individualmente y evita tener que recurrir al rechazo en el nivel de red, que debería quedar como último recurso.
+
+=== Ejercicio 20.9
+
+==== Consigna
+
+En una red que tiene un tamaño máximo de paquete de 128 bytes, un tiempo de vida má-
+ximo de 30 s y un número de secuencia de paquetes de 8 bits, ¿cuál es la máxima tasa de
+transmisión de datos por conexión?
+
+==== Respuesta
+
+Para evitar ambigüedades en el receptor (donde paquete viejo podría confundirse con uno nuevo que reutilice el mismo número de secuencia), el emisor no debe agotar ni reiniciar el espacio de números de secuencia en un tiempo menor al tiempo de vida máximo del paquete ($30$ s).  La conexión puede enviar como máximo $256$ paquetes en un intervalo de $30$ segundos.
+
+Cálculo de bytes totales transmitibles en $30$segundos:
+$ "Bytes totales" = 256 "paquetes" times 128 "bytes/paquete" = 32.768 "bytes" $Cálculo de la tasa máxima de bytes por segundo ($B/s$):
+$ "Tasa" = (32.768 "bytes") / (30 "s") approx 1.092,27 "B/s" $Cálculo de la tasa máxima de datos en bits por segundo ("bps"):
+$ "Tasa" = 1.092,27 "B/s" times 8 "bits/byte" approx 8.738,13 "bps" approx 8,74 "kbps" $
+
+La máxima tasa de transmisión por conexión para garantizar la unicidad de los números de secuencia es de #text(weight: "bold")[8,74 kbps] (o $1.092,27$ B/s).
+
+=== Ejercicio 20.10
+
+==== Consigna
+
+¿Es posible que se produzca un bloqueo mutuo utilizando un diálogo en dos pasos en lugar de un diálogo en tres pasos? Dé un ejemplo o demuéstrelo en caso contrario.
+
+==== Respuesta
+
+Sí porque un intercambio de dos pasos es susceptible a bloqueos mutuos (deadlock) o estados de conexión semiabierta no deseados producidos por paquetes retrasados o duplicados en la red.
+Ejemplo:
+
+- Envío de solicitud: El Host A envía una solicitud de conexión. Debido a retardos en la red, el paquete no llega inmediatamente.
+
+- Finalización de tiempo de respuesta: El Host A asume que la solicitud se perdió por falta de respuesta, cancela el intento de conexión y libera sus recursos.
+
+- Demora en llegar: Tiempo después, la solicitud enviada por A finalmente llega al Host B.
+
+- Apertura inmediata en 2 pasos: Al utilizar un protocolo de 2 pasos, el Host B responde inmediatamente con una confirmación(ACK) y pasa en ese instante al estado de conexión abierta.
+
+- Momento del bloqueo: El Host A recibe el ACK de una conexión que ya estaba descartada por lo que ignora la respuesta o la rechaza. Mientras que el Host B asume firmemente que la conexión está activa y queda en estado de espera activa, aguardando que A transmita datos.
+
+Dibuje un diagrama similar al de la Figura 20.4 para los siguientes casos (suponga un ser
+vicio de red fiable ordenado):
+#set enum(numbering: "a.")
++ Cierre de la conexión: activo/pasivo.
++ Cierre de la conexión: activo/activo.
++ Rechazo de la conexión.
++ Cancelación de la conexión: un usuario emite un Open a un usuario que está preparado y entonces emite un Close antes de que se intercambie ningún dato.
 
 === Ejercicio 20.11
 
@@ -472,7 +520,7 @@ A continuación, se enumeran cuatro estrategias que se pueden utilizar para prop
 + *El destinatario se genera al realizar la solicitud:* se envía la petición a una dirección bien conocida, donde un proceso privilegiado del sistema crea el proceso destino y devuelve su dirección.
 
   *Analogía postal:* le escribimos a la oficina de una empresa pidiéndole un servicio puntual (por ejemplo, que nos hagan un trabajo a medida). La empresa asigna a un empleado que antes no existía para nuestro pedido y nos responde con la dirección o el contacto de esa persona, a quien escribimos desde ese momento.
-  
+
 
 // Bibliografía. Si hay referencias bibliográficas se renderiza.
 // Si no, solamente con full: true se renderiza la bibliografía completa, aunque no haya referencias en el texto
