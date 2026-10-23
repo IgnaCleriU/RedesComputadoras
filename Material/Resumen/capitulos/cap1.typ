@@ -1,5 +1,3 @@
-= Resumen Stallings - Redes de Computadoras
-
 = Capítulo 1: Introducción
 
 == Modelo de Comunicaciones
@@ -49,10 +47,9 @@ Redes de cobertura pequeña. Una LAN suele ser propiedad de la misma organizaci�
 
 Existen las LAN conmutadas y las LAN inalámbricas.
 
+== Redes Inalambricas
+Proporcionan ventajas evidentes de movilidad y facilidad de instalación.
 
-
-
-
-
-
+== Redes de Área Metropolitana
+Redes de cobertura intermedia. Una MAN suele ser propiedad de una organización que la administra y proporciona servicio a los usuarios que necesitan alta capacidad en areas metropolitanas. Suelen ser más rápidas que las WAN, pero más lentas que las LAN. 
 
