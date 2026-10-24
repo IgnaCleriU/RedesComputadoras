@@ -25,6 +25,9 @@
 
 #let dominio-mail = "mi.unc.edu.ar"
 
+// Borrador: agrega una marca de agua en todas las páginas. Pasar a `false` para la entrega.
+#let borrador = true
+
 #let hoy = datetime.today()
 // `datetime.display` no traduce los meses, así que la fecha se arma a mano.
 #let meses = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre")
@@ -35,6 +38,9 @@
 // ---------------------------------------------------------------------------
 #set document(title: "Monografía: " + titulo, author: integrantes.map(i => i.nombre))
 #set page(paper: "a4", margin: (x: 2cm, top: 1.8cm, bottom: 2cm))
+#set page(background: if borrador {
+  rotate(-45deg, text(size: 80pt, weight: "bold", fill: luma(225), tracking: 0.1em)[BORRADOR])
+})
 #set text(font: "New Computer Modern", lang: "es", region: "AR")
 
 // ---------------------------------------------------------------------------

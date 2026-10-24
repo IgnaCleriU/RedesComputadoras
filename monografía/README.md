@@ -35,6 +35,8 @@ typst compile monografia.typ "WireGuardians-MONOGRAFÍA.pdf"
 
 Para recompilar al guardar, usar `typst watch` con los mismos argumentos.
 
+Mientras `borrador` sea `true` (al principio de `monografia.typ`), todas las páginas llevan la marca de agua "BORRADOR". Para la entrega, pasarlo a `false`.
+
 ## Cómo escribir
 
 Cada persona edita **su** archivo de `secciones/`, así se evitan conflictos al mergear. Las rutas dentro de un archivo de `secciones/` son relativas a ese archivo: una imagen de `assets/` se escribe `../assets/figura.png`.
