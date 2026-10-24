@@ -1,6 +1,7 @@
 // Monografía (WireGuardians). Tema: MQTT + Protocol Buffers.
 // Compilar: `typst compile monografia.typ "WireGuardians-MONOGRAFÍA.pdf"` (Typst 0.15.x, ver mise.toml en la raíz del repo).
-// Orden del documento: carátula, índice (automático), secciones (una por archivo en `secciones/`) y bibliografía.
+// Orden del documento: carátula, índice (automático), secciones (una por archivo en `secciones/`),
+// bibliografía y anexos.
 // Detalles de uso en README.md.
 
 // ---------------------------------------------------------------------------
@@ -172,7 +173,10 @@
 // ---------------------------------------------------------------------------
 #include "secciones/introduccion.typ"
 #include "secciones/objetivos.typ"
+#include "secciones/alcance.typ"
+#include "secciones/marco-teorico.typ"
 #include "secciones/desarrollo.typ"
+#include "secciones/experimentos.typ"
 #include "secciones/conclusion.typ"
 
 // ---------------------------------------------------------------------------
@@ -181,3 +185,7 @@
 = Bibliografía
 #bibliography("bibliografia.bib", title: none, style: "ieee", full: true)
 
+// ---------------------------------------------------------------------------
+// Anexos
+// ---------------------------------------------------------------------------
+#include "secciones/anexos.typ"

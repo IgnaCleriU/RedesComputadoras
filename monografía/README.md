@@ -7,10 +7,23 @@ El documento está en [Typst](https://typst.app/docs/) (0.15.x, ver `mise.toml` 
 | Archivo | Qué es |
 | --- | --- |
 | `monografia.typ` | Documento principal: carátula, formato general, índice y orden de las secciones. |
-| `secciones/*.typ` | Una sección por archivo: `introduccion`, `objetivos`, `desarrollo` y `conclusion`. |
+| `secciones/*.typ` | Una sección por archivo (ver "Orden del documento"). |
 | `bibliografia.bib` | Referencias en formato BibTeX (se muestran en estilo IEEE). |
 | `assets/` | Logos e imágenes. |
 | `WireGuardians-MONOGRAFÍA.pdf` | PDF compilado. |
+
+## Orden del documento
+
+Sigue la estructura habitual de una monografía (portada, índice, introducción, marco teórico, desarrollo, conclusiones, bibliografía y anexos). Entre paréntesis, el archivo de `secciones/` de cada parte:
+
+1. Carátula (en `monografia.typ`): título, integrantes, docente, institución y fecha.
+2. Índice (automático).
+3. Introducción (`introduccion`, `objetivos`, `alcance`): contexto y problema, objetivos y alcance.
+4. Marco teórico (`marco-teorico`): modelo pub/sub, MQTT, Protocol Buffers y alternativas.
+5. Desarrollo (`desarrollo`, `experimentos`): análisis y diseño experimental.
+6. Conclusiones (`conclusion`): responden a los objetivos; no agregan información nueva.
+7. Bibliografía (automática, desde `bibliografia.bib`).
+8. Anexos (`anexos`): material extenso que cortaría la lectura, como los `.proto` completos. Se numeran con letras.
 
 ## Compilar
 
