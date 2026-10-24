@@ -25,6 +25,9 @@
 #let dominio-mail = "mi.unc.edu.ar"
 
 #let hoy = datetime.today()
+// `datetime.display` no traduce los meses, así que la fecha se arma a mano.
+#let meses = ("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre")
+#let fecha = [#hoy.day() de #meses.at(hoy.month() - 1) de #hoy.year()]
 
 // ---------------------------------------------------------------------------
 // Configuración general (la carátula usa estos márgenes; el cuerpo los cambia más abajo)
@@ -117,9 +120,9 @@
   #line(length: 100%, stroke: 0.5pt)
   #v(0.5cm)
 
-  // Año
+  // Fecha
   #align(center)[
-    #hoy.year()
+    #fecha
   ]
 ]
 
@@ -142,12 +145,23 @@
 #show heading.where(level: 1): set text(size: 18pt)
 #show heading.where(level: 2): set text(size: 14pt)
 #show heading.where(level: 3): set text(size: 12pt)
+#show heading.where(level: 4): set text(size: 11pt)
 #show heading: set block(above: 1.4em, below: 1em)
 
 // Figuras y tablas: epígrafe en cursiva ("Figura 1: ..."); en las tablas va arriba.
 #show figure.caption: set text(size: 10pt, style: "italic")
 #show figure.where(kind: table): set figure.caption(position: top)
 #set math.equation(numbering: "(1)")
+
+// Tablas: texto un poco más chico, alineado a la izquierda y encabezado en negrita.
+#set table(stroke: 0.5pt + luma(170), inset: 5pt, align: left)
+#show table: set text(size: 9.5pt)
+#show table: set par(justify: false)
+#show table.cell.where(y: 0): set text(weight: "bold")
+
+// Bloques de código (mensajes .proto, JSON): fondo gris claro y letra un poco más chica.
+#show raw.where(block: true): set text(size: 9pt)
+#show raw.where(block: true): block.with(fill: luma(245), inset: 8pt, radius: 3pt, width: 100%, breakable: false)
 
 // Índice: se arma solo a partir de los títulos.
 #show outline.entry.where(level: 1): set text(weight: "bold")
@@ -162,7 +176,8 @@
 #include "secciones/conclusion.typ"
 
 // ---------------------------------------------------------------------------
-// Bibliografía (estilo APA; muestra todas las entradas de bibliografia.bib)
+// Bibliografía (estilo IEEE; muestra todas las entradas de bibliografia.bib)
 // ---------------------------------------------------------------------------
 = Bibliografía
-#bibliography("bibliografia.bib", title: none, style: "apa", full: true)
+#bibliography("bibliografia.bib", title: none, style: "ieee", full: true)
+

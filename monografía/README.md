@@ -8,7 +8,7 @@ El documento está en [Typst](https://typst.app/docs/) (0.15.x, ver `mise.toml` 
 | --- | --- |
 | `monografia.typ` | Documento principal: carátula, formato general, índice y orden de las secciones. |
 | `secciones/*.typ` | Una sección por archivo: `introduccion`, `objetivos`, `desarrollo` y `conclusion`. |
-| `bibliografia.bib` | Referencias en formato BibTeX (se muestran en estilo APA). |
+| `bibliografia.bib` | Referencias en formato BibTeX (se muestran en estilo IEEE). |
 | `assets/` | Logos e imágenes. |
 | `WireGuardians-MONOGRAFÍA.pdf` | PDF compilado. |
 
@@ -39,7 +39,7 @@ Cada persona edita **su** archivo de `secciones/`, así se evitan conflictos al 
   En el texto se cita con `@fig-nombre`.
 - **Tablas:** `#figure(table(...), caption: [...]) <tab-nombre>`; se cita con `@tab-nombre`.
 - **Ecuaciones:** `$ E = m c^2 $ <ec-nombre>`; se cita con `@ec-nombre`.
-- **Citas:** agregar la entrada a `bibliografia.bib` (modelo en `tps/tp-teorico/tarea5/bibliografia.bib`) y citar con `@clave`; en el texto sale como "(Stallings, 2004)". La bibliografía lista todas las entradas del `.bib`.
+- **Citas:** agregar la entrada a `bibliografia.bib` (modelo en `tps/tp-teorico/tarea5/bibliografia.bib`) y citar con `@clave`; en el texto sale como "[1]" (estilo IEEE). La bibliografía lista todas las entradas del `.bib`.
 - **Sección nueva:** crear el archivo en `secciones/` y agregarlo con `#include` en `monografia.typ`, en el lugar que corresponda.
 
 ## Requisito de la cátedra
