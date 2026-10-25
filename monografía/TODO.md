@@ -1,0 +1,6 @@
+- Presentar marco teorico modelo pub/sub
+  - Buscar papers asociados al modelo, para tenerlos como fuente en la explicacion
+- Explicar como implementa MQTT el modelo pub/sub
+- Explicar el mecanizmo de serializacion de ProtoBuf
+- Comparar el stack vs las alternativas HTTP, CoAP y JSON
+-
