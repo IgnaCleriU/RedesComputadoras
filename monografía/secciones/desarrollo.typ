@@ -56,3 +56,14 @@
 
 // Messenger, Robótica, ver si hay otros relevantes.
 // Qué problema resolvió el stack en cada caso y qué limitaciones tiene.
+
+// TODO(mapeo tecnológico) Pedido del profesor (mail del 27/10). Aplica a todo el trabajo.
+// - Hacer el "mapeo tecnológico", es decir, ponerle marca y modelo a los equipos reales con los que se implementaría
+//   el sistema, dónde se comprarían y cuánto cuestan. Es lo primero que se pregunta en un caso real (¿cuánto sale hacer esto?).
+// - Probablemente convenga una sección propia, acá después de Casos de uso. Cosas a relevar según el caso:
+//   - Dispositivos de borde (placas y módulos, por ejemplo la familia ESP32 de los experimentos, o gateways industriales).
+//   - Broker (servidor propio en la nube contra servicio MQTT administrado, con su costo mensual).
+//   - Conectividad (routers, módems celulares, planes de datos).
+// - Para cada equipo, indicar modelo, proveedor (local o importación), precio con fecha y moneda, y la fuente.
+// - Justificar las elecciones con los tres factores que acotan un proyecto (calidad técnica, plazo y presupuesto).
+//   La idea es proponer una solución viable, no necesariamente la de máxima calidad técnica.
