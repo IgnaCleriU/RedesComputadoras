@@ -1,3 +1,6 @@
+// Diagramas (Typst Universe).
+#import "@preview/chronos:0.3.0"
+
 = Marco teórico
 
 /*
@@ -71,7 +74,6 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
 // Cómo implementa MQTT el modelo pub/sub: broker, tópicos, niveles de QoS, sesiones y seguridad.
 
 /*
-- Historia breve: IBM y Arcom, 1999, telemetría de oleoductos por satélite. OASIS 3.1.1 (2014), ISO/IEC 20922 (2016), 5.0 (2019).
 - Mapear cada elemento del modelo pub/sub de Eugster a MQTT: broker = servicio de eventos; un mismo cliente puede publicar y suscribirse.
   - Todos los participantes son clientes TCP del broker (definición de cliente de Kurose p. 73-74). Retomar lo dicho en la sección anterior.
 - Tópicos jerárquicos y comodines + y # → es la variante "basada en tópicos" de Eugster.
@@ -89,9 +91,56 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
   - Hunkeler, Truong y Stanford-Clark 2008, MQTT-S (Stanford-Clark es co-creador de MQTT). Falta en el .bib.
 */
 
-== Protocol Buffers
+MQTT es un protocolo de transporte de mensajes de tipo publicador/suscriptor, basado en una arquitectura cliente-servidor y diseñado para ser liviano, abierto y fácil de implementar @mqtt50. La primera versión estandarizada por OASIS fue la 3.1.1, adoptada también como norma ISO/IEC 20922, y la versión 5.0, en la que se centra este trabajo, incorpora numerosas funcionalidades nuevas sin alterar el núcleo del protocolo. MQTT adopta la arquitectura centralizada descrita en la sección anterior denominando _broker_ al servidor y cliente a todo programa o dispositivo que abre una conexión hacia él para publicar mensajes y/o suscribirse a ellos, y deja a cada implementación la elección de los mecanismos de autenticación, autorización y cifrado. MQTT delega en la capa de transporte la entrega ordenada y sin pérdidas de los datos a la capa de transporte, por lo que funciona sobre TCP, TLS o WebSocket, pero no directamente sobre UDP.
+
+Cada mensaje de aplicación lleva un nombre de tópico, el cual consiste en una cadena de texto que el servidor compara con las suscripciones de los clientes. Los tópicos se organizan en niveles separados por el carácter `/`, y las suscripciones se expresan mediante filtros que se comparan con los tópicos de mensajes entrantes. Las expresiones de suscripción pueden incluir los comodines `+`, que coincide con exactamente un nivel, y `#`, que solo puede ubicarse al final del filtro y coincide con cualquier cantidad de niveles.
+
+De esta manera las expresiones de suscripción permiten, por ejemplo, en una flota de robots que publica en tópicos de la forma `flota/{ID de robot}/{sensor}`, suscribirse con el filtro `flota/+/bateria` que recibe el estado de batería de todos los robots o el filtro `flota/robot1/#`, que recibe todos los mensajes de el robot `robot1`.
+
+Implementar el esquema basado en tópicos, MQTT implementa desacoplamiento en el espacio, ya que el publicador solo conoce el nombre del tópico y es el servidor quien determina qué clientes reciben cada mensaje. La versión 5.0 agrega además las suscripciones compartidas, en las que cada mensaje se entrega a uno solo de los clientes de un grupo, lo que permite repartir el procesamiento entre varios consumidores.
+
+La entrega de los mensajes se rige por tres niveles de calidad de servicio (QoS), cuyos intercambios de paquetes muestra la @fig-qos. Con QoS 0, el mensaje se envía sin confirmación ni reintentos y llega una vez o ninguna. Con QoS 1, el receptor confirma cada mensaje con un paquete PUBACK y el emisor lo conserva hasta recibir esa confirmación, lo que asegura que llegue al menos una vez aunque pueden producirse duplicados. Con QoS 2, un intercambio en dos etapas garantiza que el mensaje llegue exactamente una vez, a costa de una mayor sobrecarga.
+
+El nivel de QoS se aplica por separado entre el publicador y el broker y entre el broker y cada suscriptor, y cada suscriptor recibe el mensaje con el menor nivel de QoS entre el usado al publicarlo y el máximo concedido a su suscripción. La relación entre estos niveles y la confiabilidad que ya ofrece TCP se analiza en la @sec-qos-tcp.
+
+// Flujo de QoS: `mensajes` es una lista de (origen, destino, paquete),
+// donde "E" es el emisor y "R" el receptor.
+#let flujo-qos(titulo, mensajes) = align(center, {
+  text(weight: "bold", titulo)
+  chronos.diagram({
+    import chronos: *
+    _par("E", display-name: "Emisor", show-bottom: false)
+    _par("R", display-name: "Receptor", show-bottom: false)
+    for (origen, destino, paquete) in mensajes {
+      _seq(origen, destino, comment: raw(paquete))
+    }
+  })
+})
+
+#figure(
+  grid(
+    columns: 3,
+    column-gutter: 0.6cm,
+    flujo-qos("QoS 0", (("E", "R", "PUBLISH"),)),
+    flujo-qos("QoS 1", (("E", "R", "PUBLISH"), ("R", "E", "PUBACK"))),
+    flujo-qos("QoS 2", (("E", "R", "PUBLISH"), ("R", "E", "PUBREC"), ("E", "R", "PUBREL"), ("R", "E", "PUBCOMP"))),
+  ),
+  kind: image,
+  caption: [Intercambio de paquetes de control en cada nivel de QoS.],
+) <fig-qos>
+
+Las confirmaciones de QoS 1 y 2 requieren que cliente y servidor mantengan un estado de sesión. En el servidor, ese estado comprende las suscripciones del cliente y los mensajes destinados a él que aún no fueron enviados o confirmados, y puede conservarse a lo largo de varias conexiones consecutivas. Al conectarse, el cliente indica si inicia una sesión nueva o retoma la anterior, y durante cuánto tiempo debe conservarse el estado una vez cerrada la conexión. Este mecanismo es el que permite el desacoplamiento en el tiempo, ya que el servidor almacena los mensajes dirigidos a un suscriptor desconectado y se los entrega cuando este vuelve a conectarse. Sin embargo, ese desacoplamiento no es incondicional, ya que si sesión no persiste más allá de la conexión, o si los mensajes se publican con QoS 0 que el servidor no está obligado a almacenar, un suscriptor desconectado nunca reibe los mensajes publicados, por lo que corresponde a la aplicación elegir la combinación adecuada para cada tipo de dato.
+
+Complementando este comportamiento, MQTT suma dos mecanismos más. Un mensaje publicado con el indicador RETAIN se almacena en el servidor como último mensaje retenido de su tópico y se entrega a cada nuevo suscriptor, de modo que un cliente que se suscribe recibe de inmediato el estado más reciente aunque el publicador lo envíe de forma irregular. El mensaje de última voluntad (_Will Message_), por su parte, lo registra el cliente al conectarse y el servidor lo publica a los suscriptores si la conexión se cierra de forma anormal, por ejemplo cuando el cliente deja de comunicarse dentro del intervalo de keep-alive, que es el tiempo máximo que puede transcurrir entre dos paquetes enviados por el cliente. Esto permite notificar a los interesados de la desconexión de un dispositivo.
+
+Por último, toda la comunicación en MQTT se realiza mediante paquetes de control, de los cuales la especificación define quince tipos. Entre ellos se encuentran CONNECT y CONNACK para establecer la conexión, PUBLISH para transportar los mensajes de aplicación, PUBACK y los demás paquetes de confirmación de los niveles de QoS, SUBSCRIBE y UNSUBSCRIBE para gestionar las suscripciones, y PINGREQ y PINGRESP para el keep-alive. Cada paquete se compone de un encabezado fijo, presente en todos ellos, seguido de un encabezado variable y de una carga útil que solo aparecen en algunos tipos. El primer byte del encabezado fijo indica el tipo de paquete y algunos indicadores, como el nivel de QoS y RETAIN en el caso de PUBLISH, y a continuación se codifica la longitud restante del paquete con un entero de longitud variable que ocupa un solo byte para valores de hasta 127. De este modo, el encabezado fijo ocupa apenas dos bytes en los paquetes pequeños, que es también el tamaño total de los paquetes de keep-alive. El uso de este tipo de encabezados resulta en una economización del costo de transporte, la cual se evalúa en el experimento de la @sec-exp-mqtt-https.
+
+El contenido de los mensajes queda fuera del protocolo MQTT, que transporta la carga útil sin interpretarla. La versión 5.0 permite declarar su formato mediante las propiedades de indicador de formato y tipo de contenido, que el servidor reenvía sin modificar, pero no impone ninguno, aspecto que se retoma en la @sec-stack. La representación de los datos queda así a cargo de la aplicación, que es el problema que aborda Protocol Buffers, descrito en la @sec-protobuf.
+
+== Protocol Buffers <sec-protobuf>
 
 // Mecanismo de serialización: esquema .proto, codificación binaria, compatibilidad entre versiones.
+// TODO(prometido en Marco teórico, @sec-mqtt) Explicar la codificación de enteros de longitud variable (varint) y señalar que es el mismo esquema que usa MQTT para la Remaining Length del encabezado fijo (7 bits de datos por byte y el bit más significativo como bit de continuación).
 
 /*
 - Partir del problema de representación de datos que quedó planteado al final del capítulo:
@@ -108,9 +157,10 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
   - Comer cap. 27 (ASN.1/BER).
 */
 
-== Stack MQTT y Protocol Buffers
+== Stack MQTT y Protocol Buffers <sec-stack>
 
 // Cómo se combinan: Protobuf como payload de los mensajes MQTT, el esquema compartido entre clientes.
+// TODO(prometido en Marco teórico, @sec-mqtt) Retomar las propiedades Payload Format Indicator y Content Type de MQTT 5 como forma de declarar que el payload es un mensaje Protobuf (y de qué tipo).
 
 /*
 - MQTT trata el payload como bytes opacos: Protobuf entra ahí sin cambios.
