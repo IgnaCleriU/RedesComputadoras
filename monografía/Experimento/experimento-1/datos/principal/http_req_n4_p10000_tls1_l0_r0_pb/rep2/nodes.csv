@@ -1,0 +1,5 @@
+esp_id,ready,done,ready_host_us,produced,sent,failed,queue_drops,pending,overruns,rtf,marks,syncs,sync_offset_median_us,mqtt_disconnects,http_errors,http_retries_ok
+1,true,true,1793078530391995,12,12,0,0,0,0,1.0000,25,9,1362,0,0,0
+2,true,true,1793078529574163,12,12,0,0,0,0,1.0000,25,9,1233,0,0,0
+3,true,true,1793078529491648,12,12,0,0,0,0,1.0000,25,9,1127,0,0,0
+4,true,true,1793078530532502,12,12,0,0,0,0,1.0000,25,9,1337,0,0,0

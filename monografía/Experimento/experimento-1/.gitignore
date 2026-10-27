@@ -1,0 +1,33 @@
+# --- Firmware (ESP-IDF) ---
+# Salida de compilación: se regenera con ./firmware/build.sh
+firmware/build/
+# sdkconfig se genera a partir de sdkconfig.defaults en cada compilación
+firmware/sdkconfig
+firmware/sdkconfig.old
+# Copia de infra/certs/ca.crt que hace build.sh antes de compilar
+firmware/main/ca.crt
+firmware/managed_components/
+firmware/dependencies.lock
+
+# --- Backend (Go) ---
+# Binarios: se regeneran con (cd backend && go build -o bin/ ./cmd/...)
+backend/bin/
+
+# --- Certificados ---
+# Claves privadas: cada uno las genera con infra/certs/gen.sh
+*.key
+*.csr
+*.srl
+infra/certs/server.ext
+
+# --- Datos ---
+# De cada corrida solo se versionan los .csv y .json; las capturas y los logs
+# quedan en la máquina donde se corrió el experimento.
+*.pcapng
+datos/**/*.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/

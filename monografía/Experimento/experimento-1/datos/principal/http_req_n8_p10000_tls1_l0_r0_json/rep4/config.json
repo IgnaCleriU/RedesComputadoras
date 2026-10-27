@@ -1,0 +1,20 @@
+{
+  "transport": "http_req",
+  "nodes": 8,
+  "period_ms": 10000,
+  "tls": true,
+  "loss_pct": 0,
+  "rtt_ms": 0,
+  "serialization": "json",
+  "nodelay": false,
+  "duration_s": 120,
+  "factor": "serialization",
+  "config_id": "http_req_n8_p10000_tls1_l0_r0_json",
+  "rep": 4,
+  "port": 443,
+  "status": "ok",
+  "start": "2026-10-26T23:24:33.620056187-03:00",
+  "end": "2026-10-26T23:26:43.148850757-03:00",
+  "nodes_done": 8,
+  "flash_image": "/home/aaron4500/Downloads/Redes Monografia/experimento/firmware/build/flash.bin"
+}

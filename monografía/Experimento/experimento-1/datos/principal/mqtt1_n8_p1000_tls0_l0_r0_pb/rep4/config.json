@@ -1,0 +1,20 @@
+{
+  "transport": "mqtt1",
+  "nodes": 8,
+  "period_ms": 1000,
+  "tls": false,
+  "loss_pct": 0,
+  "rtt_ms": 0,
+  "serialization": "pb",
+  "nodelay": false,
+  "duration_s": 120,
+  "factor": "tls",
+  "config_id": "mqtt1_n8_p1000_tls0_l0_r0_pb",
+  "rep": 4,
+  "port": 1883,
+  "status": "ok",
+  "start": "2026-10-27T03:55:37.56876803-03:00",
+  "end": "2026-10-27T03:57:47.093138212-03:00",
+  "nodes_done": 8,
+  "flash_image": "/home/aaron4500/Downloads/Redes Monografia/experimento/firmware/build/flash.bin"
+}

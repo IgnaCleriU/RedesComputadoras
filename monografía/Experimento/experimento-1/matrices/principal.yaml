@@ -1,0 +1,30 @@
+# Matriz del experimento: se varía un factor a la vez respecto de la base.
+# Para cada transporte se corre la base y cada nivel distinto de la base.
+duration_s: 120
+repetitions: 5
+seed: 42          # orden aleatorio reproducible de las corridas
+
+base:
+  nodes: 8
+  period_ms: 1000
+  tls: true
+  loss_pct: 0
+  rtt_ms: 0
+  serialization: pb
+
+transports: [mqtt0, mqtt1, http_req, http_reuse]
+
+# HTTPS por request satura en QEMU con períodos <= 1 s: cada handshake TLS con
+# criptografía emulada tarda ~3-5 s (con 8 nodos), así que la cola crece y se
+# entrega ~27 % de las lecturas. Para http_req el período base es 10 s (todas sus
+# variantes, incluida la sin TLS) y se omiten los niveles de período menores.
+period_overrides:
+  http_req: 10000
+
+factors:
+  nodes: [2, 4, 8]
+  period_ms: [100, 1000, 10000]
+  tls: [true, false]
+  loss_pct: [0, 1, 5]
+  rtt_ms: [0, 50, 200]
+  serialization: [pb, json]
