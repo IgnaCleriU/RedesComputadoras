@@ -191,6 +191,45 @@ Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En p
   - Falta en el .bib: Eclipse Sparkplug 3.0; Proos y Carlsson 2020 (IFIP Networking, compara MQTT/AMQP/CoAP con Protobuf/FlatBuffers).
 */
 
+MQTT y Protocol Buffers resuelven problemas distintos y complementarios. MQTT define cómo se distribuyen los mensajes entre los participantes, pero no impone ningún formato para su contenido: la carga útil de cada paquete PUBLISH es una secuencia de bytes cuyo contenido y formato son específicos de la aplicación @mqtt50. Protocol Buffers, por su parte, define cómo representar datos estructurados en una secuencia de bytes compacta, pero no cómo transportarla. La combinación consiste, entonces, en serializar cada mensaje con Protocol Buffers y publicarlo como carga útil de un paquete PUBLISH, que el broker reenvía a los suscriptores sin interpretarlo.
+
+Esta división de tareas resulta complementaria también en la delimitación de los mensajes. El formato binario de Protocol Buffers no es autodelimitante, es decir, un decodificador no puede determinar por sí solo dónde termina un mensaje, por lo que, si se envían varios por un mismo flujo, la aplicación debe indicar antes el tamaño de cada uno @protobuf-techniques. Sobre una conexión TCP, que solo entrega una secuencia continua de bytes, esa tarea quedaría a cargo de la aplicación. MQTT, en cambio, transporta cada mensaje de aplicación en un único paquete PUBLISH, cuya longitud se obtiene de su encabezado fijo @mqtt50, de modo que cada paquete contiene exactamente un mensaje de Protocol Buffers.
+
+Como un mensaje de Protocol Buffers no indica a qué tipo pertenece y no puede interpretarse sin su esquema @protobuf-overview, el receptor debe saber de antemano qué mensaje del archivo `.proto` contiene cada carga útil. La práctica habitual es asociar cada tópico, o cada patrón de tópicos, a un único tipo de mensaje, de modo que el tópico cumple una doble función: determina a qué suscriptores se entrega el mensaje e identifica el esquema con el que se interpreta su contenido. Por ejemplo, en la flota de robots que publica en tópicos de la forma `flota/{ID de robot}/{sensor}`, el tópico `flota/robot1/bateria` puede transportar siempre un mensaje `EstadoBateria`, y un suscriptor con el filtro `flota/+/bateria` sabe que todo lo que recibe se interpreta con ese mismo esquema.
+
+La versión 5.0 de MQTT permite, además, declarar el formato en el propio mensaje mediante propiedades opcionales que el broker reenvía sin modificar @mqtt50. El indicador de formato de la carga útil distingue entre bytes sin especificar, como un mensaje de Protocol Buffers, y texto codificado en UTF-8, como un documento JSON, mientras que el tipo de contenido es una cadena que definen las aplicaciones y que puede usarse para nombrar el tipo de mensaje transportado. Las propiedades de usuario admiten, a su vez, pares nombre-valor definidos por la aplicación, como la versión del esquema, y el alias del tópico reemplaza un nombre de tópico largo y repetido por un entero de dos bytes dentro de una misma conexión, lo que complementa, en el encabezado, la reducción de tamaño que Protocol Buffers logra en el contenido @mqtt50.
+
+El esquema compartido constituye así el contrato entre todos los participantes: a partir de un mismo archivo `.proto` se genera el código de cada uno, ya sea el firmware de un microcontrolador o un servicio en la nube @protobuf-overview. Ese contrato introduce un acoplamiento en el formato de los datos que el modelo publicador/suscriptor no elimina, ya que publicadores y suscriptores no se conocen ni se actualizan al mismo tiempo. Protocol Buffers lo atenúa con sus reglas de compatibilidad: agregar un campo no afecta a los receptores que usan el esquema anterior, que simplemente lo ignoran, y los mensajes antiguos pueden leerse con el esquema nuevo, que asigna valores por defecto a los campos ausentes, siempre que no se modifiquen ni se reutilicen los números de campo existentes @protobuf-proto3. Como contrapartida, el broker solo puede encaminar los mensajes según su tópico, ya que no interpreta su contenido, lo que corresponde a la menor expresividad del esquema basado en tópicos frente al basado en contenido @eugster2003pubsub.
+
+La madurez de esta combinación se refleja en su estandarización. La especificación Eclipse Sparkplug, adoptada como norma ISO/IEC 20237 @sparkplug-iso, define para los sistemas industriales precisamente lo que MQTT deja abierto: un espacio de tópicos, la gestión del estado de las sesiones y la codificación de la carga útil, que en su versión B se basa en Protocol Buffers @sparkplug30. En ella, el primer nivel de cada tópico identifica el esquema de codificación de la carga útil y otro nivel indica el tipo de mensaje, como el aviso de conexión, los datos o los comandos de un nodo; el mensaje de última voluntad de MQTT transporta el aviso de desconexión, y los nombres de las variables pueden reemplazarse por alias numéricos para reducir el tamaño de los mensajes @sparkplug30.
+
+En síntesis, cada pieza del stack cubre una parte de los requisitos planteados al comienzo, como resume la @tab-stack-requisitos.
+
+#figure(
+  table(
+    columns: 2,
+    table.header[Requisito][Pieza del stack que lo cubre],
+    [*Enviar datos al dispositivo sin que acepte conexiones entrantes*],
+    [Conexión TCP abierta por el dispositivo y entrega por parte del broker],
+
+    [*Comunicar productores y consumidores que no se conocen*], [MQTT: broker y tópicos],
+    [*Tolerar desconexiones*], [MQTT: sesiones persistentes, mensajes retenidos y mensaje de última voluntad],
+    [*Delimitar cada mensaje*], [MQTT: un paquete PUBLISH por mensaje],
+    [*Identificar el tipo de cada mensaje*], [Asociación entre tópico y esquema; en MQTT 5.0, tipo de contenido],
+    [*Interpretar los datos de forma unívoca entre equipos heterogéneos*],
+    [Protocol Buffers: esquema compartido y código generado para cada lenguaje],
+
+    [*Reducir el uso de ancho de banda*],
+    [MQTT: encabezado fijo mínimo y alias de tópico; Protocol Buffers: codificación binaria],
+
+    [*Modificar los mensajes sin afectar a los demás participantes*],
+    [Protocol Buffers: reglas de compatibilidad del esquema],
+  ),
+  caption: [Requisitos de los sistemas estudiados y pieza del stack que cubre cada uno.],
+) <tab-stack-requisitos>
+
+Algunas empresas y proyectos que aplican este stack son InOrbit, en robótica @inorbit-edge-sdk; OpenRobOps, plataforma de código abierto para flotas de robots @openrobops-repo; Meshtastic, en redes LoRa @meshtastic-mqtt; y Amazon Web Services, cuyo servicio AWS IoT Core decodifica mensajes de Protocol Buffers recibidos por MQTT @aws-iot-protobuf.
+
 == Comparación con alternativas
 
 === MQTT, HTTP y CoAP
