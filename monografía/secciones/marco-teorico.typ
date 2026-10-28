@@ -126,7 +126,7 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
 */
 
 == Comparación con alternativas
-Para intercambiar datos entre un dispositivo (ya sea un sensor, un celular o un robot), y la nube, deben tomarse dos decisiones:
+Para intercambiar datos entre un dispositivo (ya sea un sensor, un celular o un robot) y la nube deben tomarse dos decisiones:
 1. Qué protocolo de capa de aplicación implementar (define cómo se intercambian los mensajes).
 2. Qué mecanismo de serialización se utiliza para representar los datos dentro de cada mensaje (con qué formato viaja la información).
 
@@ -135,7 +135,23 @@ Las secciones anteriores describieron la combinación de MQTT y Protocol Buffers
 La comparación de protocolos considera el modelo de interacción, el protocolo de transporte, el tamaño de los encabezados, la confiabilidad y el paso por NAT y firewalls, mientras que la de mecanismos de serialización considera el tamaño de los mensajes, el costo de procesamiento y la necesidad de un esquema compartido. El análisis se apoya en las especificaciones de cada tecnología y en estudios publicados.
 
 === MQTT, HTTP y CoAP
+Se definirán brevemente los protocolos HTTP y CoAP, para posteriormente adentrarse en sus diferencias con MQTT.
 
+==== HTTP
+
+Se trata de un protocolo de aplicación *sin estado* de *solicitud y respuesta*. Cada solicitud se interpreta de manera independiente, por lo que el servidor no conserva información sobre los clientes entre una solicitud y la siguiente @kurose2017 @stallings2004[p.~780]. Es el protocolo de la Web y el ejemplo característico del modelo cliente-servidor: el cliente envía una solicitud que indica un método (como GET o POST) y el recurso al que se refiere (identificado por una URI), y el servidor devuelve una respuesta con un código de estado y, eventualmente, el contenido solicitado @rfc9110.
+
+HTTP utiliza TCP como protocolo de transporte, del que obtiene la entrega fiable y ordenada de los datos @kurose2017. En el modelo de solicitud y respuesta, el servidor no puede iniciar una conexión con el cliente ni enviarle una respuesta que no haya sido solicitada. Por eso, un cliente que necesita enterarse de eventos nuevos debe consultar periódicamente al servidor, técnica conocida como _polling_ @rfc6202.
+
+==== CoAP
+
+CoAP (_Constrained Application Protocol_) es un protocolo de transferencia web estandarizado por el IETF (_Internet Engineering Task Force_) para nodos y redes restringidos, como microcontroladores con poca memoria que operan sobre redes de bajo consumo y con pérdidas. Está orientado a aplicaciones máquina a máquina (M2M) @rfc7252.
+
+Adopta el mismo modelo de solicitud y respuesta que HTTP, con recursos identificados por URI, métodos como GET, POST, PUT y DELETE, y códigos de respuesta. Sin embargo, no busca comprimir HTTP, sino implementar el subconjunto de esa arquitectura que necesitan las aplicaciones M2M, y está diseñado para traducirse fácilmente a HTTP mediante _proxies_, lo que facilita su integración con la Web @rfc7252.
+
+CoAP funciona sobre UDP, con DTLS como mecanismo de seguridad, y codifica sus mensajes en un formato binario compacto @rfc7252. Como UDP no garantiza la entrega, el propio protocolo incorpora una confiabilidad liviana: los mensajes confirmables (CON) se retransmiten hasta que el receptor responde con un acuse de recibo (ACK), mientras que los no confirmables (NON) se envían sin confirmación, lo que resulta adecuado, por ejemplo, para cada lectura de un flujo de datos de un sensor @rfc7252.
+
+Por último, la extensión Observe permite que un cliente se registre en un recurso para que el servidor le envíe una nueva representación cada vez que ese recurso cambia, lo que evita el _polling_ @rfc7641.
 /*
 - HTTP: cliente-servidor, pull, sin estado (Stallings p. 780; Kurose p. 83 y p. 100). Conexiones persistentes y no persistentes (Kurose p. 83-85).
 - CoAP: modelo REST sobre UDP para dispositivos restringidos; mensajes confirmables y no confirmables. Comer cap. 30 (IoT) lo nombra.
