@@ -200,14 +200,51 @@ En síntesis, MQTT resulta preferible cuando se necesita una entrega confiable d
 
 === Protocol Buffers y JSON
 
-/*
-- Texto legible contra binario. Kurose p. 86: los mensajes HTTP están en ASCII legible por cualquier persona.
-- Autodescriptivo (JSON) contra esquema compartido (Protobuf).
-- Tamaño del mensaje y costo de CPU de serializar/deserializar.
-- Mencionar al pasar FlatBuffers, CBOR, MessagePack.
+Se definirá brevemente JSON, para posteriormente contrastarlo con Protocol Buffers.
 
-- Fuentes (faltan en el .bib):
-  - Popić et al. 2016 (Protobuf contra JSON/BSON en IoT).
-  - Proos y Carlsson 2020.
-  - RFC 8259 (JSON).
-*/
+==== JSON
+
+JSON (_JavaScript Object Notation_) es un formato de intercambio de datos liviano, basado en texto e independiente del lenguaje de programación, derivado del estándar del lenguaje ECMAScript @rfc8259. Representa los datos mediante objetos, que son conjuntos de pares nombre-valor, y arreglos, cuyos elementos pueden ser cadenas de texto, números, valores booleanos, el valor nulo u otros objetos y arreglos. Fuera de un ecosistema cerrado, los textos JSON deben codificarse en UTF-8 @rfc8259. Por ejemplo, una lectura de un sensor con su temperatura y su nivel de batería puede representarse así:
+
+```json
+{"temperatura":23.5,"bateria":80}
+```
+
+Como cada mensaje incluye los nombres de sus campos, JSON es autodescriptivo: puede leerse e interpretarse sin conocer de antemano la estructura de los datos, del mismo modo que los mensajes de HTTP/1.1, escritos en texto legible @kurose2017. Esa característica determina su principal ventaja y su principal desventaja:
+
+- *Ventaja:* cualquier persona o programa puede leer el mensaje sin un acuerdo previo sobre su estructura, lo que facilita la depuración y la interoperabilidad.
+- *Desventaja:* los nombres de los campos viajan en cada mensaje y los números se representan como texto decimal. El ejemplo anterior ocupa 33 bytes, de los cuales 22 corresponden a los nombres de los campos y sus comillas. Además, la especificación recomienda no esperar más precisión que la de un número de punto flotante de doble precisión, por lo que solo garantiza la interoperabilidad de los enteros de hasta $2^53 - 1$ en valor absoluto @rfc8259.
+
+==== Contraste con Protocol Buffers
+
+De la descripción anterior, de la presentada para Protocol Buffers y de los estudios que comparan ambos mecanismos se desprenden las siguientes diferencias:
+
+1. *Representación.* JSON codifica los datos como texto, mientras que Protocol Buffers utiliza un formato binario en el que cada campo se codifica como un registro de tipo, longitud y valor, identificado por un número de campo en lugar de su nombre @protobuf-encoding.
+2. *Esquema compartido.* JSON no requiere un esquema previo. Protocol Buffers, en cambio, requiere que emisor y receptor compartan el archivo `.proto` que define la estructura de los mensajes, ya que sin él no es posible interpretar los datos recibidos. A cambio, ese esquema permite generar código para cada lenguaje y fijar el tipo de cada campo @protobuf-overview.
+3. *Tamaño de los mensajes.* Al reemplazar los nombres por números de campo y codificar los valores en binario, Protocol Buffers produce mensajes considerablemente más pequeños. En un relevamiento sobre 27 documentos JSON de distintos ámbitos, Protocol Buffers redujo el tamaño con una mediana del 70,6% @viotti2022; con cargas reales tomadas de mensajes MQTT públicos, el tamaño medio pasó de 111 bytes en JSON a 40 bytes @friesel2021; y con mensajes de producción de vehículos conectados, de 12.187 a 1.157 bytes en promedio @proos2020. La reducción, sin embargo, no es universal: en uno de los 27 documentos, formado por arreglos muy anidados y casi sin nombres de campo, Protocol Buffers resultó más grande que JSON @viotti2022.
+4. *Costo de procesamiento.* Aunque la documentación presenta a Protocol Buffers como más rápido que JSON @protobuf-overview, en microcontroladores la diferencia no es clara: en algunas arquitecturas, la biblioteca de JSON evaluada serializó más rápido. Aun así, con radios lentas transmitir un byte consume unas diez mil veces más energía que un ciclo de CPU, por lo que Protocol Buffers resultó la opción más eficiente en energía, a costa de un mayor uso de memoria RAM @friesel2021.
+5. *Tipado y evolución.* JSON ofrece solo tipos genéricos y no impone una estructura, por lo que nada garantiza que emisor y receptor interpreten los datos de la misma manera. Protocol Buffers asigna un tipo concreto a cada campo y controla la evolución de los mensajes: el código nuevo puede leer mensajes antiguos, y los campos ausentes toman un valor por defecto @protobuf-overview.
+6. *Estandarización y alcance.* JSON es un estándar del IETF @rfc8259, mientras que Protocol Buffers no es un estándar formal de ningún organismo, lo que puede ser una limitación en entornos que exigen basarse en estándares. Además, Protocol Buffers supone que cada mensaje entra completo en memoria, por lo que no resulta adecuado para datos de más de unos pocos megabytes @protobuf-overview.
+
+==== Ventajas y desventajas
+
+La principal ventaja de Protocol Buffers frente a JSON es el tamaño de los mensajes, que en los estudios citados resulta de casi tres a más de diez veces menor. Esta diferencia es especialmente relevante en los sistemas considerados, que envían mensajes pequeños a alta frecuencia por enlaces limitados: de poco sirve que MQTT o CoAP reduzcan sus encabezados a unos pocos bytes si la carga útil se codifica en texto. A esto se suman el tipado de los campos y la evolución controlada del esquema. Como contrapartida, Protocol Buffers sacrifica la legibilidad, obliga a distribuir y mantener el esquema entre todos los participantes, lo que introduce un acoplamiento en el formato de los datos que el modelo publicador/suscriptor no elimina, y no es un estándar formal. JSON, por su parte, conviene cuando la legibilidad, la depuración o la integración con sistemas existentes, como las aplicaciones web, pesan más que el tamaño de los mensajes.
+
+En síntesis, Protocol Buffers resulta preferible cuando el tamaño de los mensajes y el costo de transmitirlos son críticos y es posible distribuir un esquema común entre los participantes, mientras que JSON conviene cuando se priorizan la legibilidad, la flexibilidad y la interoperabilidad sin acuerdos previos. La @tab-comparacion-serializacion resume la comparación.
+
+#figure(
+  table(
+    columns: 3,
+    table.header[Criterio][JSON][Protocol Buffers],
+    [*Representación*], [Texto (UTF-8)], [Binaria],
+    [*Esquema*], [No requiere], [Requiere un archivo `.proto` compartido],
+    [*Autodescriptivo*], [Sí: incluye los nombres de los campos], [No: incluye números de campo],
+    [*Legibilidad*], [Legible por personas], [Requiere herramientas y el esquema],
+    [*Números*], [Texto decimal], [Binarios, de longitud variable o fija],
+    [*Tamaño de los mensajes*], [Mayor], [De casi tres a más de diez veces menor],
+    [*Tipado*], [Genérico], [Un tipo concreto por campo],
+    [*Evolución*], [Sin control], [Controlada por números de campo y valores por defecto],
+    [*Estandarización*], [Estándar del IETF], [Sin estandarización formal],
+  ),
+  caption: [Comparación entre JSON y Protocol Buffers.],
+) <tab-comparacion-serializacion>
