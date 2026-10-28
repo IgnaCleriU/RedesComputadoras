@@ -152,18 +152,51 @@ Adopta el mismo modelo de solicitud y respuesta que HTTP, con recursos identific
 CoAP funciona sobre UDP, con DTLS como mecanismo de seguridad, y codifica sus mensajes en un formato binario compacto @rfc7252. Como UDP no garantiza la entrega, el propio protocolo incorpora una confiabilidad liviana: los mensajes confirmables (CON) se retransmiten hasta que el receptor responde con un acuse de recibo (ACK), mientras que los no confirmables (NON) se envían sin confirmación, lo que resulta adecuado, por ejemplo, para cada lectura de un flujo de datos de un sensor @rfc7252.
 
 Por último, la extensión Observe permite que un cliente se registre en un recurso para que el servidor le envíe una nueva representación cada vez que ese recurso cambia, lo que evita el _polling_ @rfc7641.
-/*
-- HTTP: cliente-servidor, pull, sin estado (Stallings p. 780; Kurose p. 83 y p. 100). Conexiones persistentes y no persistentes (Kurose p. 83-85).
-- CoAP: modelo REST sobre UDP para dispositivos restringidos; mensajes confirmables y no confirmables. Comer cap. 30 (IoT) lo nombra.
-- Ejes de comparación: modelo de interacción, transporte (TCP/UDP), overhead de encabezados, confiabilidad, paso por NAT y firewalls.
-  - Kurose p. 79: muchos cortafuegos bloquean UDP.
-- Resumir lo que dice la literatura, sin números propios (esos van en Experimentos).
 
-- Fuentes (faltan en el .bib):
-  - Naik 2017, IEEE ISSE (MQTT, CoAP, AMQP y HTTP).
-  - Thangavel et al. 2014, ISSNIP (MQTT y CoAP con un middleware común).
-  - RFC 7252 (CoAP).
-*/
+==== Comparación
+
+De las descripciones anteriores y de los estudios que comparan estos protocolos se desprenden las siguientes diferencias:
+
+1. *Modelo de interacción.* HTTP y CoAP siguen el modelo de solicitud y respuesta, en el que el cliente aplica métodos sobre recursos y recibe códigos de respuesta. En ese modelo, el dato viaja cuando el cliente lo pide, por lo que para enterarse de eventos nuevos debe recurrir al _polling_, cuyo costo crece con la frecuencia de las consultas, o al _long polling_, en el que cada notificación sigue siendo un mensaje HTTP completo, con todos sus encabezados @rfc6202. La extensión Observe acerca CoAP a un modelo de notificaciones, pero sin un broker que desacople a las partes, y su propia especificación aclara que no pretende reemplazar a los sistemas publicador/suscriptor @rfc7641. MQTT, en cambio, implementa el modelo publicador/suscriptor: el broker entrega cada mensaje en el momento en que se publica, mediante la conexión que el suscriptor estableció previamente, y puede conservar los mensajes destinados a un cliente desconectado mediante sesiones persistentes y mensajes retenidos @mqtt50, algo que HTTP y CoAP no prevén.
+2. *Protocolo de transporte.* HTTP y MQTT funcionan sobre TCP, del que heredan la entrega fiable y ordenada, pero deben establecer una conexión antes de intercambiar datos. MQTT la establece una sola vez y la mantiene abierta, mientras que HTTP puede abrir una conexión por cada solicitud o reutilizarla para varias @kurose2017. CoAP, en cambio, funciona sobre UDP y no necesita establecer una conexión, de modo que una transacción se resuelve con dos datagramas, uno en cada sentido @naik2017.
+3. *Tamaño de los encabezados.* HTTP utiliza encabezados de texto de longitud variable, mientras que los de CoAP y MQTT son binarios: el encabezado fijo de CoAP ocupa cuatro bytes @rfc7252 y el de MQTT, dos bytes como mínimo @mqtt50. Sin embargo, la conexión TCP que requiere MQTT aumenta su sobrecarga total. Por eso, en las comparaciones cualitativas, HTTP resulta el más pesado en tamaño de mensaje, consumo de energía, ancho de banda y latencia, CoAP el más liviano y MQTT ocupa una posición intermedia (esas comparaciones no consideran las retransmisiones) @naik2017.
+4. *Confiabilidad.* HTTP depende exclusivamente de la confiabilidad de TCP. MQTT le agrega tres niveles de calidad de servicio y el mensaje de última voluntad, mientras que CoAP ofrece, mediante sus mensajes no confirmables y confirmables, dos niveles aproximadamente equivalentes a QoS 0 y QoS 1 @naik2017. Ante pérdidas, MQTT presenta menor retardo que CoAP cuando las pérdidas son bajas y mayor cuando son elevadas, y con mensajes pequeños y pérdidas de hasta el 25% CoAP genera menos tráfico adicional para garantizar la entrega @thangavel2014. En un estudio sobre la comunicación entre vehículos y la nube, CoAP obtuvo las menores latencias y la menor sobrecarga, pero no logró entregar todos los mensajes con pérdidas elevadas, ni siquiera con mensajes confirmables, mientras que los protocolos basados en TCP, entre ellos MQTT, los entregaron todos @proos2020.
+5. *Paso por NAT y firewalls.* Muchos firewalls están configurados para bloquear el tráfico UDP @kurose2017. Entre el 2% y el 4% de las redes de acceso terrestres lo bloquean por completo, y las restricciones se concentran en las redes empresariales; además, los NAT descartan las asociaciones UDP mucho antes que las TCP (en promedio, a los 160 segundos frente a los 386 minutos), lo que obliga a enviar mensajes de mantenimiento con mayor frecuencia @rfc8323. Esto favorece a HTTP y a MQTT frente a CoAP, que para estos casos cuenta con una variante sobre TCP, TLS y WebSocket, a costa de un mayor tamaño de código, más memoria y más intercambios @rfc8323.
+6. *Seguridad.* HTTP y MQTT se protegen con TLS sobre TCP, mientras que CoAP utiliza DTLS sobre UDP @naik2017. MQTT, además, deja a cada implementación la elección de los mecanismos de autenticación y autorización @mqtt50.
+7. *Interoperabilidad y formato de los datos.* HTTP es el protocolo más interoperable, ya que basta con disponer de una pila HTTP en cada extremo @naik2017, y CoAP se integra con la Web mediante _proxies_ que traducen a HTTP @rfc7252. MQTT, en cambio, requiere un broker y no indica en sus mensajes el formato del contenido, por lo que todos los clientes deben conocerlo de antemano @naik2017; la versión 5.0 agrega propiedades opcionales para declararlo, pero no impone ninguno @mqtt50. Ninguno de los tres protocolos impone un mecanismo de serialización, aspecto que se analiza en la siguiente subsección.
+
+==== Ventajas y desventajas
+
+Frente a HTTP, la principal ventaja de MQTT es que el broker puede entregarle datos al dispositivo sin que este los solicite, lo que evita el _polling_. A esto se suman encabezados mínimos, una única conexión que se mantiene abierta y sirve en ambos sentidos, niveles de calidad de servicio propios y la posibilidad de conservar los mensajes de un cliente desconectado. Como contrapartida, MQTT es menos interoperable que HTTP, requiere un broker, que agrega un salto a cada mensaje y concentra la carga de todos los participantes, como se señaló al describir el modelo publicador/suscriptor, y obliga a que los clientes acuerden de antemano el formato de los datos.
+
+Frente a CoAP, la ventaja de MQTT es la confiabilidad: al funcionar sobre TCP, en los estudios citados entregó todos los mensajes aun con pérdidas elevadas, y atraviesa con menos dificultad los NAT y firewalls, y su broker ofrece un desacoplamiento completo entre publicadores y suscriptores, que las notificaciones de mejor esfuerzo de Observe no alcanzan. Como contrapartida, CoAP es más liviano: genera menos sobrecarga, no requiere la pila TCP y admite solicitudes _multicast_ @rfc7252, para las que MQTT no está diseñado @naik2017. Para redes en las que TCP no es viable, como algunas redes inalámbricas de sensores, existe una variante, MQTT-SN, que funciona sobre un servicio de datagramas y se conecta al broker mediante un _gateway_ @mqttsn2013.
+
+En síntesis, MQTT resulta preferible cuando se necesita una entrega confiable de datos en ambos sentidos sobre redes que no se controlan, con dispositivos detrás de NAT o firewalls; CoAP conviene para dispositivos muy restringidos que envían actualizaciones pequeñas sin necesidad de entrega garantizada @proos2020; y HTTP, para intercambios puntuales iniciados por el cliente o cuando la integración con la Web es prioritaria. La @tab-comparacion-protocolos resume la comparación.
+
+#figure(
+  table(
+    columns: 4,
+    table.header[Criterio][HTTP][CoAP][MQTT],
+    [*Modelo de interacción*],
+    [Solicitud y respuesta],
+    [Solicitud y respuesta (con Observe, notificaciones de mejor esfuerzo)],
+    [Publicador/suscriptor],
+
+    [*Entrega sin solicitud previa*], [No (requiere _polling_)], [Solo con Observe], [Sí, a través del broker],
+    [*Clientes desconectados*],
+    [Sin entrega posterior],
+    [Sin entrega posterior],
+    [Sesiones persistentes y mensajes retenidos],
+
+    [*Transporte*], [TCP], [UDP], [TCP],
+    [*Encabezado*], [Texto, de longitud variable], [Binario, 4 bytes fijos], [Binario, 2 bytes fijos como mínimo],
+    [*Confiabilidad*], [La de TCP], [Mensajes confirmables y no confirmables], [La de TCP y QoS 0, 1 y 2],
+    [*Paso por NAT y firewalls*], [Favorable (TCP)], [Desfavorable (UDP)], [Favorable (TCP)],
+    [*Seguridad*], [TLS], [DTLS], [TLS],
+    [*Interoperabilidad*], [La más alta], [Alta, mediante _proxies_ a HTTP], [Requiere un broker y un formato acordado],
+  ),
+  caption: [Comparación entre HTTP, CoAP y MQTT.],
+) <tab-comparacion-protocolos>
 
 === Protocol Buffers y JSON
 
