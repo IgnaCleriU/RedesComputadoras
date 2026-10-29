@@ -139,22 +139,39 @@ El contenido de los mensajes queda fuera del protocolo MQTT, que transporta la c
 
 == Protocol Buffers <sec-protobuf>
 
-// Mecanismo de serialización: esquema .proto, codificación binaria, compatibilidad entre versiones.
+Una conexión TCP entrega una secuencia de bytes, y un broker MQTT reenvía el contenido de cada mensaje sin interpretarlo. Para que un dato producido por un microcontrolador sea leído correctamente por un servicio escrito en otro lenguaje y ejecutado en otra arquitectura, ambos extremos deben acordar cómo se traduce una estructura de datos a bytes y viceversa, incluyendo el orden de los bytes, el tamaño de los enteros y la forma de delimitar cada campo. En el modelo OSI esta tarea corresponde a la capa de presentación @stallings2004, pero la arquitectura TCP/IP no la incluye, por lo que cada aplicación debe resolverla por su cuenta @comer2014.
 
-/*
-- Partir del problema de representación de datos que quedó planteado al final del capítulo:
-  - Comer p. 422-423: orden de bytes de red. Stallings p. 39: capa de presentación. TCP/IP no tiene capa de presentación.
-- Antecedentes: XDR y ASN.1/BER (Comer cap. 27, SNMP). Protobuf como sucesor moderno de la misma idea.
-- Esquema .proto y generación de código.
-- Codificación binaria: tag (número de campo + wire type), varints, zigzag para enteros con signo, campos de longitud prefijada. Es un TLV, como BER.
-- Compatibilidad hacia adelante y hacia atrás: números de campo, campos desconocidos, reserved.
-- Limitaciones: no es autodescriptivo (sin el esquema no se puede leer), no es legible, no delimita los mensajes.
-- Relación con la distinción de Kurose (p. 79-80): Protobuf define la sintaxis y parte de la semántica de los mensajes, no las reglas de intercambio.
+Protocol Buffers, también conocido como Protobuf, es un mecanismo para serializar datos estructurados que es neutral respecto del lenguaje de programación y de la plataforma @protobuf-overview. Fue desarrollado por Google, que lo publicó como software libre y mantiene implementaciones oficiales para una variedad de lenguajes @protobuf-repo. Su propuesta es comparable a la de JSON, pero con mensajes más pequeños, un procesamiento más rápido y la generación de código nativo para cada lenguaje. Según su documentación, ofrece un formato de serialización para paquetes de datos estructurados y tipados de hasta unos pocos megabytes, adecuado tanto para el tráfico de red efímero como para el almacenamiento de datos a largo plazo, y que puede extenderse con nueva información sin invalidar los datos existentes ni obligar a actualizar el código @protobuf-overview. Estas propiedades explican su amplia adopción por parte de grandes empresas de internet y en arquitecturas de microservicios @emqx-protobuf-mqtt.
 
-- Fuentes:
-  - Google, Overview (@protobuf-overview). Falta en el .bib: protobuf.dev/programming-guides/encoding.
-  - Comer cap. 27 (ASN.1/BER).
-*/
+=== Esquema y generación de código
+
+La estructura de los datos se define una única vez en un archivo de esquema con extensión `.proto`, en el que cada mensaje se describe como un conjunto de campos con un tipo, un nombre y un número que lo identifica. Por ejemplo, la lectura de un sensor ambiental podría definirse así:
+
+```proto
+syntax = "proto3";
+
+message Lectura {
+  float temperatura = 1;
+  float humedad     = 2;
+  uint32 bateria    = 3;
+}
+```
+
+A partir de este archivo, el compilador `protoc` genera el código fuente que permite construir, serializar y deserializar el mensaje en cada lenguaje de destino. De este modo, el `.proto` cumple a la vez la función de documentación y la de contrato explícito entre los equipos o servicios que intercambian los datos, y un mismo esquema produce implementaciones compatibles en todos los lenguajes soportados.
+
+=== Codificación binaria
+
+En la codificación binaria de Protobuf, cada campo se transmite precedido de una etiqueta (_tag_) que combina el número de campo definido en el esquema con un tipo de codificación (_wire type_), que indica cómo leer el valor a continuación, como un entero de longitud variable, un valor de 32 o de 64 bits de longitud fija, o un bloque precedido de su longitud, que se usa para cadenas, bytes y mensajes anidados @protobuf-encoding. Se trata, en esencia, de una codificación de tipo-longitud-valor (TLV), como la de BER.
+
+Los enteros se codifican como _varints_, en los que cada byte aporta siete bits del valor y utiliza el bit más significativo para indicar si el número continúa en el byte siguiente. Así, los valores pequeños, que son los más frecuentes, ocupan un solo byte. Por ejemplo, un campo número 1 con el valor 150 se codifica en tres bytes, `08 96 01`: el primero es la etiqueta y los dos restantes el valor @protobuf-encoding. Para los enteros con signo existe además la codificación _zigzag_, que intercala positivos y negativos para que los valores negativos pequeños también resulten cortos. El mensaje no incluye los nombres de los campos, que solo existen en el esquema, y en proto3 los campos que tienen su valor por defecto directamente no se transmiten @protobuf-proto3. Esta combinación es la que hace que un mensaje Protobuf pese varias veces menos que su equivalente en JSON y que se procese más rápido.
+
+=== Compatibilidad entre versiones
+
+Dado que los campos se identifican por número y no por posición ni por nombre, el esquema puede evolucionar sin romper a quienes usan versiones anteriores. Un programa que recibe un campo cuyo número no conoce simplemente lo ignora, de modo que los clientes viejos pueden leer mensajes nuevos (compatibilidad hacia adelante). En sentido inverso, un programa nuevo que lee un mensaje viejo encuentra los valores por defecto en los campos ausentes (compatibilidad hacia atrás). La condición para que esto funcione es no reutilizar números de campo, para lo cual el lenguaje ofrece la palabra clave `reserved`, que impide volver a asignar los números o nombres de campos eliminados @protobuf-proto3. Esta compatibilidad en ambos sentidos es la principal fortaleza de Protobuf frente a otros formatos binarios.
+
+=== Limitaciones
+
+Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En primer lugar, el formato no es legible por personas, por lo que la depuración requiere herramientas como `protoc --decode` o conversores a JSON. En segundo lugar, no es autodescriptivo: sin el esquema no es posible interpretar los datos, ya que el binario no indica qué mensaje contiene ni qué significa cada campo. En tercer lugar, la codificación no delimita los mensajes, por lo que el protocolo que los transporta debe indicar dónde termina cada uno. Por último, agrega al proyecto un paso de compilación y de generación de código, y resulta menos práctico que JSON para APIs públicas simples o para su uso directo desde navegadores, aunque para ese caso existen alternativas como gRPC-Web.
 
 == Stack MQTT y Protocol Buffers <sec-stack>
 
