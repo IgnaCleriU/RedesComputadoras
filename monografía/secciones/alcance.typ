@@ -1,6 +1,6 @@
 == Alcance
 
-El trabajo se centra en el stack formado por MQTT y Protocol Buffers y en el recorrido de un mensaje desde el dispositivo que lo genera hasta el broker que lo distribuye. A continuación se precisa qué aspectos abarca el análisis y cuáles quedan fuera de él.
+El trabajo se centra en el stack formado por MQTT y Protocol Buffers, considerando distintos transportes para MQTT (TCP, TLS y WebSockets), y en el recorrido de un mensaje desde el dispositivo que lo genera hasta el broker que lo distribuye. A continuación se precisa qué aspectos abarca el análisis y cuáles quedan fuera de él.
 
 === Tecnologías estudiadas
 
