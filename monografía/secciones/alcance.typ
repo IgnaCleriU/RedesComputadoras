@@ -16,6 +16,12 @@ Los casos de uso se toman de fuentes públicas, entre ellas la mensajería de Fa
 
 === Parte experimental
 
-Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, que se comunican con un broker Mosquitto y un backend. Se plantean dos experimentos. El primero compara MQTT con Protocol Buffers contra HTTPS con JSON en un escenario de telemetría, y mide por separado el costo en bytes y en latencia del transporte y de la serialización. El segundo aplica el stack a la sincronización de osciladores acoplados. Las condiciones de red, como las pérdidas, la latencia y los cortes de conexión, se introducen de forma artificial.
+Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, que se comunican con un broker Mosquitto y un backend. Se plantean dos experimentos en los que se comparan las siguientes combinaciones de protocolo y formato de serialización:
+- MQTT con Protocol Buffers
+- MQTT con JSON
+- HTTP con Protocol Buffers
+- HTTP con JSON
 
-La emulación impone limitaciones que acotan el alcance de los resultados. No reproduce el comportamiento de una radio real, por lo que no se mide el consumo de energía de los dispositivos y no se incluyen enlaces inalámbricos restringidos como LoRa, NB-IoT o satelitales. Tampoco reproduce los tiempos de procesamiento de un microcontrolador físico. Los escenarios de ruteo se emulan y no sobre una red con múltiples sistemas autónomos reales. Por último, no se evalúan la escalabilidad del broker con miles de clientes ni las configuraciones en clúster.
+El primer experimento se realiza en un escenario de telemetría y mide por separado el costo en bytes y en latencia del transporte y de la serialización. El segundo compara las mismas combinaciones en la sincronización de osciladores acoplados. En ambos, las condiciones de red, como las pérdidas, la latencia y los cortes de conexión, se introducen de forma artificial, y cada combinación se evalúa con y sin TLS.
+
+La emulación impone limitaciones que acotan el alcance de los resultados. No reproduce el comportamiento de una radio real, por lo que no se mide el consumo de energía de los dispositivos y no se incluyen enlaces inalámbricos restringidos como LoRa, NB-IoT o satelitales. Tampoco reproduce los tiempos de procesamiento de un microcontrolador físico. Los escenarios de ruteo se emulan, en lugar de reproducirse sobre una red con múltiples sistemas autónomos reales. Por último, no se evalúan la escalabilidad del broker con miles de clientes ni las configuraciones en clúster.
