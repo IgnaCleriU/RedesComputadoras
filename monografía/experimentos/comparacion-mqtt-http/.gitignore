@@ -24,7 +24,7 @@ infra/certs/server.ext
 # De cada corrida solo se versionan los .csv y .json; las capturas y los logs
 # quedan en la máquina donde se corrió el experimento.
 *.pcapng
-datos/**/*.log
+datos/
 
 # --- Python ---
 __pycache__/
