@@ -1,0 +1,6 @@
+# Name,   Type, SubType, Offset,   Size
+nvs,      data, nvs,     0x9000,   0x6000
+phy_init, data, phy,     0xf000,   0x1000
+factory,  app,  factory, 0x10000,  0x180000
+# Config por nodo: texto "clave=valor" que escribe el runner en la imagen de flash.
+cfg,      0x40, 0x00,    0x190000, 0x1000
