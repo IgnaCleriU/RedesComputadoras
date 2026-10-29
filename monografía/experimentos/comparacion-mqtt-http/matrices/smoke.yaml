@@ -1,0 +1,8 @@
+# Prueba corta de punta a punta (ver README.md, "Puesta en marcha").
+duration_s: 20
+repetitions: 1
+seed: 1
+base: {nodes: 2, period_ms: 500, tls: false, loss_pct: 0, rtt_ms: 0, serialization: pb}
+transports: [mqtt0, mqtt1, http_req, http_reuse]
+factors:
+  tls: [false, true]
