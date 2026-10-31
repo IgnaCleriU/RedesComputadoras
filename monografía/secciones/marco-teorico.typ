@@ -1,3 +1,6 @@
+// Diagramas (Typst Universe).
+#import "@preview/chronos:0.3.0"
+
 = Marco teórico
 
 /*
@@ -71,7 +74,6 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
 // Cómo implementa MQTT el modelo pub/sub: broker, tópicos, niveles de QoS, sesiones y seguridad.
 
 /*
-- Historia breve: IBM y Arcom, 1999, telemetría de oleoductos por satélite. OASIS 3.1.1 (2014), ISO/IEC 20922 (2016), 5.0 (2019).
 - Mapear cada elemento del modelo pub/sub de Eugster a MQTT: broker = servicio de eventos; un mismo cliente puede publicar y suscribirse.
   - Todos los participantes son clientes TCP del broker (definición de cliente de Kurose p. 73-74). Retomar lo dicho en la sección anterior.
 - Tópicos jerárquicos y comodines + y # → es la variante "basada en tópicos" de Eugster.
@@ -89,28 +91,92 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
   - Hunkeler, Truong y Stanford-Clark 2008, MQTT-S (Stanford-Clark es co-creador de MQTT). Falta en el .bib.
 */
 
-== Protocol Buffers
+MQTT es un protocolo de transporte de mensajes de tipo publicador/suscriptor, basado en una arquitectura cliente-servidor y diseñado para ser liviano, abierto y fácil de implementar @mqtt50. La primera versión estandarizada por OASIS fue la 3.1.1, adoptada también como norma ISO/IEC 20922, y la versión 5.0, en la que se centra este trabajo, incorpora numerosas funcionalidades nuevas sin alterar el núcleo del protocolo. MQTT adopta la arquitectura centralizada descrita en la sección anterior denominando _broker_ al servidor y cliente a todo programa o dispositivo que abre una conexión hacia él para publicar mensajes y/o suscribirse a ellos, y deja a cada implementación la elección de los mecanismos de autenticación, autorización y cifrado. MQTT delega en la capa de transporte la entrega ordenada y sin pérdidas de los datos a la capa de transporte, por lo que funciona sobre TCP, TLS o WebSocket, pero no directamente sobre UDP.
 
-// Mecanismo de serialización: esquema .proto, codificación binaria, compatibilidad entre versiones.
+Cada mensaje de aplicación lleva un nombre de tópico, el cual consiste en una cadena de texto que el servidor compara con las suscripciones de los clientes. Los tópicos se organizan en niveles separados por el carácter `/`, y las suscripciones se expresan mediante filtros que se comparan con los tópicos de mensajes entrantes. Las expresiones de suscripción pueden incluir los comodines `+`, que coincide con exactamente un nivel, y `#`, que solo puede ubicarse al final del filtro y coincide con cualquier cantidad de niveles.
 
-/*
-- Partir del problema de representación de datos que quedó planteado al final del capítulo:
-  - Comer p. 422-423: orden de bytes de red. Stallings p. 39: capa de presentación. TCP/IP no tiene capa de presentación.
-- Antecedentes: XDR y ASN.1/BER (Comer cap. 27, SNMP). Protobuf como sucesor moderno de la misma idea.
-- Esquema .proto y generación de código.
-- Codificación binaria: tag (número de campo + wire type), varints, zigzag para enteros con signo, campos de longitud prefijada. Es un TLV, como BER.
-- Compatibilidad hacia adelante y hacia atrás: números de campo, campos desconocidos, reserved.
-- Limitaciones: no es autodescriptivo (sin el esquema no se puede leer), no es legible, no delimita los mensajes.
-- Relación con la distinción de Kurose (p. 79-80): Protobuf define la sintaxis y parte de la semántica de los mensajes, no las reglas de intercambio.
+De esta manera las expresiones de suscripción permiten, por ejemplo, en una flota de robots que publica en tópicos de la forma `flota/{ID de robot}/{sensor}`, suscribirse con el filtro `flota/+/bateria` que recibe el estado de batería de todos los robots o el filtro `flota/robot1/#`, que recibe todos los mensajes de el robot `robot1`.
 
-- Fuentes:
-  - Google, Overview (@protobuf-overview). Falta en el .bib: protobuf.dev/programming-guides/encoding.
-  - Comer cap. 27 (ASN.1/BER).
-*/
+Implementar el esquema basado en tópicos, MQTT implementa desacoplamiento en el espacio, ya que el publicador solo conoce el nombre del tópico y es el servidor quien determina qué clientes reciben cada mensaje. La versión 5.0 agrega además las suscripciones compartidas, en las que cada mensaje se entrega a uno solo de los clientes de un grupo, lo que permite repartir el procesamiento entre varios consumidores.
 
-== Stack MQTT y Protocol Buffers
+La entrega de los mensajes se rige por tres niveles de calidad de servicio (QoS), cuyos intercambios de paquetes muestra la @fig-qos. Con QoS 0, el mensaje se envía sin confirmación ni reintentos y llega una vez o ninguna. Con QoS 1, el receptor confirma cada mensaje con un paquete PUBACK y el emisor lo conserva hasta recibir esa confirmación, lo que asegura que llegue al menos una vez aunque pueden producirse duplicados. Con QoS 2, un intercambio en dos etapas garantiza que el mensaje llegue exactamente una vez, a costa de una mayor sobrecarga.
+
+El nivel de QoS se aplica por separado entre el publicador y el broker y entre el broker y cada suscriptor, y cada suscriptor recibe el mensaje con el menor nivel de QoS entre el usado al publicarlo y el máximo concedido a su suscripción. La relación entre estos niveles y la confiabilidad que ya ofrece TCP se analiza en la @sec-qos-tcp.
+
+// Flujo de QoS: `mensajes` es una lista de (origen, destino, paquete),
+// donde "E" es el emisor y "R" el receptor.
+#let flujo-qos(titulo, mensajes) = align(center, {
+  text(weight: "bold", titulo)
+  chronos.diagram({
+    import chronos: *
+    _par("E", display-name: "Emisor", show-bottom: false)
+    _par("R", display-name: "Receptor", show-bottom: false)
+    for (origen, destino, paquete) in mensajes {
+      _seq(origen, destino, comment: raw(paquete))
+    }
+  })
+})
+
+#figure(
+  grid(
+    columns: 3,
+    column-gutter: 0.6cm,
+    flujo-qos("QoS 0", (("E", "R", "PUBLISH"),)),
+    flujo-qos("QoS 1", (("E", "R", "PUBLISH"), ("R", "E", "PUBACK"))),
+    flujo-qos("QoS 2", (("E", "R", "PUBLISH"), ("R", "E", "PUBREC"), ("E", "R", "PUBREL"), ("R", "E", "PUBCOMP"))),
+  ),
+  kind: image,
+  caption: [Intercambio de paquetes de control en cada nivel de QoS.],
+) <fig-qos>
+
+Las confirmaciones de QoS 1 y 2 requieren que cliente y servidor mantengan un estado de sesión. En el servidor, ese estado comprende las suscripciones del cliente y los mensajes destinados a él que aún no fueron enviados o confirmados, y puede conservarse a lo largo de varias conexiones consecutivas. Al conectarse, el cliente indica si inicia una sesión nueva o retoma la anterior, y durante cuánto tiempo debe conservarse el estado una vez cerrada la conexión. Este mecanismo es el que permite el desacoplamiento en el tiempo, ya que el servidor almacena los mensajes dirigidos a un suscriptor desconectado y se los entrega cuando este vuelve a conectarse. Sin embargo, ese desacoplamiento no es incondicional, ya que si la sesión no persiste más allá de la conexión, o si los mensajes se publican con QoS 0 que el servidor no está obligado a almacenar, un suscriptor desconectado nunca recibe los mensajes publicados, por lo que corresponde a la aplicación elegir la combinación adecuada para cada tipo de dato.
+
+Complementando este comportamiento, MQTT suma dos mecanismos más. Un mensaje publicado con el indicador RETAIN se almacena en el servidor como último mensaje retenido de su tópico y se entrega a cada nuevo suscriptor, de modo que un cliente que se suscribe recibe de inmediato el estado más reciente aunque el publicador lo envíe de forma irregular. El mensaje de última voluntad (_Will Message_), por su parte, lo registra el cliente al conectarse y el servidor lo publica a los suscriptores si la conexión se cierra de forma anormal, por ejemplo cuando el cliente deja de comunicarse dentro del intervalo de keep-alive, que es el tiempo máximo que puede transcurrir entre dos paquetes enviados por el cliente. Esto permite notificar a los interesados de la desconexión de un dispositivo.
+
+Por último, toda la comunicación en MQTT se realiza mediante paquetes de control, de los cuales la especificación define quince tipos. Entre ellos se encuentran CONNECT y CONNACK para establecer la conexión, PUBLISH para transportar los mensajes de aplicación, PUBACK y los demás paquetes de confirmación de los niveles de QoS, SUBSCRIBE y UNSUBSCRIBE para gestionar las suscripciones, y PINGREQ y PINGRESP para el keep-alive. Cada paquete se compone de un encabezado fijo, presente en todos ellos, seguido de un encabezado variable y de una carga útil que solo aparecen en algunos tipos. El primer byte del encabezado fijo indica el tipo de paquete y algunos indicadores, como el nivel de QoS y RETAIN en el caso de PUBLISH, y a continuación se codifica la longitud restante del paquete con un entero de longitud variable que ocupa un solo byte para valores de hasta 127. De este modo, el encabezado fijo ocupa apenas dos bytes en los paquetes pequeños, que es también el tamaño total de los paquetes de keep-alive. El uso de este tipo de encabezados resulta en una economización del costo de transporte, la cual se evalúa en el experimento de la @sec-exp-mqtt-https.
+
+El contenido de los mensajes queda fuera del protocolo MQTT, que transporta la carga útil sin interpretarla. La versión 5.0 permite declarar su formato mediante las propiedades de indicador de formato y tipo de contenido, que el servidor reenvía sin modificar, pero no impone ninguno, aspecto que se retoma en la @sec-stack. La representación de los datos queda así a cargo de la aplicación, que es el problema que aborda Protocol Buffers, descrito en la @sec-protobuf.
+
+== Protocol Buffers <sec-protobuf>
+
+Una conexión TCP entrega una secuencia de bytes, y un broker MQTT reenvía el contenido de cada mensaje sin interpretarlo. Para que un dato producido por un microcontrolador sea leído correctamente por un servicio escrito en otro lenguaje y ejecutado en otra arquitectura, ambos extremos deben acordar cómo se traduce una estructura de datos a bytes y viceversa, incluyendo el orden de los bytes, el tamaño de los enteros y la forma de delimitar cada campo. En el modelo OSI esta tarea corresponde a la capa de presentación @stallings2004, pero la arquitectura TCP/IP no la incluye, por lo que cada aplicación debe resolverla por su cuenta @comer2014.
+
+Protocol Buffers, también conocido como Protobuf, es un mecanismo para serializar datos estructurados que es neutral respecto del lenguaje de programación y de la plataforma @protobuf-overview. Fue desarrollado por Google, que lo publicó como software libre y mantiene implementaciones oficiales para una variedad de lenguajes @protobuf-repo. Su propuesta es comparable a la de JSON, pero con mensajes más pequeños, un procesamiento más rápido y la generación de código nativo para cada lenguaje. Según su documentación, ofrece un formato de serialización para paquetes de datos estructurados y tipados de hasta unos pocos megabytes, adecuado tanto para el tráfico de red efímero como para el almacenamiento de datos a largo plazo, y que puede extenderse con nueva información sin invalidar los datos existentes ni obligar a actualizar el código @protobuf-overview. Estas propiedades explican su amplia adopción por parte de grandes empresas de internet y en arquitecturas de microservicios @emqx-protobuf-mqtt.
+
+=== Esquema y generación de código
+
+La estructura de los datos se define una única vez en un archivo de esquema con extensión `.proto`, en el que cada mensaje se describe como un conjunto de campos con un tipo, un nombre y un número que lo identifica. Por ejemplo, la lectura de un sensor ambiental podría definirse así:
+
+```proto
+syntax = "proto3";
+
+message Lectura {
+  float temperatura = 1;
+  float humedad     = 2;
+  uint32 bateria    = 3;
+}
+```
+
+A partir de este archivo, el compilador `protoc` genera el código fuente que permite construir, serializar y deserializar el mensaje en cada lenguaje de destino. De este modo, el `.proto` cumple a la vez la función de documentación y la de contrato explícito entre los equipos o servicios que intercambian los datos, y un mismo esquema produce implementaciones compatibles en todos los lenguajes soportados.
+
+=== Codificación binaria
+
+En la codificación binaria de Protobuf, cada campo se transmite precedido de una etiqueta (_tag_) que combina el número de campo definido en el esquema con un tipo de codificación (_wire type_), que indica cómo leer el valor a continuación, como un entero de longitud variable, un valor de 32 o de 64 bits de longitud fija, o un bloque precedido de su longitud, que se usa para cadenas, bytes y mensajes anidados @protobuf-encoding. Se trata, en esencia, de una codificación de tipo-longitud-valor (TLV), como la de BER.
+
+Los enteros se codifican como _varints_, en los que cada byte aporta siete bits del valor y utiliza el bit más significativo para indicar si el número continúa en el byte siguiente. Así, los valores pequeños, que son los más frecuentes, ocupan un solo byte. Por ejemplo, un campo número 1 con el valor 150 se codifica en tres bytes, `08 96 01`: el primero es la etiqueta y los dos restantes el valor @protobuf-encoding. Para los enteros con signo existe además la codificación _zigzag_, que intercala positivos y negativos para que los valores negativos pequeños también resulten cortos. El mensaje no incluye los nombres de los campos, que solo existen en el esquema, y en proto3 los campos que tienen su valor por defecto directamente no se transmiten @protobuf-proto3. Esta combinación es la que hace que un mensaje Protobuf pese varias veces menos que su equivalente en JSON y que se procese más rápido.
+
+=== Compatibilidad entre versiones
+
+Dado que los campos se identifican por número y no por posición ni por nombre, el esquema puede evolucionar sin romper a quienes usan versiones anteriores. Un programa que recibe un campo cuyo número no conoce simplemente lo ignora, de modo que los clientes viejos pueden leer mensajes nuevos (compatibilidad hacia adelante). En sentido inverso, un programa nuevo que lee un mensaje viejo encuentra los valores por defecto en los campos ausentes (compatibilidad hacia atrás). La condición para que esto funcione es no reutilizar números de campo, para lo cual el lenguaje ofrece la palabra clave `reserved`, que impide volver a asignar los números o nombres de campos eliminados @protobuf-proto3. Esta compatibilidad en ambos sentidos es la principal fortaleza de Protobuf frente a otros formatos binarios.
+
+=== Limitaciones
+
+Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En primer lugar, el formato no es legible por personas, por lo que la depuración requiere herramientas como `protoc --decode` o conversores a JSON. En segundo lugar, no es autodescriptivo: sin el esquema no es posible interpretar los datos, ya que el binario no indica qué mensaje contiene ni qué significa cada campo. En tercer lugar, la codificación no delimita los mensajes, por lo que el protocolo que los transporta debe indicar dónde termina cada uno. Por último, agrega al proyecto un paso de compilación y de generación de código, y resulta menos práctico que JSON para APIs públicas simples o para su uso directo desde navegadores, aunque para ese caso existen alternativas como gRPC-Web.
+
+== Stack MQTT y Protocol Buffers <sec-stack>
 
 // Cómo se combinan: Protobuf como payload de los mensajes MQTT, el esquema compartido entre clientes.
+// TODO(prometido en Marco teórico, @sec-mqtt) Retomar las propiedades Payload Format Indicator y Content Type de MQTT 5 como forma de declarar que el payload es un mensaje Protobuf (y de qué tipo).
 
 /*
 - MQTT trata el payload como bytes opacos: Protobuf entra ahí sin cambios.

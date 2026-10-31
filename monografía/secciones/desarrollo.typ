@@ -19,7 +19,9 @@
 // Handshake una sola vez al conectar. Comparación con HTTPS con handshake  una vez por conexión, con y sin conexión reusable.
 // Costo en bytes y tiempo.
 
-=== QoS MQTT sobre la confiabilidad de TCP
+=== QoS MQTT sobre la confiabilidad de TCP <sec-qos-tcp>
+
+// TODO(prometido en Marco teórico, @sec-mqtt) Analizar la relación entre los niveles de QoS y la confiabilidad que ya ofrece TCP.
 
 // TCP garantiza entrega ordenada dentro de una conexión, no que la aplicación procesó el mensaje. Si la conexión se cae, lo que estaba en tránsito se pierde.
 // Publisher -> broker -> siscriber son dos conexiones TCP distintas
