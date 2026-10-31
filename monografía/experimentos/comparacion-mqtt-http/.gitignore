@@ -18,6 +18,9 @@ backend/bin/
 *.key
 *.csr
 *.srl
+*.crt 
+*.pem 
+*.key
 infra/certs/server.ext
 
 # --- Datos ---
