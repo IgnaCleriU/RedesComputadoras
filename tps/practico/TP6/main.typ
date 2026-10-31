@@ -142,6 +142,100 @@ _Documentar con que grupo intercambiaron cables (pueden intercambiar más de una
 
 En esta parte armamos una LAN con dos computadoras de nuestro grupo, a las que llamamos PC A y PC B, conectadas a un switch Cisco Catalyst 2950 del laboratorio, verificamos la conectividad con `ping` y generamos tráfico UDP con `ncat`, que capturamos con Wireshark. Todo el material (fotos, capturas de pantalla y archivos `.pcapng`) está en la carpeta `Experimento/`.
 
+== Opcional
+
+=== Consigna 1
+
+_Utilizando internet y el datasheet del switch Cisco, documentar las características principales del mismo._
+
+El switch del laboratorio es un Cisco Catalyst 2950. El modelo fue extraido de el mensaje CDP (_Cisco Discovery Protocol_) enviado por el switch durante la captura de la Consigna 4 (`captura-udp-ncat.pcapng`):
+
+#figure(
+  image("Experimento/captura-udp-ncat-cisco-cdp.png"),
+  caption: [Trama CDP capturada por Wireshark. El switch anuncia su modelo, versión de IOS y puerto donde está conectada la PC B.],
+) <fig-cdp>
+
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    table.header([*Campo CDP*], [*Valor*]),
+    [Plataforma], [`cisco WS-C2950-24`],
+    [Software], [IOS `C2950-I6Q4L2-M`, versión 12.1(22)EA8a, compilada en 2006],
+    [Nombre (_Device ID_)], [`Switch`, el nombre de fábrica],
+    [IP de administración], [`192.168.1.2`],
+    [Puerto], [`FastEthernet0/1`, donde estaba conectada la PC B],
+    [VLAN nativa], [1],
+    [Dúplex], [Full],
+  ),
+  caption: [Contenido del anuncio CDP del switch.],
+) <tab-cdp>
+
+#figure(
+  image("Experimento/switch-puertos-conectados.jpg", width: 55%),
+  caption: [Frente del switch C2950-24: los 24 puertos RJ-45 en dos bloques de 12 y, a la izquierda, la conexión a la PCB en el puerto FastEthernet0/1.],
+) <fig-switch>
+
+Del datasheet @cisco2950ds, para el modelo WS-C2950-24:
+
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    table.header([*Característica*], [*Valor*]),
+    [Tipo], [Switch administrable, independiente y de configuración fija, de 1 RU de alto],
+    [Puertos],
+    [24 × 10/100 Mbps RJ-45, con detección automática de velocidad y autonegociación de dúplex. No tiene uplinks Gigabit (otros modelos de la serie, como el 2950SX-24 o el 2950T-48, sí)],
+
+    [Cableado], [10BASE-T: UTP categoría 3, 4 o 5. 100BASE-TX: UTP categoría 5],
+    [Consola], [RJ-45 de 8 pines, con cable RJ-45–DB9 para la PC],
+    [_Switching fabric_], [8,8 Gbps],
+    [Ancho de banda de reenvío], [4,8 Gbps],
+    [Tasa de reenvío], [3,6 Mpps (paquetes de 64 bytes)],
+    [Memoria], [16 MB de DRAM, 8 MB de Flash y 8 MB de buffer de paquetes compartido por todos los puertos],
+    [Tabla MAC], [Hasta 8000 direcciones],
+    [Alimentación],
+    [Fuente interna de 100–240 VAC, 47–63 Hz, 30 W máximo. Conector para la fuente redundante Cisco RPS 675],
+
+    [Dimensiones y peso], [4,36 × 44,45 × 24,18 cm, 3 kg],
+    [Ambiente], [0 a 45 °C en funcionamiento, humedad 10–85 % sin condensación],
+    [MTBF], [398 240 horas (unos 45 años)],
+    [Software], [_Standard Image_ (SI). No se puede actualizar a _Enhanced Image_],
+  ),
+  caption: [Especificaciones principales del Catalyst 2950-24.],
+) <tab-switch>
+
+Los números de rendimiento se explican como:
+
+- *Ancho de banda:* 24 puertos × 100 Mbps × 2 (full dúplex: transmite y recibe a la vez) = 4,8 Gbps.
+- *Tasa de reenvío:* la trama Ethernet más chica ocupa en el cable 64 bytes, más 8 de preámbulo y 12 de separación entre tramas: 84 bytes = 672 bits. A 100 Mbps entran 148 810 tramas por segundo en cada puerto, que por 24 puertos dan 3,57 Mpps. Es decir, el switch reenvía a velocidad de línea (_wire-speed_) en todos los puertos a la vez.
+- *_Fabric_:* el _switching fabric_ es el camino interno por el que el switch lleva cada trama del puerto de entrada al de salida, y su capacidad es el tráfico total que puede mover por dentro. En el 2950 es de memoria compartida, donde las tramas pasan por el buffer de 8 MB común a todos los puertos (@tab-switch). La capacidad del _switching fabric_ es de 8,8 Gbps, superando los 4,8 Gbps que pueden generar los puertos, por tanto no es un cuello de botella.
+
+Funciones principales del software:
+
+- *VLANs:* IEEE 802.1Q, VTP para propagar VLANs entre switches y DTP para negociar enlaces troncales. Un enlace troncal lleva tráfico de varias VLANs por la misma conexión, normalmente entre switches, con tramas etiquetadas.
+  - VTP (_VLAN Trunking Protocol_, de Cisco) distribuye la lista de VLANs por los troncales: se crean en un switch y el resto las aprende, en vez de configurarlas a mano en cada uno.
+  - DTP (_Dynamic Trunking Protocol_, de Cisco) negocia con el equipo del otro extremo si el enlace va a ser troncal o de acceso (una sola VLAN, sin etiquetas). Por eso se observaron tramas DTP enviadas del switch a las PCs (@tab-protocolos), que dado que éstas no las interpretan el puerto queda como de acceso.
+- *Spanning Tree:* Soporta los protocolos IEEE 802.1D, 802.1w (RSTP), 802.1s (MSTP) y PVST+, con las extensiones de Cisco PortFast, UplinkFast y BackboneFast. Se envían BPDUs cada 1 a 2 s, observadas en la captura. Spanning Tree evita los bucles cuando hay caminos redundantes entre switches, bloqueando los puertos que cerrarían un bucle y reactivándolos si se cae el camino principal. Los switches se coordinan intercambiando BPDUs (_Bridge Protocol Data Units_).
+- *Agregación de enlaces:* EtherChannel (PAgP) y LACP (IEEE 802.3ad) para sumar varios puertos en un enlace lógico. El enlace agrupado tiene la suma de los anchos de banda y, si se corta un cable, el tráfico sigue por los demás.
+  - PAgP (_Port Aggregation Protocol_, de Cisco) y LACP (_Link Aggregation Control Protocol_, estándar) negocian el grupo automáticamente con el otro extremo. LACP sirve también con equipos de otras marcas.
+- *QoS:* clasificación por CoS (IEEE 802.1p), 4 colas por puerto de salida, prioridad estricta y _Weighted Round Robin_. QoS (_Quality of Service_) permite priorizar un tipo de tráfico sobre otro, por ejemplo la voz sobre una descarga.
+  - CoS (_Class of Service_) es un valor de prioridad de 0 a 7 que viaja en la etiqueta 802.1Q de la trama. Si la trama no lo trae, el switch le asigna el CoS por defecto del puerto.
+  - Según su CoS, cada trama va a una de las 4 colas del puerto de salida. Con prioridad estricta, la cola más prioritaria se atiende siempre primero. Con _Weighted Round Robin_ las colas se atienden por turnos, cada una con un peso, para que las de baja prioridad no se queden sin salir nunca.
+- *Multicast:* IGMP _snooping_ (hasta IGMPv3), para mandar el tráfico multicast solo a los puertos que lo pidieron. Multicast es el envío de un mismo flujo a un grupo de receptores. Sin _snooping_ el switch lo inunda por todos los puertos, como un broadcast. Con _snooping_ escucha los mensajes IGMP con los que cada equipo se une a un grupo o lo abandona, y reenvía el flujo solo a esos puertos.
+- *Seguridad:* _port security_ por MAC, autenticación IEEE 802.1x con RADIUS o TACACS+, _private VLAN edge_ y _storm control_.
+  - _Port security_ limita qué direcciones MAC pueden usar un puerto. Si se conecta otro equipo, el puerto se bloquea.
+  - Con 802.1x el equipo tiene que autenticarse antes de que el puerto le deje pasar tráfico. El switch no guarda las credenciales sino que se las consulta a un servidor RADIUS o TACACS+.
+  - _Private VLAN edge_ aísla entre sí puertos del mismo switch: solo pueden hablar con el puerto de subida, no entre ellos.
+  - _Storm control_ limita el broadcast, multicast y unicast de cada puerto, para que un equipo que funciona mal no sature la red.
+- *Administración:* CLI por consola, Telnet y SNMP v1/v2/v3, interfaz web embebida (_Cisco Device Manager_), RMON, SPAN (copia del tráfico de un puerto a otro para analizarlo), CDP, NTP y TFTP para actualizar el IOS.
+  - SNMP (_Simple Network Management Protocol_) permite que una estación de gestión lea y modifique parámetros del switch, como contadores de tráfico o el estado de los puertos.
+  - RMON (_Remote Monitoring_) hace que el propio switch guarde estadísticas, historial y alarmas de tráfico, sin depender de una estación que lo consulte todo el tiempo.
+  - CDP (_Cisco Discovery Protocol_) anuncia a los equipos vecinos el modelo, el IOS y la IP del switch (@tab-cdp).
+  - NTP (_Network Time Protocol_) sincroniza el reloj del switch, para que los registros tengan la hora correcta.
+  - TFTP (_Trivial File Transfer Protocol_) es una transferencia de archivos simple, sin autenticación, que se usa para cargar el IOS o copias de la configuración.
+- *LEDs:* por puerto (enlace, actividad, velocidad y dúplex) y de sistema (SYST, RPS y utilización).
+
 == Levantar y testear una LAN
 
 === Consigna 1
