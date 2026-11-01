@@ -23,6 +23,10 @@ concretos.
 
 === Casos de uso y mapeo tecnológico
 
+// TODO(casos de uso) Actualizar con la selección definitiva de casos (Messenger, InOrbit y OpenRobOps con VDA 5050 e ISO 21423,
+// Sparkplug, Meshtastic y ChirpStack).
+// TODO(mapeo tecnológico) Separar casos de uso y mapeo tecnológico, y aclarar que el mapeo parte del escenario del experimento 1.
+
 Los casos de uso se toman de fuentes públicas, entre ellas la mensajería de Facebook Messenger y las plataformas de robótica de InOrbit y OpenRobOps,
 y se analizan a partir de la información que publican las propias empresas, sin acceso a sus implementaciones internas. Además, el trabajo incluye un
 mapeo tecnológico con los equipos reales con los que se implementaría el sistema estudiado: dispositivos de borde, el broker (en un servidor propio
