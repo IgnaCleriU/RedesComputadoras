@@ -21,17 +21,13 @@ interno se toma OSPF como protocolo principal y se usan RIP y EIGRP como compara
 se analizan en cuanto a su convergencia y su efecto sobre las conexiones TCP de larga duración, y no en cuanto a su configuración en equipos
 concretos.
 
-=== Casos de uso y mapeo tecnológico
+=== Casos de uso
 
-// TODO(casos de uso) Actualizar con la selección definitiva de casos (Messenger, InOrbit y OpenRobOps con VDA 5050 e ISO 21423,
-// Sparkplug, Meshtastic y ChirpStack).
-// TODO(mapeo tecnológico) Separar casos de uso y mapeo tecnológico, y aclarar que el mapeo parte del escenario del experimento 1.
+Los casos de uso abarcan la mensajería (Facebook Messenger), la robótica móvil (InOrbit, OpenRobOps y los estándares VDA 5050 e ISO 21423), la automatización industrial (Eclipse Sparkplug) y las redes de radio LoRa (Meshtastic y ChirpStack). Se analizan a partir de la documentación, las especificaciones y el código fuente que publican sus responsables, con foco en cómo emplean MQTT y Protocol Buffers y no en los detalles de cada dominio. Las redes LoRa, excluidas de la parte experimental, se consideran únicamente en este análisis, en el punto en que sus datos ingresan a una red IP.
 
-Los casos de uso se toman de fuentes públicas, entre ellas la mensajería de Facebook Messenger y las plataformas de robótica de InOrbit y OpenRobOps,
-y se analizan a partir de la información que publican las propias empresas, sin acceso a sus implementaciones internas. Además, el trabajo incluye un
-mapeo tecnológico con los equipos reales con los que se implementaría el sistema estudiado: dispositivos de borde, el broker (en un servidor propio
-o como servicio administrado) y la conectividad. Para cada uno se indica el modelo, el proveedor y un precio de referencia con su fecha y moneda.
-El objetivo es estimar la viabilidad de una solución considerando la calidad técnica, el plazo y el presupuesto, y no proponer la alternativa de máxima prestación.
+=== Mapeo tecnológico
+
+El trabajo incluye además un mapeo tecnológico, desarrollado en la @sec-mapeo-tecnologico, con los equipos reales con los que se implementaría el escenario de telemetría del primer experimento (@sec-exp-mqtt-https) en lugar de los equipos emulados. Se relevan los dispositivos de borde, el broker, ya sea en un servidor propio o como servicio administrado, y la conectividad, y para cada uno se indica el modelo, el proveedor y un precio de referencia con su fecha y moneda. El objetivo es estimar la viabilidad de una solución considerando la calidad técnica, el plazo y el presupuesto, y no proponer la alternativa de máxima prestación.
 
 === Parte experimental
 
