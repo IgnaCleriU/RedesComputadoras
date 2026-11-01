@@ -81,6 +81,9 @@ verificación de conexiones de red.*],
       it.element.numbering,
       ..counter(math.equation).at(it.element.location()),
     ))
+  } else if it.element != none and it.element.func() == heading and it.element.numbering == none {
+    // Los títulos no tienen número: la referencia muestra el texto del título
+    link(it.element.location(), it.element.body)
   } else {
     // Otras referencias quedan igual
     it
@@ -235,6 +238,121 @@ Funciones principales del software:
   - NTP (_Network Time Protocol_) sincroniza el reloj del switch, para que los registros tengan la hora correcta.
   - TFTP (_Trivial File Transfer Protocol_) es una transferencia de archivos simple, sin autenticación, que se usa para cargar el IOS o copias de la configuración.
 - *LEDs:* por puerto (enlace, actividad, velocidad y dúplex) y de sistema (SYST, RPS y utilización).
+
+=== Consigna 2
+
+_Elaborar checklists (manuales, indicaciones) de procedimientos para las siguientes actividades:_
+
+==== Acceso a la consola del switch <sec-acceso-consola>
+
+_Conectar una PC al puerto de consola del switch Cisco a 9600 baudios utilizando PUTTY. Turnense para verificar el acceso a la consola del Switch._
+
+El puerto de consola es una interfaz serie RS-232 que da acceso a la CLI del switch sin pasar por la red (administración _fuera de banda_). Funciona aunque el switch no tenga IP o no esté configurado.
+
+*Materiales*
+
++ Cable de consola de Cisco (_rollover_, celeste): RJ-45 en un extremo y DB9 hembra en el otro.
++ Adaptador USB-serie RS-232, porque las notebooks no tienen puerto DB9.
++ Una PC con PuTTY instalado.
+
+*Conexión física*
+
++ Encender el switch y esperar a que termine de iniciar (LED SYST en verde, cerca de un minuto).
++ Conectar el RJ-45 del cable en el puerto `CONSOLE`, en la parte trasera del switch. El conector es igual al de los puertos Ethernet del frente.
++ Conectar el DB9 al adaptador USB-serie y el adaptador a la PC.
++ Identificar el puerto serie del adaptador:
+  - Windows: Administrador de dispositivos → Puertos (COM y LPT), por ejemplo `COM3`.
+  - Linux: `sudo dmesg | grep tty`, por ejemplo `/dev/ttyUSB0`. El usuario tiene que estar en el grupo `dialout` (Debian/Ubuntu) o `uucp` (Arch) para poder abrirlo.
+
+*Configuración de PuTTY*
+
++ En _Session_, elegir _Connection type: Serial_.
++ En _Serial line_, poner el puerto del paso anterior (`COM3` o `/dev/ttyUSB0`).
++ En _Speed_, poner `9600`.
++ En _Connection → Serial_, verificar 8 _data bits_, 1 _stop bit_, _parity: None_ y _flow control: None_. Es la configuración "9600 8N1" que espera la consola del switch.
++ Presionar _Open_.
+
+*Verificación*
+
++ Presionar Enter. Tiene que aparecer el prompt `Switch>` (modo usuario).
++ Si el switch no tiene configuración, pregunta `Would you like to enter the initial configuration dialog? [yes/no]:`. Responder `no`.
++ Probar un comando de solo lectura, por ejemplo `show version`: debe mostrar el modelo `WS-C2950-24` y la versión del IOS.
++ Salir con `exit`, cerrar PuTTY y pasar el cable al siguiente.
+
+==== Acceso a la administración y levantamiento de interfaces
+
+_Acceder a las opciones de administración del switch y levantar varias interfaces para usar en el laboratorio._
+
+La CLI del IOS tiene modos jerárquicos, y cada uno se reconoce por el prompt:
+
+#figure(
+  table(
+    columns: 4,
+    align: (left, left, left, left),
+    table.header([*Modo*], [*Prompt*], [*Acceso*], [*Uso*]),
+    [Usuario], [`Switch>`], [Al conectarse], [`show` básicos y `ping`],
+    [Privilegiado], [`Switch#`], [`enable`], [Ver toda la configuración, guardarla, reiniciar],
+    [Configuración global], [`Switch(config)#`], [`configure terminal`], [Cambios que afectan a todo el switch],
+    [Configuración de interfaz], [`Switch(config-if)#`], [`interface ...`], [Cambios en uno o varios puertos],
+  ),
+  caption: [Modos de la CLI del IOS.],
+) <tab-modos>
+
+*Entrar a la administración*
+
++ Conectarse por consola (@sec-acceso-consola).
++ Ejecutar `enable`. Ingresar la contraseña de ser necesario.
++ Revisar el estado actual con `show version` y `show running-config`.
++ Ver los puertos con `show interfaces status`. Cada uno aparece como `connected` (enlace arriba), `notconnect` (sin cable o con el otro extremo apagado), `disabled` (apagado a mano con `shutdown`) o `err-disabled` (bloqueado por un error, por ejemplo de _port security_).
+
+*Levantar las interfaces*
+
+Por ejemplo, los puertos 1 a 8:
+
+```
+Switch# configure terminal
+Switch(config)# interface range fastEthernet 0/1 - 8
+Switch(config-if-range)# description Lab - PCs
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport nonegotiate
+Switch(config-if-range)# switchport access vlan 1
+Switch(config-if-range)# speed auto
+Switch(config-if-range)# duplex auto
+Switch(config-if-range)# spanning-tree portfast
+Switch(config-if-range)# no shutdown
+Switch(config-if-range)# end
+```
+
+- `interface range fastEthernet 0/1 - 8`: aplica la misma configuración a varios puertos a la vez. En este IOS los espacios alrededor del guion son obligatorios.
+- `description`: una etiqueta que aparece en `show interfaces status`.
+- `switchport mode access` y `switchport nonegotiate`: el puerto queda fijo como puerto de acceso de una sola VLAN y no negocia troncales. De fábrica el 2950 está en modo `dynamic desirable` y envía DTP cada 30 s, como se muestra en la @tab-protocolos.
+- `switchport access vlan 1`: todos los puertos en la misma VLAN (la 1, la nativa según el CDP), para que las PCs se vean entre sí.
+- `speed auto` y `duplex auto`: autonegociación. Valores por defecto, que se pueden dejar explícitos.
+- `spanning-tree portfast`: el puerto pasa directo a reenviar tráfico al conectar un equipo. Si configurar esto, STP lo tiene unos 30 s en los estados _listening_ y _learning_ (LED amarillo) antes de transmitir tramas. Solo se usa en puertos con PCs, ya que en en un puerto hacia otro switch desactivar STP puede formar bucles.
+- `no shutdown`: lo que efectivamente levanta la interfaz.
+
+*Verificar*
+
++ `show interfaces status`: los puertos con una PC conectada deben figurar `connected`, `a-full` y `a-100` (autonegociados a full dúplex y 100 Mbps).
++ Los LEDs de esos puertos tienen que estar en verde.
++ `show mac address-table`: debe aparecer la MAC de cada PC en su puerto, por ejemplo `00e0.4c68.0e87` (la PC B) en `Fa0/1`.
++ `ping` entre las PCs, como en la Consigna 2.
+
+*IP de administración (opcional)*
+
+Para administrar el switch por Telnet o por la web, sin consola, hay que darle una IP en la interfaz virtual de la VLAN 1:
+
+```
+Switch(config)# interface vlan 1
+Switch(config-if)# ip address 192.168.1.2 255.255.255.0
+Switch(config-if)# no shutdown
+```
+
+El switch del laboratorio ya tenía la `192.168.1.2` (@tab-cdp). Está en otra subred que las PCs del grupo (`192.168.10.0/24`), por lo que no se pudo acceder a la administración por la red, solo por consola.
+
+*Guardar cambios*
+
++ Los cambios quedan en la `running-config` (en RAM) y se pierden al reiniciar. Para que persistan: `copy running-config startup-config`.
 
 == Levantar y testear una LAN
 
