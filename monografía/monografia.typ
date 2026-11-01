@@ -195,6 +195,7 @@
 #include "secciones/marco-teorico.typ"
 #include "secciones/desarrollo.typ"
 #include "secciones/experimentos.typ"
+#include "secciones/mapeo-tecnologico.typ"
 #include "secciones/conclusion.typ"
 
 // ---------------------------------------------------------------------------

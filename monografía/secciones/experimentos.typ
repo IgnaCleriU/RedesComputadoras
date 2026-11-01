@@ -5,7 +5,7 @@
 === Plataforma común
 
 // Placas ESP32 emuladas con QEMU, broker Mosquitto y backend; restricciones de la emulación.
-// TODO(mapeo tecnológico) Indicar qué hardware real reemplazaría a lo emulado (modelo de placa, dónde se compra y precio) (pedido del profesor, mail del 27/10). Ver nota en desarrollo.typ.
+// TODO(mapeo tecnológico) El hardware real que reemplazaría a lo emulado se releva en @sec-mapeo-tecnologico; referenciarla acá.
 
 === Experimento 1: MQTT contra HTTPS para telemetría <sec-exp-mqtt-https>
 
