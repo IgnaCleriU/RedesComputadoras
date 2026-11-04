@@ -1,0 +1,42 @@
+# Opciones del proyecto que cambian respecto de los valores por defecto de ESP-IDF.
+# idf.py las aplica al generar sdkconfig. La aceleración por hardware de mbedTLS
+# (AES, SHA, MPI) queda activada por defecto.
+CONFIG_IDF_TARGET="esp32"
+
+# Flash de 4 MB y tabla de particiones propia (con la partición cfg)
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# Red: Ethernet "open_eth" que emula QEMU (no hay WiFi en QEMU)
+CONFIG_ETH_ENABLED=y
+CONFIG_ETH_USE_OPENETH=y
+CONFIG_ETH_OPENETH_DMA_RX_BUFFER_NUM=8
+CONFIG_ETH_OPENETH_DMA_TX_BUFFER_NUM=4
+
+# Reloj: re-sincronización SNTP cada 15 s (mínimo permitido)
+CONFIG_LWIP_SNTP_UPDATE_DELAY=15000
+
+# TLS: 1.2, igual que los servidores, sin tickets ni reanudación de sesión: cada
+# conexión paga el handshake completo, igual en los dos caminos. Buffers fijos.
+CONFIG_MBEDTLS_SSL_PROTO_TLS1_3=n
+CONFIG_MBEDTLS_CLIENT_SSL_SESSION_TICKETS=n
+CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS=n
+CONFIG_MBEDTLS_DYNAMIC_BUFFER=n
+
+# MQTT 3.1.1
+CONFIG_MQTT_PROTOCOL_311=y
+CONFIG_MQTT_PROTOCOL_5=n
+
+# Tick de 1 ms: temporización precisa para períodos de 100 ms
+CONFIG_FREERTOS_HZ=1000
+
+# Consola: solo avisos del sistema, nuestras líneas van por printf
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+# Pila de app_main más grande: es el emisor y hace los envíos con TLS
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+# Sin watchdog de tareas: un handshake TLS emulado de varios segundos lo dispararía
+CONFIG_ESP_TASK_WDT_EN=n
+
+# Solo IPv4: evita tráfico IPv6 (MLD, RS) en la captura y errores de filtro multicast en open_eth
+CONFIG_LWIP_IPV6=n

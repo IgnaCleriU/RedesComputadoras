@@ -11,6 +11,8 @@
 | [TP3 — Práctico](tps/practico/TP3/InformeTP3.pdf)     | [RC - TP N3.pdf](<tps/practico/TP3/RC - TP N3.pdf>) |
 | [TP4 — Práctico](tps/practico/TP4/InformeTP4.md)      | [RC - TP N4.pdf](<tps/practico/TP4/RC - TP N4.pdf>) |
 | [TP5 — Práctico](tps/practico/TP5/InformeTP5.md)      | [RC - TP N5.pdf](<tps/practico/TP5/RC - TP N5.pdf>) |
+| [TP6 — Práctico](tps/practico/TP6/main.pdf)           | [RC - TP N6.pdf](<tps/practico/TP6/Consigna/RC - TP N6.pdf>) |
+| [TP7 — Práctico](tps/practico/TP7/InformeTP7.md)      | [RC - TP N7.pdf](<tps/practico/TP7/RC - TP N7.pdf>) |
 | [Tarea 2 — Teórico](tps/tp-teorico/tarea2/tarea2.pdf) | [Tarea02.pdf](tps/tp-teorico/tarea2/Tarea02.pdf)    |
 | [Tarea 3 — Teórico](tps/tp-teorico/tarea3/main.pdf)   | —                                                   |
 | [Tarea 4 — Teórico](tps/tp-teorico/tarea4/main.pdf)   | —                                                   |

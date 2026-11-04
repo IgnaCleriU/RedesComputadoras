@@ -145,6 +145,18 @@
 // Títulos: los capítulos (nivel 1) van sin número y cada uno arranca en página nueva.
 // Desde el nivel 2 se numera: `==` -> 1., 2., ...; `===` -> 1.1., 1.2., ...
 #set heading(numbering: (..n) => if n.pos().len() > 1 { numbering("1.1.", ..n.pos().slice(1)) })
+
+// Referencias a secciones: "Sección 1.3" en lugar de "Sección 1.3.", ya que la numeración de los
+// títulos termina en punto. Las referencias a figuras, tablas y ecuaciones no cambian.
+#show ref: it => {
+  let el = it.element
+  if el != none and el.func() == heading and el.numbering != none {
+    let nums = counter(heading).at(el.location()).slice(1)
+    link(el.location(), [#el.supplement~#numbering("1.1", ..nums)])
+  } else {
+    it
+  }
+}
 #show heading.where(level: 1): it => {
   pagebreak(weak: true)
   it
