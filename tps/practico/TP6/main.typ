@@ -185,19 +185,8 @@ Un cable *derecho* (_straight-through_) tiene los dos extremos armados con la mi
 
 _Construir 1 (un) cable por grupo, de 1 - 1.5 m. aproximadamente. Tipo DERECHO, NO CRUZADO._
 
-Armamos un cable derecho con la norma T568A en los dos extremos (lo verificamos en la Consigna 3). El primer conector salió mal, así que lo cortamos y lo volvimos a crimpar (@fig-rj45-mal).
+Armamos un cable derecho con la norma T568A en los dos extremos (lo verificamos en la Consigna 3). El primer conector salió mal, así que lo cortamos y lo volvimos a crimpar.
 
-== Consigna 3
-
-_VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
-
-Intercambiamos cables con otro grupo (Consigna 4), que revisó el nuestro. Las fotos de esta sección son de nuestro cable.
-
-=== Punto a)
-
-_Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
-
-Revisamos el conector final del cable y el primer intento, que descartamos.
 
 #figure(
   grid(
@@ -214,44 +203,27 @@ Revisamos el conector final del cable y el primer intento, que descartamos.
   caption: [Vista lateral del conector final, con los contactos hacia la cámara y el cable a la derecha. El pin 1 queda abajo y el 8 arriba.],
 ) <fig-rj45-lateral>
 
+
+== Consigna 3
+
+#highlight[COMPLETAR: No se que grupo es con quien cambiamos y no tengo fotos de el otro cable]
+
+_VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
+
+=== Punto a)
+
+_Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
+
 *Lo que está bien en el conector final*
-
-- Norma T568A completa: 
-- Conductores rectos: los 8 van paralelos, cada uno en su canal, sin cruzarse adentro del conector.
-- Contactos parejos: los 8 contactos dorados quedaron a la misma altura (@fig-rj45-frente), señal de que la pinza los bajó a todos por igual. Un contacto más alto que los demás puede no perforar el aislante y dejar ese hilo abierto.
-- Conductores bajo los contactos, las puntas de color se ven detrás de los contactos en las vistas frontales y por debajo de ellos en la lateral.
-- La vaina negra entra en el conector y queda debajo de la cuña.
-- Poco destrenzado: el tramo sin vaina, desde el borde de la vaina hasta los contactos.
-
-
-#figure(
-  recorte("Experimento/conector-rj45-mal-crimpeado-anterior.jpg", (868, 1156), 300, 450, 300, 470, 8cm),
-  caption: [Primer conector que armamos, descartado: la vaina quedó afuera y los conductores no llegan al frente.],
-) <fig-rj45-mal>
-
-*El primer intento* (@fig-rj45-mal) tenía varios defectos, por lo que lo cortamos y lo volvimos a armar:
-
-- La Vaina quedo por fuera del contector, y salen los cables sueltos
-- Las puntas terminan a alturas distintas y la mayoría queda lejos del frente. Un conductor que no llega hasta debajo de su contacto queda abierto o hace contacto intermitente.
-- Con la vaina afuera, los pares van destrenzados en todo el largo del conector y más allá, muy por encima de los 13 mm. Eso aumenta la diafonía entre pares.
-- Conductores cruzados a la salida del conector, el naranja se cruza por encima de un blanco.
-
-En el conector final (@fig-rj45-lateral) se corrigieron los tres primeros puntos.
 
 === Punto b)
 
 _Verificación eléctrica utilizando un tester para cables ethernet._
 
-Probamos el cable con el tester de cables Ethernet y los 8 hilos dieron bien.
-
 
 == Consigna 4
 
 _Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación._
-
-Intercambiamos cables con el grupo #highlight[COMPLETAR: nombre del grupo].
-
-Las fotos que evidencian la verificación son las del punto a) (@fig-rj45-frente, @fig-rj45-lateral y @fig-rj45-mal). No sacamos fotos del tester durante la prueba.
 
 
 #pagebreak();
