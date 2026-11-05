@@ -117,6 +117,19 @@ verificación de conexiones de red.*],
   spacing: 1.2em,
 )
 
+// Muestra solo una parte de una foto. `tam-img` es el tamaño de la foto en píxeles
+// (ancho, alto); `x`, `y`, `ancho` y `alto` delimitan el recorte, también en píxeles;
+// `altura` es el alto con el que se dibuja el recorte.
+#let recorte(ruta, tam-img, x, y, ancho, alto, altura) = {
+  let s = altura / alto
+  box(clip: true, width: ancho * s, height: altura, place(
+    top + left,
+    dx: -x * s,
+    dy: -y * s,
+    image(ruta, width: tam-img.at(0) * s, height: tam-img.at(1) * s),
+  ))
+}
+
 #pagebreak()
 
 
@@ -126,17 +139,119 @@ verificación de conexiones de red.*],
 
 _Investigar los pasos para crimpar un cable bajo la norma T568A/B DERECHO. No cruzado._
 
+Un cable *derecho* (_straight-through_) tiene los dos extremos armados con la misma norma, T568A en ambos o T568B en ambos, de modo que cada pin de un conector queda unido al mismo pin del otro (1 con 1, 2 con 2, …, 8 con 8). Es el cable que se usa entre una PC y un switch. Si un extremo es T568A y el otro T568B, el cable es *cruzado*.
+
+#figure(
+  table(
+    columns: 4,
+    align: center + horizon,
+    table.header([*Pin*], [*T568A*], [*T568B*], [*Uso en 10/100BASE-TX*]),
+    [1], [Blanco-verde], [Blanco-naranja], [Transmite (+)],
+    [2], [Verde], [Naranja], [Transmite (−)],
+    [3], [Blanco-naranja], [Blanco-verde], [Recibe (+)],
+    [4], [Azul], [Azul], [—],
+    [5], [Blanco-azul], [Blanco-azul], [—],
+    [6], [Naranja], [Verde], [Recibe (−)],
+    [7], [Blanco-marrón], [Blanco-marrón], [—],
+    [8], [Marrón], [Marrón], [—],
+  ),
+  caption: [Orden de colores de las dos normas y uso de cada pin del lado de la PC. 1000BASE-T usa los cuatro pares.],
+) <tab-t568>
+
+- Las dos normas solo intercambian el par naranja con el verde. Para un cable derecho da lo mismo cuál se use, siempre que los dos extremos tengan la misma.
+- Los pines 3 y 6 forman un par aunque no estén juntos, por eso el orden no va par por par. Hay que respetar los colores, si los dos hilos de un par quedan en pines que no se corresponden, se pierde el efecto del trenzado, que es cancelar la interferencia entre pares (diafonía). Ese cable puede pasar el tester y aun así andar mal.
+
+*Materiales*
+
++ Cable UTP Cat5/Cat5e (4 pares trenzados, 24 AWG).
++ Dos conectores RJ45 (8P8C) aptos para la categoría y para el tipo de conductor (macizo o multifilar).
++ Pinza crimpeadora para RJ45, que suele traer cuchilla para cortar y pelar.
++ Tester de cables Ethernet.
+
+*Pasos*
+
++ Cortar el cable al largo deseado (en el TP, 1 a 1,5 m) con un corte recto.
++ Pelar unos 2,5 a 3 cm de la vaina exterior sin cortar el aislante de los conductores. Si el cable tiene hilo de nylon hay que cortarlo.
++ Destrenzar los pares solo lo necesario y enderezar los conductores.
++ Ordenarlos según la norma (@tab-t568), mirando el conector con la traba hacia abajo y los contactos hacia uno, el pin 1 queda a la izquierda.
++ Alinear los 8 conductores planos y paralelos, y cortarlos rectos a unos 13 mm (aproximadamente) del borde de la vaina. Así la vaina entra en el conector y el tramo destrenzado no supera los 13 mm que admite la norma TIA-568 para Cat5e.
++ Insertarlos en el conector sin que cambien de orden, empujando hasta que los 8 toquen la pared del frente. La vaina tiene que quedar adentro del conector, debajo de la cuña de sujeción.
++ Revisar a través del plástico el orden de colores, que todos lleguen al frente y que la vaina esté adentro.
++ Meter el conector en la crimpeadora y apretar a fondo. La pinza baja los 8 contactos, que perforan el aislante y tocan el cobre, y baja la cuña que traba la vaina.
++ Repetir en el otro extremo *con la misma norma*.
++ Verificar con el tester (Consigna 3).
+
+== Consigna 2
+
+_Construir 1 (un) cable por grupo, de 1 - 1.5 m. aproximadamente. Tipo DERECHO, NO CRUZADO._
+
+Armamos un cable derecho con la norma T568A en los dos extremos (lo verificamos en la Consigna 3). El primer conector salió mal, así que lo cortamos y lo volvimos a crimpar (@fig-rj45-mal).
+
 == Consigna 3
 
 _VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
 
-== Punto a)
+Intercambiamos cables con otro grupo (Consigna 4), que revisó el nuestro. Las fotos de esta sección son de nuestro cable.
+
+=== Punto a)
 
 _Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
+
+Revisamos el conector final del cable y el primer intento, que descartamos.
+
+#figure(
+  grid(
+    columns: 2,
+    gutter: 8pt,
+    recorte("Experimento/conector-rj45-superior-1.jpg", (868, 1156), 200, 370, 300, 280, 6cm),
+    recorte("Experimento/conector-rj45-superior-2.jpg", (868, 1156), 290, 370, 260, 280, 6cm),
+  ),
+  caption: [Vistas frontales del conector final: los 8 contactos a la misma altura y, detrás, las puntas de los conductores.],
+) <fig-rj45-frente>
+
+#figure(
+  recorte("Experimento/conector-rj45-superior-3.jpg", (1156, 868), 400, 220, 480, 280, 6cm),
+  caption: [Vista lateral del conector final, con los contactos hacia la cámara y el cable a la derecha. El pin 1 queda abajo y el 8 arriba.],
+) <fig-rj45-lateral>
+
+*Lo que está bien en el conector final*
+
+- Norma T568A completa: 
+- Conductores rectos: los 8 van paralelos, cada uno en su canal, sin cruzarse adentro del conector.
+- Contactos parejos: los 8 contactos dorados quedaron a la misma altura (@fig-rj45-frente), señal de que la pinza los bajó a todos por igual. Un contacto más alto que los demás puede no perforar el aislante y dejar ese hilo abierto.
+- Conductores bajo los contactos, las puntas de color se ven detrás de los contactos en las vistas frontales y por debajo de ellos en la lateral.
+- La vaina negra entra en el conector y queda debajo de la cuña.
+- Poco destrenzado: el tramo sin vaina, desde el borde de la vaina hasta los contactos.
+
+
+#figure(
+  recorte("Experimento/conector-rj45-mal-crimpeado-anterior.jpg", (868, 1156), 300, 450, 300, 470, 8cm),
+  caption: [Primer conector que armamos, descartado: la vaina quedó afuera y los conductores no llegan al frente.],
+) <fig-rj45-mal>
+
+*El primer intento* (@fig-rj45-mal) tenía varios defectos, por lo que lo cortamos y lo volvimos a armar:
+
+- La Vaina quedo por fuera del contector, y salen los cables sueltos
+- Las puntas terminan a alturas distintas y la mayoría queda lejos del frente. Un conductor que no llega hasta debajo de su contacto queda abierto o hace contacto intermitente.
+- Con la vaina afuera, los pares van destrenzados en todo el largo del conector y más allá, muy por encima de los 13 mm. Eso aumenta la diafonía entre pares.
+- Conductores cruzados a la salida del conector, el naranja se cruza por encima de un blanco.
+
+En el conector final (@fig-rj45-lateral) se corrigieron los tres primeros puntos.
+
+=== Punto b)
+
+_Verificación eléctrica utilizando un tester para cables ethernet._
+
+Probamos el cable con el tester de cables Ethernet y los 8 hilos dieron bien.
+
 
 == Consigna 4
 
 _Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación._
+
+Intercambiamos cables con el grupo #highlight[COMPLETAR: nombre del grupo].
+
+Las fotos que evidencian la verificación son las del punto a) (@fig-rj45-frente, @fig-rj45-lateral y @fig-rj45-mal). No sacamos fotos del tester durante la prueba.
 
 
 #pagebreak();
@@ -535,7 +650,7 @@ No. En toda la captura la PC B no le envía a la PC A ningún paquete IP: lo ún
 
 _¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?_
 
-El datagrama sale igual, porque el emisor no pregunta antes si hay alguien escuchando (punto a). UDP no se entera de que el receptor no está, pero el sistema operativo de la máquina destino sí: si llega un datagrama a un puerto donde no escucha ningún programa, lo descarta y le devuelve al emisor un ICMP _Destination Unreachable_ con código 3 (_Port Unreachable_) @rfc1122. En la captura de la Consigna 4 no hay ningún ICMP ya que todos los datagramas llegaron al receptor mientras este estaba escuchando
+El datagrama sale igual, porque el emisor no pregunta antes si hay alguien escuchando (punto a). UDP no se entera de que el receptor no está, pero el sistema operativo de la máquina destino si, si llega un datagrama a un puerto donde no escucha ningún programa, este lo descarta y le devuelve al emisor un ICMP _Destination Unreachable_ con código 3 (_Port Unreachable_) @rfc1122. En la captura de la Consigna 4 no hay ningún ICMP ya que todos los datagramas llegaron al receptor mientras este estaba escuchando
 
 
 ```
