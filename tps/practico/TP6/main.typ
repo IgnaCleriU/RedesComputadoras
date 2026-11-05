@@ -62,7 +62,7 @@
 
   titulo: [Taller de armado y verificación de cables Cat5/Cat5e bajo estándar T568A/B],
   resumen: [*_Objetivo_ --- Tomar contacto con elementos de la capa física y ganar experiencia en armado y
-verificación de conexiones de red.*],
+  verificación de conexiones de red.*],
 
   fecha: datetime.today().display("[year]-[month]-[day]"),
 )
@@ -206,25 +206,59 @@ Armamos un cable derecho con la norma T568A en los dos extremos (lo verificamos 
 
 == Consigna 3
 
-#highlight[COMPLETAR: No se que grupo es con quien cambiamos y no tengo fotos de el otro cable]
-
 _VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
+
+Intercambiamos cables con el grupo *WAN-direction* y verificamos el suyo. Las fotos de esta sección son de ese cable.
 
 === Punto a)
 
 _Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
 
-*Lo que está bien en el conector final*
+#figure(
+  grid(
+    columns: 1,
+    gutter: 6pt,
+    recorte("Experimento/conectores-cable-otro-grupo.jpg", (964, 1280), 400, 440, 380, 180, 3.5cm),
+    recorte("Experimento/conectores-cable-otro-grupo.jpg", (964, 1280), 380, 920, 400, 180, 3.5cm),
+  ),
+  caption: [Los dos extremos del cable del otro grupo, con el cable a la izquierda. En los dos, el pin 1 queda abajo y el 8 arriba.],
+) <fig-otro-conectores>
+
+En la punta de los dos conectores (@fig-otro-conectores), de arriba hacia abajo y con la misma separación entre ellos, se ven el marrón, el verde, el azul y el naranja. Son los pines 8, 6, 4 y 2 de la norma T568B (@tab-t568). Los blancos de cada par van en los pines intermedios y en la foto casi no se distinguen.
+
+*Lo que está bien*
+
+- Misma norma en los dos extremos, los dos conectores tienen el mismo orden de colores, así que es un cable derecho. Usaron una norma distinta a la nuestra, pero es un cable derecho asi que da lo mismo.
+- Los conductores llegan hasta el frente del conector, donde están los contactos, al menos hasta donde deja ver la resolución de la foto.
+
+*Lo que está mal*
+
+- La vaina no entra en ninguno de los dos conectores, termina unos milímetros antes de la parte trasera y entre la vaina negra y el plástico quedan los conductores al aire. La cuña de sujeción, que al crimpar tendría que apretar la vaina, aprieta los conductores sueltos.
+- Como la vaina queda afuera los pares van destrenzados desde antes del conector hasta los contactos.
+- Hay conductores cruzados adentro del conector en el extremo de abajo
+
+En estas fotos no se ven los contactos, así que no pudimos revisar si bajaron todos a la misma altura.
 
 === Punto b)
 
 _Verificación eléctrica utilizando un tester para cables ethernet._
 
+#figure(
+  recorte("Experimento/tester-cable-otro-grupo.jpg", (964, 1280), 185, 600, 530, 640, 8cm),
+  caption: [Tester NSHL468 con el cable del otro grupo: unidad principal (_master_) a la izquierda y remota a la derecha. En este paso se enciende el LED 4 de las dos.],
+) <fig-tester>
+
+Usamos un tester de cables NSHL468 (@fig-tester). Tiene dos partes que van una en cada extremo del cable: la principal, que manda la señal, y la remota. El tester recorre los pines de a uno y en cada paso enciende, en la principal, el LED del pin que prueba y, en la remota, el del pin al que llega ese hilo
+
+El LED G no se enciende en ningún paso porque el cable es UTP, sin malla.
+
+En la foto se ve que el pin 4 anda bien el tester, el tester solo probó que cada pin llegue al que le corresponde. No detecta el destrenzado ni la vaina afuera del punto a), que afectan la diafonía y la resistencia mecánica del cable, así que un cable puede pasar esta prueba y aun así andar mal.
 
 == Consigna 4
 
 _Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación._
 
+Mas arriba se adjuntaron imagenes del cable del grupo *WAN-direction*
 
 #pagebreak();
 
@@ -501,8 +535,7 @@ Conectamos las dos notebooks al switch con cables UTP (@fig-montaje). Ninguna de
   grid(
     columns: 2,
     gutter: 8pt,
-    image("Experimento/montaje-switch-notebooks.jpg"),
-    image("Experimento/adaptador-usb-ethernet.jpg"),
+    image("Experimento/montaje-switch-notebooks.jpg"), image("Experimento/adaptador-usb-ethernet.jpg"),
   ),
   caption: [Montaje: las notebooks conectadas al switch (izquierda) y el adaptador USB–Ethernet de la PC B (derecha).],
 ) <fig-montaje>
@@ -535,8 +568,7 @@ Cada línea escrita en el emisor apareció en el receptor (@fig-ncat). En el med
     columns: 2,
     gutter: 12pt,
     align: horizon,
-    image("Experimento/ncat-emisor-pc-a.jpg", height: 8cm),
-    image("Experimento/ncat-receptor-pc-b.png", height: 8cm),
+    image("Experimento/ncat-emisor-pc-a.jpg", height: 8cm), image("Experimento/ncat-receptor-pc-b.png", height: 8cm),
   ),
   caption: [A la izquierda, el emisor (PC A) enviando mensajes. A la derecha, el receptor (PC B): el final del `ping` y los mensajes recibidos por `ncat`.],
 ) <fig-ncat>
@@ -680,7 +712,6 @@ UDP conviene cuando la demora importa más que la confiabilidad, en la siguiente
     [Juegos en línea],
     [Variable],
     [Solo importa la posición más reciente de cada jugador. Una actualización vieja retransmitida no sirve.],
-
   ),
   caption: [Aplicaciones que usan UDP.],
 ) <tab-apps-udp>
@@ -718,7 +749,7 @@ Desde la PC B abrimos `http://192.168.10.2:8000/` en el navegador: (@fig-navegad
 #figure(
   grid(
     columns: 1,
-    image("Experimento/navegador-claude-md.png")
+    image("Experimento/navegador-claude-md.png"),
   ),
   caption: [Archivo CLAUDE.md por la PC A vistos desde el navegador de la PC B.],
 ) <fig-navegador2>
