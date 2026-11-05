@@ -121,19 +121,19 @@ verificación de conexiones de red.*],
 
 == Consigna 1
 
-Investigar los pasos para crimpar un cable bajo la norma T568A/B DERECHO. No cruzado.
+_Investigar los pasos para crimpar un cable bajo la norma T568A/B DERECHO. No cruzado._
 
 == Consigna 3
 
-VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables.
+_VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
 
 == Punto a)
 
-Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen.
+_Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
 
 == Consigna 4
 
-Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación.
+_Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación._
 
 
 #pagebreak();
@@ -146,7 +146,7 @@ En esta parte armamos una LAN con dos computadoras de nuestro grupo, a las que l
 
 === Consigna 1
 
-Configurar MANUALMENTE la interfaz de red de la computadora que elija el grupo para realizar la actividad.
+_Configurar MANUALMENTE la interfaz de red de la computadora que elija el grupo para realizar la actividad._
 
 Configuramos a mano la interfaz cableada de las dos computadoras del grupo (la PC B usó un adaptador USB–Ethernet Realtek, que Linux nombra `enp3s0f3u1u1`):
 
@@ -184,7 +184,7 @@ nmcli con add type ethernet ifname enp3s0f3u1u1 con-name tp-manual \
 
 ==== Punto d)
 
-Justificar las direcciones elegidas y si al final tenían o no sentido para la actividad.
+_Justificar las direcciones elegidas y si al final tenían o no sentido para la actividad._
 
 - *Direcciones IP:* elegimos el rango privado `192.168.0.0/16` (RFC 1918), que no se enruta en Internet y no choca con nada externo. Usamos la subred `192.168.10.0/24` en vez de la `192.168.1.0/24` del ejemplo de la consigna para no pisarnos con otros grupos ni con el switch, que según el CDP tiene la IP de administración `192.168.1.2`.
 - *Máscara /24:* deja las dos PCs en la misma subred, así se comunican directo por el switch, sin router. Sobran direcciones (254 hosts), pero es la máscara más simple de configurar. Tuvo sentido: `ping`, `ncat` y HTTP funcionaron.
@@ -192,7 +192,7 @@ Justificar las direcciones elegidas y si al final tenían o no sentido para la a
 
 === Consigna 2
 
-De a dos o más grupos por switch, conectarán una computadora por cada grupo al mismo utilizando los cables que tengan de la parte 1 de este TP. Verificar que pueden llegar a la PC de otro grupo usando ping.
+_De a dos o más grupos por switch, conectarán una computadora por cada grupo al mismo utilizando los cables que tengan de la parte 1 de este TP. Verificar que pueden llegar a la PC de otro grupo usando ping._
 
 La consigna propone conectar al switch una PC de cada grupo. En nuestro caso, las dos computadoras (PC A y PC B) eran de nuestro grupo, así que la prueba de conectividad se hizo entre ellas. Esto nos permitió ver los dos extremos de cada prueba (emisor y receptor) y capturar tanto lo que se enviaba como lo que llegaba.
 
@@ -224,7 +224,7 @@ No se perdió ningún paquete y el RTT promedio fue de 0,89 ms, coherente con do
 
 === Consigna 3
 
-Utilizando ncat, establecer un receptor UDP en una computadora y, desde la segunda computadora, enviar mensajes al receptor.
+_Utilizando ncat, establecer un receptor UDP en una computadora y, desde la segunda computadora, enviar mensajes al receptor._
 
 - En la PC B (receptor) ejecutamos `ncat -u -l 5000`: queda escuchando datagramas UDP en el puerto 5000.
 - En la PC A (emisor) ejecutamos `ncat -u 192.168.10.3 5000` y escribimos varias líneas (`hola`, `hola hola`, `jhjkhjk`, `k`, líneas vacías…).
@@ -244,7 +244,7 @@ Cada línea escrita en el emisor apareció en el receptor (@fig-ncat). En el med
 
 === Consigna 4
 
-Capturar los paquetes recibidos desde la computadora del otro grupo con wireshark. Documentar.
+_Capturar los paquetes recibidos desde la computadora del otro grupo con wireshark. Documentar._
 
 Como las dos PCs eran nuestras, en lugar de la computadora de otro grupo el emisor fue la PC A. Capturamos con Wireshark en la interfaz `enp3s0f3u1u1` de la PC B mientras recibía los mensajes enviados por la PC A (archivo `captura-udp-ncat.pcapng`). En 84 segundos se capturaron 70 tramas, pero solo 12 son los datagramas UDP de los mensajes. El resto es tráfico de control que genera el propio switch:
 
@@ -307,26 +307,26 @@ Lo que se observa:
 
 ==== Punto a)
 
-¿Se observa algún procedimiento de establecimiento de conexión antes de enviar los datos?
+_¿Se observa algún procedimiento de establecimiento de conexión antes de enviar los datos?_
 
 ==== Punto b)
 
-¿Existe algún mecanismo de confirmación de recepción equivalente a los ACK de TCP?
+_¿Existe algún mecanismo de confirmación de recepción equivalente a los ACK de TCP?_
 
 
 ==== Punto c)
 
-¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?
+_¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?_
 
 
 ==== Punto d)
 
-¿UDP garantiza que los mensajes lleguen en el mismo orden en que fueron enviados?
+_¿UDP garantiza que los mensajes lleguen en el mismo orden en que fueron enviados?_
 
 
 ==== Punto e)
 
-¿Qué aplicaciones reales utilizan UDP y por qué?
+_¿Qué aplicaciones reales utilizan UDP y por qué?_
 
 #pagebreak();
 
@@ -336,7 +336,7 @@ Usamos la misma LAN de la Parte 2, con las dos computadoras de nuestro grupo: la
 
 === Consigna 1
 
-En una de las computadoras, crear un directorio que contenga al menos tres archivos de diferentes tipos (por ejemplo, TXT, PDF e imagen). Iniciar un servidor HTTP utilizando Python:
+_En una de las computadoras, crear un directorio que contenga al menos tres archivos de diferentes tipos (por ejemplo, TXT, PDF e imagen). Iniciar un servidor HTTP utilizando Python:_
 
 ```zsh  python3 -m http.server 8000```
 
@@ -344,7 +344,7 @@ En la PC A lanzamos `python3 -m http.server 8000` dentro del repositorio de la m
 
 === Consigna 2
 
-Desde la segunda computadora, acceder al servidor mediante un navegador web, utilizando la dirección IP correspondiente y el puerto 8000 (o el que hayas elegido). Descargar uno de los archivos disponibles.
+_Desde la segunda computadora, acceder al servidor mediante un navegador web, utilizando la dirección IP correspondiente y el puerto 8000 (o el que hayas elegido). Descargar uno de los archivos disponibles._
 
 Desde la PC B abrimos `http://192.168.10.2:8000/` en el navegador: (@fig-navegador1).
 
@@ -369,7 +369,7 @@ En las capturas se ve que los acentos aparecen rotos (`Ã¡` en lugar de `á`, `
 
 === Consigna 3
 
-Repetir la transferencia utilizando curl desde una terminal:
+_Repetir la transferencia utilizando curl desde una terminal:_
 
 Repetimos las descargas desde la terminal de la PC B con `curl` (en las peticiones se ve `User-Agent: curl/8.22.0`):
 
@@ -381,7 +381,7 @@ Repetimos las descargas desde la terminal de la PC B con `curl` (en las peticion
 
 === Consigna 4
 
-Capturar el tráfico generado con Wireshark. ¿De qué tipo es?
+_Capturar el tráfico generado con Wireshark. ¿De qué tipo es?_
 
 Es tráfico *HTTP/1.0 sobre TCP*, puerto 8000, sobre IPv4 y Ethernet. A diferencia de la Parte 2, es *orientado a conexión y confiable*. Además viaja *en texto plano*: en Wireshark se leen completos los encabezados y el contenido del archivo, porque no hay cifrado (no es HTTPS).
 
