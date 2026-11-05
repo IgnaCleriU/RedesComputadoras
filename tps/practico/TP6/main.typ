@@ -81,6 +81,9 @@ verificación de conexiones de red.*],
       it.element.numbering,
       ..counter(math.equation).at(it.element.location()),
     ))
+  } else if it.element != none and it.element.func() == heading and it.element.numbering == none {
+    // Los títulos no tienen número: la referencia muestra el texto del título
+    link(it.element.location(), it.element.body)
   } else {
     // Otras referencias quedan igual
     it
@@ -141,6 +144,215 @@ _Documentar con que grupo intercambiaron cables (pueden intercambiar más de una
 = Parte 2 — Equipamiento físico, verificación y utilización de equipos de red y generación de tráfico
 
 En esta parte armamos una LAN con dos computadoras de nuestro grupo, a las que llamamos PC A y PC B, conectadas a un switch Cisco Catalyst 2950 del laboratorio, verificamos la conectividad con `ping` y generamos tráfico UDP con `ncat`, que capturamos con Wireshark. Todo el material (fotos, capturas de pantalla y archivos `.pcapng`) está en la carpeta `Experimento/`.
+
+== Opcional
+
+=== Consigna 1
+
+_Utilizando internet y el datasheet del switch Cisco, documentar las características principales del mismo._
+
+El switch del laboratorio es un Cisco Catalyst 2950. El modelo fue extraido de el mensaje CDP (_Cisco Discovery Protocol_) enviado por el switch durante la captura de la Consigna 4 (`captura-udp-ncat.pcapng`):
+
+#figure(
+  image("Experimento/captura-udp-ncat-cisco-cdp.png"),
+  caption: [Trama CDP capturada por Wireshark. El switch anuncia su modelo, versión de IOS y puerto donde está conectada la PC B.],
+) <fig-cdp>
+
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    table.header([*Campo CDP*], [*Valor*]),
+    [Plataforma], [`cisco WS-C2950-24`],
+    [Software], [IOS `C2950-I6Q4L2-M`, versión 12.1(22)EA8a, compilada en 2006],
+    [Nombre (_Device ID_)], [`Switch`, el nombre de fábrica],
+    [IP de administración], [`192.168.1.2`],
+    [Puerto], [`FastEthernet0/1`, donde estaba conectada la PC B],
+    [VLAN nativa], [1],
+    [Dúplex], [Full],
+  ),
+  caption: [Contenido del anuncio CDP del switch.],
+) <tab-cdp>
+
+#figure(
+  image("Experimento/switch-puertos-conectados.jpg", width: 55%),
+  caption: [Frente del switch C2950-24: los 24 puertos RJ-45 en dos bloques de 12 y, a la izquierda, la conexión a la PCB en el puerto FastEthernet0/1.],
+) <fig-switch>
+
+Del datasheet @cisco2950ds, para el modelo WS-C2950-24:
+
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    table.header([*Característica*], [*Valor*]),
+    [Tipo], [Switch administrable, independiente y de configuración fija, de 1 RU de alto],
+    [Puertos],
+    [24 × 10/100 Mbps RJ-45, con detección automática de velocidad y autonegociación de dúplex. No tiene uplinks Gigabit (otros modelos de la serie, como el 2950SX-24 o el 2950T-48, sí)],
+
+    [Cableado], [10BASE-T: UTP categoría 3, 4 o 5. 100BASE-TX: UTP categoría 5],
+    [Consola], [RJ-45 de 8 pines, con cable RJ-45–DB9 para la PC],
+    [_Switching fabric_], [8,8 Gbps],
+    [Ancho de banda de reenvío], [4,8 Gbps],
+    [Tasa de reenvío], [3,6 Mpps (paquetes de 64 bytes)],
+    [Memoria], [16 MB de DRAM, 8 MB de Flash y 8 MB de buffer de paquetes compartido por todos los puertos],
+    [Tabla MAC], [Hasta 8000 direcciones],
+    [Alimentación],
+    [Fuente interna de 100–240 VAC, 47–63 Hz, 30 W máximo. Conector para la fuente redundante Cisco RPS 675],
+
+    [Dimensiones y peso], [4,36 × 44,45 × 24,18 cm, 3 kg],
+    [Ambiente], [0 a 45 °C en funcionamiento, humedad 10–85 % sin condensación],
+    [MTBF], [398 240 horas (unos 45 años)],
+    [Software], [_Standard Image_ (SI). No se puede actualizar a _Enhanced Image_],
+  ),
+  caption: [Especificaciones principales del Catalyst 2950-24.],
+) <tab-switch>
+
+Los números de rendimiento se explican como:
+
+- *Ancho de banda:* 24 puertos × 100 Mbps × 2 (full dúplex: transmite y recibe a la vez) = 4,8 Gbps.
+- *Tasa de reenvío:* la trama Ethernet más chica ocupa en el cable 64 bytes, más 8 de preámbulo y 12 de separación entre tramas: 84 bytes = 672 bits. A 100 Mbps entran 148 810 tramas por segundo en cada puerto, que por 24 puertos dan 3,57 Mpps. Es decir, el switch reenvía a velocidad de línea (_wire-speed_) en todos los puertos a la vez.
+- *_Fabric_:* el _switching fabric_ es el camino interno por el que el switch lleva cada trama del puerto de entrada al de salida, y su capacidad es el tráfico total que puede mover por dentro. En el 2950 es de memoria compartida, donde las tramas pasan por el buffer de 8 MB común a todos los puertos (@tab-switch). La capacidad del _switching fabric_ es de 8,8 Gbps, superando los 4,8 Gbps que pueden generar los puertos, por tanto no es un cuello de botella.
+
+Funciones principales del software:
+
+- *VLANs:* IEEE 802.1Q, VTP para propagar VLANs entre switches y DTP para negociar enlaces troncales. Un enlace troncal lleva tráfico de varias VLANs por la misma conexión, normalmente entre switches, con tramas etiquetadas.
+  - VTP (_VLAN Trunking Protocol_, de Cisco) distribuye la lista de VLANs por los troncales: se crean en un switch y el resto las aprende, en vez de configurarlas a mano en cada uno.
+  - DTP (_Dynamic Trunking Protocol_, de Cisco) negocia con el equipo del otro extremo si el enlace va a ser troncal o de acceso (una sola VLAN, sin etiquetas). Por eso se observaron tramas DTP enviadas del switch a las PCs (@tab-protocolos), que dado que éstas no las interpretan el puerto queda como de acceso.
+- *Spanning Tree:* Soporta los protocolos IEEE 802.1D, 802.1w (RSTP), 802.1s (MSTP) y PVST+, con las extensiones de Cisco PortFast, UplinkFast y BackboneFast. Se envían BPDUs cada 1 a 2 s, observadas en la captura. Spanning Tree evita los bucles cuando hay caminos redundantes entre switches, bloqueando los puertos que cerrarían un bucle y reactivándolos si se cae el camino principal. Los switches se coordinan intercambiando BPDUs (_Bridge Protocol Data Units_).
+- *Agregación de enlaces:* EtherChannel (PAgP) y LACP (IEEE 802.3ad) para sumar varios puertos en un enlace lógico. El enlace agrupado tiene la suma de los anchos de banda y, si se corta un cable, el tráfico sigue por los demás.
+  - PAgP (_Port Aggregation Protocol_, de Cisco) y LACP (_Link Aggregation Control Protocol_, estándar) negocian el grupo automáticamente con el otro extremo. LACP sirve también con equipos de otras marcas.
+- *QoS:* clasificación por CoS (IEEE 802.1p), 4 colas por puerto de salida, prioridad estricta y _Weighted Round Robin_. QoS (_Quality of Service_) permite priorizar un tipo de tráfico sobre otro, por ejemplo la voz sobre una descarga.
+  - CoS (_Class of Service_) es un valor de prioridad de 0 a 7 que viaja en la etiqueta 802.1Q de la trama. Si la trama no lo trae, el switch le asigna el CoS por defecto del puerto.
+  - Según su CoS, cada trama va a una de las 4 colas del puerto de salida. Con prioridad estricta, la cola más prioritaria se atiende siempre primero. Con _Weighted Round Robin_ las colas se atienden por turnos, cada una con un peso, para que las de baja prioridad no se queden sin salir nunca.
+- *Multicast:* IGMP _snooping_ (hasta IGMPv3), para mandar el tráfico multicast solo a los puertos que lo pidieron. Multicast es el envío de un mismo flujo a un grupo de receptores. Sin _snooping_ el switch lo inunda por todos los puertos, como un broadcast. Con _snooping_ escucha los mensajes IGMP con los que cada equipo se une a un grupo o lo abandona, y reenvía el flujo solo a esos puertos.
+- *Seguridad:* _port security_ por MAC, autenticación IEEE 802.1x con RADIUS o TACACS+, _private VLAN edge_ y _storm control_.
+  - _Port security_ limita qué direcciones MAC pueden usar un puerto. Si se conecta otro equipo, el puerto se bloquea.
+  - Con 802.1x el equipo tiene que autenticarse antes de que el puerto le deje pasar tráfico. El switch no guarda las credenciales sino que se las consulta a un servidor RADIUS o TACACS+.
+  - _Private VLAN edge_ aísla entre sí puertos del mismo switch: solo pueden hablar con el puerto de subida, no entre ellos.
+  - _Storm control_ limita el broadcast, multicast y unicast de cada puerto, para que un equipo que funciona mal no sature la red.
+- *Administración:* CLI por consola, Telnet y SNMP v1/v2/v3, interfaz web embebida (_Cisco Device Manager_), RMON, SPAN (copia del tráfico de un puerto a otro para analizarlo), CDP, NTP y TFTP para actualizar el IOS.
+  - SNMP (_Simple Network Management Protocol_) permite que una estación de gestión lea y modifique parámetros del switch, como contadores de tráfico o el estado de los puertos.
+  - RMON (_Remote Monitoring_) hace que el propio switch guarde estadísticas, historial y alarmas de tráfico, sin depender de una estación que lo consulte todo el tiempo.
+  - CDP (_Cisco Discovery Protocol_) anuncia a los equipos vecinos el modelo, el IOS y la IP del switch (@tab-cdp).
+  - NTP (_Network Time Protocol_) sincroniza el reloj del switch, para que los registros tengan la hora correcta.
+  - TFTP (_Trivial File Transfer Protocol_) es una transferencia de archivos simple, sin autenticación, que se usa para cargar el IOS o copias de la configuración.
+- *LEDs:* por puerto (enlace, actividad, velocidad y dúplex) y de sistema (SYST, RPS y utilización).
+
+=== Consigna 2
+
+_Elaborar checklists (manuales, indicaciones) de procedimientos para las siguientes actividades:_
+
+==== Acceso a la consola del switch <sec-acceso-consola>
+
+_Conectar una PC al puerto de consola del switch Cisco a 9600 baudios utilizando PUTTY. Turnense para verificar el acceso a la consola del Switch._
+
+El puerto de consola es una interfaz serie RS-232 que da acceso a la CLI del switch sin pasar por la red (administración _fuera de banda_). Funciona aunque el switch no tenga IP o no esté configurado.
+
+*Materiales*
+
++ Cable de consola de Cisco (_rollover_, celeste): RJ-45 en un extremo y DB9 hembra en el otro.
++ Adaptador USB-serie RS-232, porque las notebooks no tienen puerto DB9.
++ Una PC con PuTTY instalado.
+
+*Conexión física*
+
++ Encender el switch y esperar a que termine de iniciar (LED SYST en verde, cerca de un minuto).
++ Conectar el RJ-45 del cable en el puerto `CONSOLE`, en la parte trasera del switch. El conector es igual al de los puertos Ethernet del frente.
++ Conectar el DB9 al adaptador USB-serie y el adaptador a la PC.
++ Identificar el puerto serie del adaptador:
+  - Windows: Administrador de dispositivos → Puertos (COM y LPT), por ejemplo `COM3`.
+  - Linux: `sudo dmesg | grep tty`, por ejemplo `/dev/ttyUSB0`. El usuario tiene que estar en el grupo `dialout` (Debian/Ubuntu) o `uucp` (Arch) para poder abrirlo.
+
+*Configuración de PuTTY*
+
++ En _Session_, elegir _Connection type: Serial_.
++ En _Serial line_, poner el puerto del paso anterior (`COM3` o `/dev/ttyUSB0`).
++ En _Speed_, poner `9600`.
++ En _Connection → Serial_, verificar 8 _data bits_, 1 _stop bit_, _parity: None_ y _flow control: None_. Es la configuración "9600 8N1" que espera la consola del switch.
++ Presionar _Open_.
+
+*Verificación*
+
++ Presionar Enter. Tiene que aparecer el prompt `Switch>` (modo usuario).
++ Si el switch no tiene configuración, pregunta `Would you like to enter the initial configuration dialog? [yes/no]:`. Responder `no`.
++ Probar un comando de solo lectura, por ejemplo `show version`: debe mostrar el modelo `WS-C2950-24` y la versión del IOS.
++ Salir con `exit`, cerrar PuTTY y pasar el cable al siguiente.
+
+==== Acceso a la administración y levantamiento de interfaces
+
+_Acceder a las opciones de administración del switch y levantar varias interfaces para usar en el laboratorio._
+
+La CLI del IOS tiene modos jerárquicos, y cada uno se reconoce por el prompt:
+
+#figure(
+  table(
+    columns: 4,
+    align: (left, left, left, left),
+    table.header([*Modo*], [*Prompt*], [*Acceso*], [*Uso*]),
+    [Usuario], [`Switch>`], [Al conectarse], [`show` básicos y `ping`],
+    [Privilegiado], [`Switch#`], [`enable`], [Ver toda la configuración, guardarla, reiniciar],
+    [Configuración global], [`Switch(config)#`], [`configure terminal`], [Cambios que afectan a todo el switch],
+    [Configuración de interfaz], [`Switch(config-if)#`], [`interface ...`], [Cambios en uno o varios puertos],
+  ),
+  caption: [Modos de la CLI del IOS.],
+) <tab-modos>
+
+*Entrar a la administración*
+
++ Conectarse por consola (@sec-acceso-consola).
++ Ejecutar `enable`. Ingresar la contraseña de ser necesario.
++ Revisar el estado actual con `show version` y `show running-config`.
++ Ver los puertos con `show interfaces status`. Cada uno aparece como `connected` (enlace arriba), `notconnect` (sin cable o con el otro extremo apagado), `disabled` (apagado a mano con `shutdown`) o `err-disabled` (bloqueado por un error, por ejemplo de _port security_).
+
+*Levantar las interfaces*
+
+Por ejemplo, los puertos 1 a 8:
+
+```
+Switch# configure terminal
+Switch(config)# interface range fastEthernet 0/1 - 8
+Switch(config-if-range)# description Lab - PCs
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport nonegotiate
+Switch(config-if-range)# switchport access vlan 1
+Switch(config-if-range)# speed auto
+Switch(config-if-range)# duplex auto
+Switch(config-if-range)# spanning-tree portfast
+Switch(config-if-range)# no shutdown
+Switch(config-if-range)# end
+```
+
+- `interface range fastEthernet 0/1 - 8`: aplica la misma configuración a varios puertos a la vez. En este IOS los espacios alrededor del guion son obligatorios.
+- `description`: una etiqueta que aparece en `show interfaces status`.
+- `switchport mode access` y `switchport nonegotiate`: el puerto queda fijo como puerto de acceso de una sola VLAN y no negocia troncales. De fábrica el 2950 está en modo `dynamic desirable` y envía DTP cada 30 s, como se muestra en la @tab-protocolos.
+- `switchport access vlan 1`: todos los puertos en la misma VLAN (la 1, la nativa según el CDP), para que las PCs se vean entre sí.
+- `speed auto` y `duplex auto`: autonegociación. Valores por defecto, que se pueden dejar explícitos.
+- `spanning-tree portfast`: el puerto pasa directo a reenviar tráfico al conectar un equipo. Si configurar esto, STP lo tiene unos 30 s en los estados _listening_ y _learning_ (LED amarillo) antes de transmitir tramas. Solo se usa en puertos con PCs, ya que en en un puerto hacia otro switch desactivar STP puede formar bucles.
+- `no shutdown`: lo que efectivamente levanta la interfaz.
+
+*Verificar*
+
++ `show interfaces status`: los puertos con una PC conectada deben figurar `connected`, `a-full` y `a-100` (autonegociados a full dúplex y 100 Mbps).
++ Los LEDs de esos puertos tienen que estar en verde.
++ `show mac address-table`: debe aparecer la MAC de cada PC en su puerto, por ejemplo `00e0.4c68.0e87` (la PC B) en `Fa0/1`.
++ `ping` entre las PCs, como en la Consigna 2.
+
+*IP de administración (opcional)*
+
+Para administrar el switch por Telnet o por la web, sin consola, hay que darle una IP en la interfaz virtual de la VLAN 1:
+
+```
+Switch(config)# interface vlan 1
+Switch(config-if)# ip address 192.168.1.2 255.255.255.0
+Switch(config-if)# no shutdown
+```
+
+El switch del laboratorio ya tenía la `192.168.1.2` (@tab-cdp). Está en otra subred que las PCs del grupo (`192.168.10.0/24`), por lo que no se pudo acceder a la administración por la red, solo por consola.
+
+*Guardar cambios*
+
++ Los cambios quedan en la `running-config` (en RAM) y se pierden al reiniciar. Para que persistan: `copy running-config startup-config`.
 
 == Levantar y testear una LAN
 
