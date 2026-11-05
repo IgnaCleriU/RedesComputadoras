@@ -517,28 +517,88 @@ Lo que se observa:
 
 === Consigna 5
 
+Las respuestas se basan en `captura-udp-ncat.pcapng` (Consigna 4) y en la comparación con la descarga HTTP sobre TCP de la Parte 3 (@tab-http).
+
 ==== Punto a)
 
 _¿Se observa algún procedimiento de establecimiento de conexión antes de enviar los datos?_
+
+No. El primer datagrama de la captura (trama 4, `hola\n`) ya lleva los datos de la aplicación. Antes de él solo hay dos BPDUs de STP y un LOOP del switch (@tab-protocolos). Todo esto debido a que estamos usando el protocolo UDP. En este caso tampoco hay algun procedimiento con ARP (ya que antes se habia hecho ping entre las 2 pc's)
 
 ==== Punto b)
 
 _¿Existe algún mecanismo de confirmación de recepción equivalente a los ACK de TCP?_
 
+No. En toda la captura la PC B no le envía a la PC A ningún paquete IP: lo único que manda es la respuesta ARP de la trama 22. Con TCP, en cambio, el cliente confirmaba cada segmento con un `ACK` acumulativo (@tab-http).
 
 ==== Punto c)
 
 _¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?_
+
+El datagrama sale igual, porque el emisor no pregunta antes si hay alguien escuchando (punto a). UDP no se entera de que el receptor no está, pero el sistema operativo de la máquina destino sí: si llega un datagrama a un puerto donde no escucha ningún programa, lo descarta y le devuelve al emisor un ICMP _Destination Unreachable_ con código 3 (_Port Unreachable_) @rfc1122. En la captura de la Consigna 4 no hay ningún ICMP ya que todos los datagramas llegaron al receptor mientras este estaba escuchando
+
+
+```
+$ ncat -u 127.0.0.1 5999
+uno
+Ncat: Connection refused.
+```
+
+#figure(
+  table(
+    columns: 4,
+    align: (center, center, center, left),
+    table.header([*Trama*], [*Tiempo*], [*Protocolo*], [*Contenido*]),
+    [1], [0], [UDP], [`56336 → 5999`, 4 bytes de datos (`uno\n`)],
+    [2], [36 µs], [ICMP], [_Destination unreachable (Port unreachable)_],
+  ),
+  caption: [Captura en `lo` al enviar a un puerto UDP sin receptor.],
+) <tab-loopback>
 
 
 ==== Punto d)
 
 _¿UDP garantiza que los mensajes lleguen en el mismo orden en que fueron enviados?_
 
+No. UDP no numera los datagramas, así que el receptor no puede saber si llegaron desordenados, duplicados o si falta alguno, se los entrega a la aplicación en el orden en que llegan a diferencia de TCP que se asegura de que reciba al menos el orden de los paquetes
+
+En nuestro experimento llegaron en orden. Se puede comprobar con el campo _Identification_ del encabezado IP, que en los 12 datagramas va de `0xe5b7` a `0xe5c2`, de a uno, sin saltos ni desorden: no se perdió ninguno y llegaron en el orden en que se enviaron. Pero eso se debe a la red, no a UDP:
+
+#pagebreak()
 
 ==== Punto e)
 
 _¿Qué aplicaciones reales utilizan UDP y por qué?_
+
+UDP conviene cuando la demora importa más que la confiabilidad, en la siguiente tabla se enumeran los principales usos del protocolo UDP.
+
+
+#figure(
+  table(
+    columns: (auto, auto, 1fr),
+    align: (left, center, left),
+    table.header([*Aplicación*], [*Puerto UDP*], [*Por qué UDP*]),
+    [DNS],
+    [53],
+    [Una consulta y una respuesta, cada una en un solo datagrama. Con TCP, el _handshake_ duplicaría el tiempo de cada consulta. Si no llega la respuesta, el cliente vuelve a preguntar.],
+
+    [DHCP],
+    [67 y 68],
+    [El cliente todavía no tiene IP y pregunta por broadcast: no hay con quién armar una conexión. Es lo que reemplazamos al configurar las IP a mano en la Consigna 1.],
+
+    [Voz y video en vivo (RTP)],
+    [Dinámicos],
+    [Un paquete que llega tarde ya no sirve, y retransmitirlo agrega demora. Es preferible perder un fragmento de audio a que la llamada se congele.],
+
+    [Juegos en línea],
+    [Variable],
+    [Solo importa la posición más reciente de cada jugador. Una actualización vieja retransmitida no sirve.],
+
+  ),
+  caption: [Aplicaciones que usan UDP.],
+) <tab-apps-udp>
+
+En todos los casos, la aplicación prefiere manejar ella misma las pérdidas y el orden (o directamente no le importan) antes que esperar las retransmisiones de TCP.
 
 #pagebreak();
 
