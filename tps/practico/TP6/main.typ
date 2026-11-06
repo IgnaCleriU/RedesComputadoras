@@ -62,7 +62,7 @@
 
   titulo: [Taller de armado y verificación de cables Cat5/Cat5e bajo estándar T568A/B],
   resumen: [*_Objetivo_ --- Tomar contacto con elementos de la capa física y ganar experiencia en armado y
-verificación de conexiones de red.*],
+  verificación de conexiones de red.*],
 
   fecha: datetime.today().display("[year]-[month]-[day]"),
 )
@@ -117,6 +117,19 @@ verificación de conexiones de red.*],
   spacing: 1.2em,
 )
 
+// Muestra solo una parte de una foto. `tam-img` es el tamaño de la foto en píxeles
+// (ancho, alto); `x`, `y`, `ancho` y `alto` delimitan el recorte, también en píxeles;
+// `altura` es el alto con el que se dibuja el recorte.
+#let recorte(ruta, tam-img, x, y, ancho, alto, altura) = {
+  let s = altura / alto
+  box(clip: true, width: ancho * s, height: altura, place(
+    top + left,
+    dx: -x * s,
+    dy: -y * s,
+    image(ruta, width: tam-img.at(0) * s, height: tam-img.at(1) * s),
+  ))
+}
+
 #pagebreak()
 
 
@@ -126,18 +139,126 @@ verificación de conexiones de red.*],
 
 _Investigar los pasos para crimpar un cable bajo la norma T568A/B DERECHO. No cruzado._
 
+Un cable *derecho* (_straight-through_) tiene los dos extremos armados con la misma norma, T568A en ambos o T568B en ambos, de modo que cada pin de un conector queda unido al mismo pin del otro (1 con 1, 2 con 2, …, 8 con 8). Es el cable que se usa entre una PC y un switch. Si un extremo es T568A y el otro T568B, el cable es *cruzado*.
+
+#figure(
+  table(
+    columns: 4,
+    align: center + horizon,
+    table.header([*Pin*], [*T568A*], [*T568B*], [*Uso en 10/100BASE-TX*]),
+    [1], [Blanco-verde], [Blanco-naranja], [Transmite (+)],
+    [2], [Verde], [Naranja], [Transmite (−)],
+    [3], [Blanco-naranja], [Blanco-verde], [Recibe (+)],
+    [4], [Azul], [Azul], [—],
+    [5], [Blanco-azul], [Blanco-azul], [—],
+    [6], [Naranja], [Verde], [Recibe (−)],
+    [7], [Blanco-marrón], [Blanco-marrón], [—],
+    [8], [Marrón], [Marrón], [—],
+  ),
+  caption: [Orden de colores de las dos normas y uso de cada pin del lado de la PC. 1000BASE-T usa los cuatro pares.],
+) <tab-t568>
+
+- Las dos normas solo intercambian el par naranja con el verde. Para un cable derecho da lo mismo cuál se use, siempre que los dos extremos tengan la misma.
+- Los pines 3 y 6 forman un par aunque no estén juntos, por eso el orden no va par por par. Hay que respetar los colores, si los dos hilos de un par quedan en pines que no se corresponden, se pierde el efecto del trenzado, que es cancelar la interferencia entre pares (diafonía). Ese cable puede pasar el tester y aun así andar mal.
+
+*Materiales*
+
++ Cable UTP Cat5/Cat5e (4 pares trenzados, 24 AWG).
++ Dos conectores RJ45 (8P8C) aptos para la categoría y para el tipo de conductor (macizo o multifilar).
++ Pinza crimpeadora para RJ45, que suele traer cuchilla para cortar y pelar.
++ Tester de cables Ethernet.
+
+*Pasos*
+
++ Cortar el cable al largo deseado (en el TP, 1 a 1,5 m) con un corte recto.
++ Pelar unos 2,5 a 3 cm de la vaina exterior sin cortar el aislante de los conductores. Si el cable tiene hilo de nylon hay que cortarlo.
++ Destrenzar los pares solo lo necesario y enderezar los conductores.
++ Ordenarlos según la norma (@tab-t568), mirando el conector con la traba hacia abajo y los contactos hacia uno, el pin 1 queda a la izquierda.
++ Alinear los 8 conductores planos y paralelos, y cortarlos rectos a unos 13 mm (aproximadamente) del borde de la vaina. Así la vaina entra en el conector y el tramo destrenzado no supera los 13 mm que admite la norma TIA-568 para Cat5e.
++ Insertarlos en el conector sin que cambien de orden, empujando hasta que los 8 toquen la pared del frente. La vaina tiene que quedar adentro del conector, debajo de la cuña de sujeción.
++ Revisar a través del plástico el orden de colores, que todos lleguen al frente y que la vaina esté adentro.
++ Meter el conector en la crimpeadora y apretar a fondo. La pinza baja los 8 contactos, que perforan el aislante y tocan el cobre, y baja la cuña que traba la vaina.
++ Repetir en el otro extremo *con la misma norma*.
++ Verificar con el tester (Consigna 3).
+
+== Consigna 2
+
+_Construir 1 (un) cable por grupo, de 1 - 1.5 m. aproximadamente. Tipo DERECHO, NO CRUZADO._
+
+Armamos un cable derecho con la norma T568A en los dos extremos (lo verificamos en la Consigna 3). El primer conector salió mal, así que lo cortamos y lo volvimos a crimpar.
+
+
+#figure(
+  grid(
+    columns: 2,
+    gutter: 8pt,
+    recorte("Experimento/conector-rj45-superior-1.jpg", (868, 1156), 200, 370, 300, 280, 6cm),
+    recorte("Experimento/conector-rj45-superior-2.jpg", (868, 1156), 290, 370, 260, 280, 6cm),
+  ),
+  caption: [Vistas frontales del conector final: los 8 contactos a la misma altura y, detrás, las puntas de los conductores.],
+) <fig-rj45-frente>
+
+#figure(
+  recorte("Experimento/conector-rj45-superior-3.jpg", (1156, 868), 400, 220, 480, 280, 6cm),
+  caption: [Vista lateral del conector final, con los contactos hacia la cámara y el cable a la derecha. El pin 1 queda abajo y el 8 arriba.],
+) <fig-rj45-lateral>
+
+
 == Consigna 3
 
 _VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
 
-== Punto a)
+Intercambiamos cables con el grupo *WAN-direction* y verificamos el suyo. Las fotos de esta sección son de ese cable.
+
+=== Punto a)
 
 _Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
+
+#figure(
+  grid(
+    columns: 1,
+    gutter: 6pt,
+    recorte("Experimento/conectores-cable-otro-grupo.jpg", (964, 1280), 400, 440, 380, 180, 3.5cm),
+    recorte("Experimento/conectores-cable-otro-grupo.jpg", (964, 1280), 380, 920, 400, 180, 3.5cm),
+  ),
+  caption: [Los dos extremos del cable del otro grupo, con el cable a la izquierda. En los dos, el pin 1 queda abajo y el 8 arriba.],
+) <fig-otro-conectores>
+
+En la punta de los dos conectores (@fig-otro-conectores), de arriba hacia abajo y con la misma separación entre ellos, se ven el marrón, el verde, el azul y el naranja. Son los pines 8, 6, 4 y 2 de la norma T568B (@tab-t568). Los blancos de cada par van en los pines intermedios y en la foto casi no se distinguen.
+
+*Lo que está bien*
+
+- Misma norma en los dos extremos, los dos conectores tienen el mismo orden de colores, así que es un cable derecho. Usaron una norma distinta a la nuestra, pero es un cable derecho asi que da lo mismo.
+- Los conductores llegan hasta el frente del conector, donde están los contactos, al menos hasta donde deja ver la resolución de la foto.
+
+*Lo que está mal*
+
+- La vaina no entra en ninguno de los dos conectores, termina unos milímetros antes de la parte trasera y entre la vaina negra y el plástico quedan los conductores al aire. La cuña de sujeción, que al crimpar tendría que apretar la vaina, aprieta los conductores sueltos.
+- Como la vaina queda afuera los pares van destrenzados desde antes del conector hasta los contactos.
+- Hay conductores cruzados adentro del conector en el extremo de abajo
+
+En estas fotos no se ven los contactos, así que no pudimos revisar si bajaron todos a la misma altura.
+
+=== Punto b)
+
+_Verificación eléctrica utilizando un tester para cables ethernet._
+
+#figure(
+  recorte("Experimento/tester-cable-otro-grupo.jpg", (964, 1280), 185, 600, 530, 640, 8cm),
+  caption: [Tester NSHL468 con el cable del otro grupo: unidad principal (_master_) a la izquierda y remota a la derecha. En este paso se enciende el LED 4 de las dos.],
+) <fig-tester>
+
+Usamos un tester de cables NSHL468 (@fig-tester). Tiene dos partes que van una en cada extremo del cable: la principal, que manda la señal, y la remota. El tester recorre los pines de a uno y en cada paso enciende, en la principal, el LED del pin que prueba y, en la remota, el del pin al que llega ese hilo
+
+El LED G no se enciende en ningún paso porque el cable es UTP, sin malla.
+
+En la foto se ve que el pin 4 anda bien el tester, el tester solo probó que cada pin llegue al que le corresponde. No detecta el destrenzado ni la vaina afuera del punto a), que afectan la diafonía y la resistencia mecánica del cable, así que un cable puede pasar esta prueba y aun así andar mal.
 
 == Consigna 4
 
 _Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación._
 
+Mas arriba se adjuntaron imagenes del cable del grupo *WAN-direction*
 
 #pagebreak();
 
@@ -414,8 +535,7 @@ Conectamos las dos notebooks al switch con cables UTP (@fig-montaje). Ninguna de
   grid(
     columns: 2,
     gutter: 8pt,
-    image("Experimento/montaje-switch-notebooks.jpg"),
-    image("Experimento/adaptador-usb-ethernet.jpg"),
+    image("Experimento/montaje-switch-notebooks.jpg"), image("Experimento/adaptador-usb-ethernet.jpg"),
   ),
   caption: [Montaje: las notebooks conectadas al switch (izquierda) y el adaptador USB–Ethernet de la PC B (derecha).],
 ) <fig-montaje>
@@ -448,8 +568,7 @@ Cada línea escrita en el emisor apareció en el receptor (@fig-ncat). En el med
     columns: 2,
     gutter: 12pt,
     align: horizon,
-    image("Experimento/ncat-emisor-pc-a.jpg", height: 8cm),
-    image("Experimento/ncat-receptor-pc-b.png", height: 8cm),
+    image("Experimento/ncat-emisor-pc-a.jpg", height: 8cm), image("Experimento/ncat-receptor-pc-b.png", height: 8cm),
   ),
   caption: [A la izquierda, el emisor (PC A) enviando mensajes. A la derecha, el receptor (PC B): el final del `ping` y los mensajes recibidos por `ncat`.],
 ) <fig-ncat>
@@ -517,28 +636,87 @@ Lo que se observa:
 
 === Consigna 5
 
+Las respuestas se basan en `captura-udp-ncat.pcapng` (Consigna 4) y en la comparación con la descarga HTTP sobre TCP de la Parte 3 (@tab-http).
+
 ==== Punto a)
 
 _¿Se observa algún procedimiento de establecimiento de conexión antes de enviar los datos?_
+
+No. El primer datagrama de la captura (trama 4, `hola\n`) ya lleva los datos de la aplicación. Antes de él solo hay dos BPDUs de STP y un LOOP del switch (@tab-protocolos). Todo esto debido a que estamos usando el protocolo UDP. En este caso tampoco hay algun procedimiento con ARP (ya que antes se habia hecho ping entre las 2 pc's)
 
 ==== Punto b)
 
 _¿Existe algún mecanismo de confirmación de recepción equivalente a los ACK de TCP?_
 
+No. En toda la captura la PC B no le envía a la PC A ningún paquete IP: lo único que manda es la respuesta ARP de la trama 22. Con TCP, en cambio, el cliente confirmaba cada segmento con un `ACK` acumulativo (@tab-http).
 
 ==== Punto c)
 
 _¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?_
+
+El datagrama sale igual, porque el emisor no pregunta antes si hay alguien escuchando (punto a). UDP no se entera de que el receptor no está, pero el sistema operativo de la máquina destino si, si llega un datagrama a un puerto donde no escucha ningún programa, este lo descarta y le devuelve al emisor un ICMP _Destination Unreachable_ con código 3 (_Port Unreachable_) @rfc1122. En la captura de la Consigna 4 no hay ningún ICMP ya que todos los datagramas llegaron al receptor mientras este estaba escuchando
+
+
+```
+$ ncat -u 127.0.0.1 5999
+uno
+Ncat: Connection refused.
+```
+
+#figure(
+  table(
+    columns: 4,
+    align: (center, center, center, left),
+    table.header([*Trama*], [*Tiempo*], [*Protocolo*], [*Contenido*]),
+    [1], [0], [UDP], [`56336 → 5999`, 4 bytes de datos (`uno\n`)],
+    [2], [36 µs], [ICMP], [_Destination unreachable (Port unreachable)_],
+  ),
+  caption: [Captura en `lo` al enviar a un puerto UDP sin receptor.],
+) <tab-loopback>
 
 
 ==== Punto d)
 
 _¿UDP garantiza que los mensajes lleguen en el mismo orden en que fueron enviados?_
 
+No. UDP no numera los datagramas, así que el receptor no puede saber si llegaron desordenados, duplicados o si falta alguno, se los entrega a la aplicación en el orden en que llegan a diferencia de TCP que se asegura de que reciba al menos el orden de los paquetes
+
+En nuestro experimento llegaron en orden. Se puede comprobar con el campo _Identification_ del encabezado IP, que en los 12 datagramas va de `0xe5b7` a `0xe5c2`, de a uno, sin saltos ni desorden: no se perdió ninguno y llegaron en el orden en que se enviaron. Pero eso se debe a la red, no a UDP:
+
+#pagebreak()
 
 ==== Punto e)
 
 _¿Qué aplicaciones reales utilizan UDP y por qué?_
+
+UDP conviene cuando la demora importa más que la confiabilidad, en la siguiente tabla se enumeran los principales usos del protocolo UDP.
+
+
+#figure(
+  table(
+    columns: (auto, auto, 1fr),
+    align: (left, center, left),
+    table.header([*Aplicación*], [*Puerto UDP*], [*Por qué UDP*]),
+    [DNS],
+    [53],
+    [Una consulta y una respuesta, cada una en un solo datagrama. Con TCP, el _handshake_ duplicaría el tiempo de cada consulta. Si no llega la respuesta, el cliente vuelve a preguntar.],
+
+    [DHCP],
+    [67 y 68],
+    [El cliente todavía no tiene IP y pregunta por broadcast: no hay con quién armar una conexión. Es lo que reemplazamos al configurar las IP a mano en la Consigna 1.],
+
+    [Voz y video en vivo (RTP)],
+    [Dinámicos],
+    [Un paquete que llega tarde ya no sirve, y retransmitirlo agrega demora. Es preferible perder un fragmento de audio a que la llamada se congele.],
+
+    [Juegos en línea],
+    [Variable],
+    [Solo importa la posición más reciente de cada jugador. Una actualización vieja retransmitida no sirve.],
+  ),
+  caption: [Aplicaciones que usan UDP.],
+) <tab-apps-udp>
+
+En todos los casos, la aplicación prefiere manejar ella misma las pérdidas y el orden (o directamente no le importan) antes que esperar las retransmisiones de TCP.
 
 #pagebreak();
 
@@ -571,7 +749,7 @@ Desde la PC B abrimos `http://192.168.10.2:8000/` en el navegador: (@fig-navegad
 #figure(
   grid(
     columns: 1,
-    image("Experimento/navegador-claude-md.png")
+    image("Experimento/navegador-claude-md.png"),
   ),
   caption: [Archivo CLAUDE.md por la PC A vistos desde el navegador de la PC B.],
 ) <fig-navegador2>
