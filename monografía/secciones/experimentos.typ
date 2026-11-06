@@ -26,17 +26,17 @@
 
 === Experimento 1: MQTT contra HTTPS para telemetría <sec-exp-mqtt-https>
 
-Este experimento es el caso base de la parte experimental. Mide cuánto cuesta, en bytes y en latencia, enviar una lectura de un sensor por MQTT y por HTTP, y separa ese costo en sus componentes: la conexión, el protocolo de aplicación, el cifrado y la serialización. Sus resultados sirven de referencia para el experimento de sincronización.
+Este experimento es el caso base de la parte experimental. Mide cuánto cuesta, en bytes y en latencia, enviar una lectura de un sensor por MQTT y por HTTP, y separa ese costo en sus componentes: la conexión, el protocolo de aplicación, el cifrado y la serialización. Sus resultados sirven de referencia para el segundo experimento (@sec-exp-sincronizacion), que compara las mismas combinaciones en la sincronización de osciladores acoplados, una aplicación de tiempo real con intercambio de mensajes a alta frecuencia.
 
 ==== Conceptos previos <sec-conceptos-exp1>
 
-Además de lo presentado en el marco teórico, el análisis de este experimento se apoya en tres mecanismos de TCP y en el protocolo con el que se sincronizan los relojes de los nodos. Se resumen a continuación porque explican buena parte de los resultados.
+Además de lo presentado en el marco teórico, el análisis de este experimento se apoya en dos mecanismos de TCP y en el protocolo con el que se sincronizan los relojes de los nodos. Se resumen a continuación porque explican buena parte de los resultados.
 
-*Algoritmo de Nagle.* Una aplicación entrega datos a TCP con llamadas a `send()` sobre un _socket_, y TCP decide cómo repartirlos en segmentos. Si cada llamada saliera de inmediato en su propio segmento, una aplicación que escribe de a pocos bytes llenaría la red de segmentos casi vacíos, en los que los 40 bytes de encabezados TCP/IP pesan más que los datos. El algoritmo de Nagle evita eso, mientras haya datos enviados sin confirmar, TCP no envía un segmento más chico que el tamaño máximo, sino que acumula los datos nuevos hasta recibir el ACK pendiente @rfc896. Si no hay nada sin confirmar, el segmento sale enseguida. Así, una escritura aislada no se demora, pero la segunda de dos escrituras seguidas espera el ACK de la primera. La especificación vigente de TCP recomienda implementar Nagle, pero exige que cada aplicación pueda desactivarlo en una conexión @rfc9293, opción que en la interfaz de _sockets_ se llama `TCP_NODELAY`.
+*Algoritmo de Nagle.* Una aplicación entrega datos a TCP con llamadas a `send()` sobre un _socket_, y TCP decide cómo repartirlos en segmentos. Si cada llamada saliera de inmediato en su propio segmento, una aplicación que escribe de a pocos bytes llenaría la red de segmentos casi vacíos, en los que los 40 bytes de encabezados TCP/IP pesan más que los datos. El algoritmo de Nagle evita eso: mientras haya datos enviados sin confirmar, TCP no envía un segmento más chico que el tamaño máximo, sino que acumula los datos nuevos hasta recibir el ACK pendiente @rfc896. Si no hay nada sin confirmar, el segmento sale enseguida. Así, una escritura aislada no se demora, pero la segunda de dos escrituras seguidas espera el ACK de la primera. La especificación vigente de TCP recomienda implementar Nagle, pero exige que cada aplicación pueda desactivarlo en una conexión @rfc9293, opción que en la interfaz de _sockets_ se llama `TCP_NODELAY`.
 
-*ACK retardado.* Del lado del receptor existe una optimización equivalente. En lugar de confirmar cada segmento apenas llega, el receptor puede esperar, hasta 500 ms según la especificación, para enviar el ACK junto con los datos de su respuesta y ahorrar un paquete @rfc1122. Si el temporizador vence antes de que haya una respuesta, el ACK sale solo. Cada mecanismo tiene sentido por separado, pero combinados pueden bloquearse entre sí como sucedio durante el experimento. 
+*ACK retardado.* Del lado del receptor existe una optimización equivalente. En lugar de confirmar cada segmento apenas llega, el receptor puede esperar, hasta 500 ms según la especificación, para enviar el ACK junto con los datos de su respuesta y ahorrar un paquete @rfc1122. Si el temporizador vence antes de que haya una respuesta, el ACK sale solo. Cada mecanismo tiene sentido por separado, pero combinados pueden bloquearse entre sí como sucedió durante el experimento. 
 
-*Sincronización de relojes con SNTP.* Para medir la latencia extremo a extremo, el nodo y el servidor tienen que compartir la hora. NTP (_Network Time Protocol_) sincroniza el reloj de un cliente con el de un servidor, el cliente envía una consulta, el servidor responde con su hora y, con las marcas de tiempo de envío y de recepción de ambos mensajes, el cliente estima el tiempo de viaje y lo descuenta @rfc5905. SNTP (_Simple Network Time Protocol_) es una versión reducida de NTP para dispositivos con pocos recursos, que omite los algoritmos con los que NTP filtra las mediciones y elige entre varios servidores @rfc5905.
+*Sincronización de relojes con SNTP.* Para medir la latencia extremo a extremo, el nodo y el servidor tienen que compartir la hora. NTP (_Network Time Protocol_) sincroniza el reloj de un cliente con el de un servidor: el cliente envía una consulta, el servidor responde con su hora y, con las marcas de tiempo de envío y de recepción de ambos mensajes, el cliente estima el tiempo de viaje y lo descuenta @rfc5905. SNTP (_Simple Network Time Protocol_) es una versión reducida de NTP para dispositivos con pocos recursos, que omite los algoritmos con los que NTP filtra las mediciones y elige entre varios servidores @rfc5905.
 
 ==== Planteo
 
@@ -46,7 +46,7 @@ A diferencia del experimento de sincronización, el caso de uso es neutral: envi
 
 #subtitulo[Motivación]
 
-El experimento responde a los objetivos que comparan MQTT con HTTP y Protocol Buffers con JSON, y a los que relacionan MQTT con la capa de transporte (TCP, keep-alive y TLS). En el marco teórico, la ventaja de MQTT se atribuyó a su encabezado fijo de dos bytes y a su conexión persistente, y la de Protocol Buffers a su codificación binaria, pero esas ventajas se enunciaron de forma cualitativa. El experimento las cuantifica. Para atribuir cada parte de la diferencia a su causa, incluye dos variantes de HTTP, corridas con y sin TLS y las dos serializaciones.
+Este experimento corresponde al último de los objetivos específicos (@sec-objetivos): medir el costo en bytes y en latencia de MQTT y Protocol Buffers frente a HTTPS y JSON, y su comportamiento ante pérdidas y latencia. También aporta datos al objetivo que analiza MQTT sobre la capa de transporte, en lo que respecta a TCP y TLS. En el marco teórico se planteó que MQTT envía mensajes más livianos y con menor latencia que HTTP, por su encabezado fijo de dos bytes y su conexión persistente, y que Protocol Buffers produce mensajes más chicos que JSON, por su codificación binaria. Esas ventajas surgen de comparaciones cualitativas y de estudios con otros mensajes y plataformas. El experimento las mide sobre un mismo sistema. Para atribuir cada parte de la diferencia a su causa, incluye dos variantes de HTTP, corridas con y sin TLS y las dos serializaciones.
 
 #subtitulo[Fundamento]
 
@@ -219,9 +219,9 @@ La @tab-entorno-telemetria resume el entorno en el que se corrió el experimento
   caption: [Entorno del experimento.],
 ) <tab-entorno-telemetria>
 
-Las 210 corridas resultaron válidas: el factor de tiempo real mínimo fue 1,000 en todas, ningún nodo se atrasó al producir lecturas, no quedaron lecturas sin enviar ni se descartaron lecturas de la cola, y no hubo desconexiones de MQTT. Dos corridas fallaron antes de empezar a medir, porque un nodo no logró sincronizar su reloj con 5 % de pérdida. Se amplió el tiempo de espera de la sincronización de 30 s a 90 s y se repitieron. Ese cambio solo afecta el arranque del nodo, antes de que empiece la medición.
+Las 210 corridas resultaron válidas, el factor de tiempo real mínimo fue 1,000 en todas, ningún nodo se atrasó al producir lecturas, no quedaron lecturas sin enviar ni se descartaron lecturas de la cola, y no hubo desconexiones de MQTT. Dos corridas fallaron antes de empezar a medir, porque un nodo no logró sincronizar su reloj con 5 % de pérdida. Se amplió el tiempo de espera de la sincronización de 30 s a 90 s y se repitieron. Ese cambio solo afecta el arranque del nodo, antes de que empiece la medición.
 
-La latencia resta marcas de tiempo de dos relojes distintos, el del nodo y el del servidor, unidos por SNTP (@sec-conceptos-exp1). El cliente SNTP de lwIP no compensa el tiempo de viaje de la respuesta del servidor, así que el reloj del nodo queda atrasado medio RTT y la latencia medida aumenta en esa misma cantidad. Sin latencia agregada, ese error es del orden de 1 ms. Con latencia agregada, como netem introduce un retardo fijo, se corrigió restando RTT/2 a las latencias medidas.
+Para calcular la latencia, a la hora de llegada, tomada del reloj del servidor, se le resta la hora de creación de la lectura, tomada del reloj del nodo. Ambos relojes se sincronizan por SNTP (@sec-conceptos-exp1), pero el cliente SNTP de lwIP no descuenta el tiempo de viaje de la respuesta del servidor, así que el reloj del nodo queda atrasado medio RTT y cada latencia medida resulta medio RTT más larga. Sin latencia agregada, ese error es de alrededor de 1 ms. Con latencia agregada, el error crece a la mitad del RTT agregado, pero como netem agrega un retardo fijo se lo puede descontar: a cada latencia medida se le restó RTT/2.
 
 ==== Resultados
 
@@ -519,7 +519,7 @@ Con hasta 5 % de pérdida no se perdió ninguna lectura, porque TCP retransmiti�
 Lo que se degradó fue la cola de la latencia, y la @fig-cdf-perdida muestra escalones en valores fijos:
 
 - Entre 1 y 1,5 s, el RTO de lwIP: un segmento perdido se recupera recién cuando vence el temporizador de retransmisión, que lwIP maneja con un reloj de 500 ms. No hay retransmisión rápida, porque requiere tres ACK duplicados y con una lectura por segundo nunca hay tantos segmentos en vuelo.
-- Entre 0,05 y 0,5 s, el bloqueo de cabeza de línea (@sec-conceptos-exp1): la lectura que sigue a una perdida sale 1 s después y queda retenida hasta que la anterior se recupera. Por eso las lecturas lentas vienen de a pares.
+- Entre 0,05 y 0,5 s, el bloqueo de cabeza de línea: la lectura que sigue a una perdida sale 1 s después y queda retenida hasta que la anterior se recupera. Por eso las lecturas lentas vienen de a pares.
 - Por encima de 2 s, pérdidas repetidas del mismo segmento, con el RTO duplicado en cada intento @rfc6298.
 
 HTTP salió peor por su esquema de solicitud y respuesta en serie. Cualquier paquete perdido, en cualquier sentido, frena el envío hasta que se recupera, y las lecturas siguientes esperan en la cola. Además, cada lectura usa 6 paquetes (22 con una conexión por lectura), contra 2 o 3 de MQTT, así que tiene más chances de perder alguno. La diferencia entre QoS 0 y QoS 1 se debe a la combinación de Nagle con los ACK perdidos, descrita en el apartado anterior.
@@ -591,7 +591,7 @@ Para un sistema de telemetría como el estudiado, los resultados sugieren cuatro
 - Mientras la conexión TCP se mantiene, QoS 1 no mejora la entrega y agrega duplicados, por lo que la aplicación debe poder descartarlos, por ejemplo con el número de secuencia. Su valor aparece ante cortes de conexión, que este experimento no midió.
 - Protocol Buffers ahorra lo mismo en todos los transportes, pero su efecto relativo es mayor justamente en MQTT, donde el resto de la lectura ya es chico.
 
-=== Experimento 2: sincronización de osciladores acoplados
+=== Experimento 2: sincronización de osciladores acoplados <sec-exp-sincronizacion>
 
 ==== Planteo
 
