@@ -31,7 +31,7 @@ La conexión TCP, sin embargo, solo garantiza la entrega de una secuencia de byt
 
 En los sistemas estudiados, el diseño de ese protocolo está condicionado en primer lugar por la forma en que circula la información. Un mismo dato suele interesar a varios consumidores y cada consumidor recibe datos de muchos dispositivos, por lo que resulta conveniente que productores y consumidores puedan comunicarse sin conocerse entre sí ni estar conectados simultáneamente, que es la propuesta del modelo publicador/suscriptor implementado por MQTT. A esto se suma la representación de los datos dentro de cada mensaje, que debe ser interpretada de manera unívoca por equipos heterogéneos y ocupar poco ancho de banda en enlaces que suelen ser limitados, problema del que se ocupa Protocol Buffers.
 
-== Modelo publicador/suscriptor
+== Modelo publicador/suscriptor <sec-pubsub>
 
 // Buscar papers asociados al modelo, para tenerlos como fuente en la explicación.
 
@@ -72,6 +72,9 @@ Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cli
 == MQTT <sec-mqtt>
 
 // Cómo implementa MQTT el modelo pub/sub: broker, tópicos, niveles de QoS, sesiones y seguridad.
+// TODO(casos de uso) Evaluar mencionar el origen de MQTT (1999, IBM y Arcom, monitoreo de oleoductos por enlaces satelitales,
+// report by exception), que explica sus decisiones de diseño. Fuentes: https://mqtt.org/faq/,
+// https://www.processingmagazine.com/mqtt-iiot-evolution/.
 
 /*
 - Mapear cada elemento del modelo pub/sub de Eugster a MQTT: broker = servicio de eventos; un mismo cliente puede publicar y suscribirse.
@@ -165,7 +168,7 @@ En la codificación binaria de Protobuf, cada campo se transmite precedido de un
 
 Los enteros se codifican como _varints_, en los que cada byte aporta siete bits del valor y utiliza el bit más significativo para indicar si el número continúa en el byte siguiente. Así, los valores pequeños, que son los más frecuentes, ocupan un solo byte. Por ejemplo, un campo número 1 con el valor 150 se codifica en tres bytes, `08 96 01`: el primero es la etiqueta y los dos restantes el valor @protobuf-encoding. Para los enteros con signo existe además la codificación _zigzag_, que intercala positivos y negativos para que los valores negativos pequeños también resulten cortos. El mensaje no incluye los nombres de los campos, que solo existen en el esquema, y en proto3 los campos que tienen su valor por defecto directamente no se transmiten @protobuf-proto3. Esta combinación es la que hace que un mensaje Protobuf pese varias veces menos que su equivalente en JSON y que se procese más rápido.
 
-=== Compatibilidad entre versiones
+=== Compatibilidad entre versiones <sec-protobuf-compat>
 
 Dado que los campos se identifican por número y no por posición ni por nombre, el esquema puede evolucionar sin romper a quienes usan versiones anteriores. Un programa que recibe un campo cuyo número no conoce simplemente lo ignora, de modo que los clientes viejos pueden leer mensajes nuevos (compatibilidad hacia adelante). En sentido inverso, un programa nuevo que lee un mensaje viejo encuentra los valores por defecto en los campos ausentes (compatibilidad hacia atrás). La condición para que esto funcione es no reutilizar números de campo, para lo cual el lenguaje ofrece la palabra clave `reserved`, que impide volver a asignar los números o nombres de campos eliminados @protobuf-proto3. Esta compatibilidad en ambos sentidos es la principal fortaleza de Protobuf frente a otros formatos binarios.
 
@@ -177,6 +180,11 @@ Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En p
 
 // Cómo se combinan: Protobuf como payload de los mensajes MQTT, el esquema compartido entre clientes.
 // TODO(prometido en Marco teórico, @sec-mqtt) Retomar las propiedades Payload Format Indicator y Content Type de MQTT 5 como forma de declarar que el payload es un mensaje Protobuf (y de qué tipo).
+// TODO(casos de uso) Sparkplug B, InOrbit y OpenRobOps se desarrollan en @sec-casos-de-uso. Acá solo presentarlos y referenciar, sin duplicar.
+// TODO(casos de uso) Al tratar Content Type, se puede mencionar que InOrbit y OpenRobOps (MQTT 3.1.1) deducen el
+// tipo de mensaje del tópico, que es lo que esa propiedad evitaría.
+// TODO(casos de uso) Mencionar que los brokers soportan Protobuf como payload (decode() en reglas de AWS IoT Core, Schema Registry de EMQX,
+// Data Hub de HiveMQ). Fuente: https://docs.aws.amazon.com/iot/latest/developerguide/binary-payloads.html.
 
 /*
 - MQTT trata el payload como bytes opacos: Protobuf entra ahí sin cambios.
@@ -191,7 +199,85 @@ Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En p
   - Falta en el .bib: Eclipse Sparkplug 3.0; Proos y Carlsson 2020 (IFIP Networking, compara MQTT/AMQP/CoAP con Protobuf/FlatBuffers).
 */
 
-== Comparación con alternativas
+Las secciones anteriores describieron MQTT y Protocol Buffers por separado. Esta sección analiza cómo se combinan: qué lugar ocupa cada uno en un mensaje, cómo sabe el receptor qué tipo de mensaje recibe, qué implica compartir el esquema entre los participantes y qué requisitos de los sistemas estudiados cubre cada pieza.
+
+=== Protocol Buffers como carga útil
+
+MQTT y Protocol Buffers resuelven problemas distintos y complementarios:
+
+- MQTT define cómo se distribuyen los mensajes entre los participantes, pero no impone ningún formato para su contenido, ya que la carga útil de cada paquete PUBLISH es una secuencia de bytes cuyo contenido y formato son específicos de la aplicación @mqtt50.
+- Protocol Buffers define cómo representar datos estructurados en una secuencia de bytes compacta, pero no cómo transportarla, como se vio en la @sec-protobuf.
+
+La combinación consiste, entonces, en serializar cada mensaje con Protocol Buffers y publicarlo como carga útil de un paquete PUBLISH, que el broker reenvía a los suscriptores sin interpretarlo. A modo de analogía, el mensaje de Protocol Buffers es la carta y el paquete PUBLISH, el sobre que la transporta: el broker lee la dirección escrita en el sobre, que es el tópico, pero nunca lo abre.
+
+La división de tareas se complementa también en la delimitación de los mensajes. Como se señaló en la @sec-protobuf, la codificación de Protocol Buffers no indica dónde termina un mensaje, por lo que, si se envían varios por un mismo flujo, la aplicación debe anteponer el tamaño de cada uno @protobuf-techniques. Sobre una conexión TCP, que solo entrega una secuencia continua de bytes, esa tarea quedaría a cargo de la aplicación. MQTT, en cambio, transporta cada mensaje de aplicación en un único paquete PUBLISH, cuya longitud se obtiene de su encabezado fijo @mqtt50, de modo que cada paquete contiene exactamente un mensaje de Protocol Buffers.
+
+=== Asociación entre tópico y esquema
+
+Un mensaje de Protocol Buffers tampoco indica a qué tipo pertenece, y sin su esquema no puede interpretarse @protobuf-overview, por lo que el receptor debe saber de antemano cuál de los mensajes definidos en el archivo `.proto`, descrito en la @sec-protobuf, contiene cada carga útil. La práctica habitual es asociar cada tópico, o cada patrón de tópicos, a un único tipo de mensaje. De este modo, el tópico cumple una doble función:
+
+- Determina a qué suscriptores entrega el broker cada mensaje, como en cualquier sistema basado en tópicos.
+- Identifica el esquema con el que se interpreta el contenido del mensaje.
+
+Por ejemplo, en la flota de robots que publica en tópicos de la forma `flota/{ID de robot}/{sensor}`, el tópico `flota/robot1/bateria` puede transportar siempre un mensaje `EstadoBateria`, y un suscriptor con el filtro `flota/+/bateria` sabe que todo lo que recibe se interpreta con ese mismo esquema.
+
+Además de esta convención, la versión 5.0 de MQTT incorpora propiedades opcionales que el publicador puede agregar al paquete PUBLISH y que resultan útiles para la combinación. El broker reenvía estas propiedades a cada suscriptor junto con el mensaje, sin modificarlas, con excepción del alias de tópico, que solo tiene validez dentro de cada conexión @mqtt50:
+
+- El *indicador de formato de la carga útil* (_Payload Format Indicator_) distingue entre bytes sin especificar, como un mensaje de Protocol Buffers, y texto codificado en UTF-8, como un documento JSON.
+- El *tipo de contenido* (_Content Type_) es una cadena que puede nombrar el tipo de mensaje transportado. La especificación no fija ningún valor para Protocol Buffers, por lo que el emisor y el receptor deben acordarlo. Los sistemas que todavía usan MQTT 3.1.1, como los de robótica analizados en la @sec-caso-robotica, no disponen de esta propiedad y deducen el tipo de cada mensaje a partir del tópico.
+- Las *propiedades de usuario* (_User Property_) admiten pares nombre-valor definidos por la aplicación, como la versión del esquema.
+- El *tópico de respuesta* (_Response Topic_) y los *datos de correlación* (_Correlation Data_) permiten implementar solicitudes y respuestas sobre MQTT (como un comando enviado a un robot y su confirmación), ambos codificados con Protocol Buffers.
+- El *alias de tópico* (_Topic Alias_) reemplaza un nombre de tópico largo y repetido por un entero de dos bytes, lo que complementa en el encabezado la reducción de tamaño que Protocol Buffers logra en el contenido.
+
+=== Esquema compartido
+
+El archivo `.proto` constituye así un contrato entre los participantes, ya que el formato de los datos se fija una única vez en un esquema distribuido entre los clientes. A partir de ese archivo se genera el código de cada participante, ya sea el firmware de un microcontrolador o un servicio en la nube @protobuf-overview. En el experimento de la @sec-exp-mqtt-https, por ejemplo, un mismo esquema genera el código de las placas ESP32 y el del backend que recibe sus datos.
+
+Ese contrato introduce un acoplamiento en el formato de los datos que el modelo publicador/suscriptor no elimina. Como publicadores y suscriptores no se conocen ni se actualizan al mismo tiempo, un cambio en un mensaje puede llegar a unos participantes antes que a otros. El desacoplamiento en el tiempo acentúa el problema, ya que un mensaje retenido, o almacenado en la sesión de un suscriptor desconectado, puede leerse mucho después de su publicación con una versión más nueva del esquema. Las reglas de compatibilidad descritas en la @sec-protobuf vuelven manejable esta situación, siempre que no se modifiquen ni se reutilicen los números de campo existentes @protobuf-proto3:
+
+- Un publicador puede agregar campos sin afectar a los suscriptores que usan el esquema anterior, que simplemente los ignoran.
+- Un suscriptor con el esquema nuevo puede leer los mensajes de los publicadores que no se actualizaron, ya que los campos ausentes toman su valor por defecto.
+
+La combinación tiene, a su vez, costos propios que se suman a las limitaciones de cada pieza:
+
+- El broker solo puede encaminar los mensajes según su tópico, ya que no interpreta su contenido, lo que corresponde a la menor expresividad del esquema basado en tópicos frente al basado en contenido @eugster2003pubsub.
+- Todo componente de la infraestructura que necesite leer los datos debe contar con el esquema. Esto alcanza también a los servicios que reciben los mensajes en la nube. Por ejemplo, AWS IoT Core, el servicio de Amazon Web Services que actúa como broker MQTT para dispositivos, puede decodificar mensajes de Protocol Buffers en sus reglas de procesamiento, pero solo si se le proporciona un archivo descriptor generado a partir del `.proto` @aws-iot-protobuf.
+- Las herramientas genéricas de MQTT permiten verificar que los mensajes circulan, pero muestran su contenido como bytes ilegibles, lo que dificulta la depuración @meshtastic-mqtt.
+
+=== Sparkplug B
+
+La madurez de esta combinación se refleja en su estandarización. La especificación Eclipse Sparkplug, adoptada como norma ISO/IEC 20237 @sparkplug-iso, define para los sistemas industriales precisamente lo que MQTT deja abierto, y en su versión B codifica la carga útil con Protocol Buffers @sparkplug30. Entre otras cosas, fija el espacio de tópicos, y con él la asociación entre tópico y esquema, y la forma de informar el estado de conexión de cada nodo mediante el mensaje de última voluntad. Su funcionamiento se analiza en la @sec-caso-industria.
+
+=== Síntesis
+
+Cada pieza del stack cubre una parte de los requisitos planteados al comienzo de la sección, como resume la @tab-stack-requisitos. Cuánto aporta cada una al tamaño y a la latencia de los mensajes se mide en el experimento de la @sec-exp-mqtt-https.
+
+#figure(
+  table(
+    columns: 2,
+    table.header[Requisito][Pieza del stack que lo cubre],
+    [*Enviar datos al dispositivo sin que acepte conexiones entrantes*],
+    [Conexión TCP abierta por el dispositivo y entrega por parte del broker],
+
+    [*Comunicar productores y consumidores que no se conocen*], [MQTT: broker y tópicos],
+    [*Tolerar desconexiones*], [MQTT: sesiones persistentes, mensajes retenidos y mensaje de última voluntad],
+    [*Delimitar cada mensaje*], [MQTT: un paquete PUBLISH por mensaje],
+    [*Identificar el tipo de cada mensaje*], [Asociación entre tópico y esquema; en MQTT 5.0, tipo de contenido],
+    [*Interpretar los datos de forma unívoca entre equipos heterogéneos*],
+    [Protocol Buffers: esquema compartido y código generado para cada lenguaje],
+
+    [*Reducir el uso de ancho de banda*],
+    [MQTT: encabezado fijo mínimo y alias de tópico; Protocol Buffers: codificación binaria],
+
+    [*Modificar los mensajes sin afectar a los demás participantes*],
+    [Protocol Buffers: reglas de compatibilidad del esquema],
+  ),
+  caption: [Requisitos de los sistemas estudiados y pieza del stack que cubre cada uno.],
+) <tab-stack-requisitos>
+
+Algunas empresas y proyectos que aplican este stack, analizados en la @sec-casos-de-uso, son InOrbit y OpenRobOps, en robótica @inorbit-edge-sdk @openrobops-repo; Meshtastic, en redes LoRa @meshtastic-mqtt; y Amazon Web Services, en la nube, con su servicio AWS IoT Core @aws-iot-protobuf.
+
+== Comparación con alternativas <sec-alternativas>
 Para intercambiar datos entre un dispositivo (ya sea un sensor, un celular o un robot) y la nube deben tomarse dos decisiones:
 1. Qué protocolo de capa de aplicación implementar (define cómo se intercambian los mensajes).
 2. Qué mecanismo de serialización se utiliza para representar los datos dentro de cada mensaje (con qué formato viaja la información).
@@ -264,7 +350,7 @@ En síntesis, MQTT resulta preferible cuando se necesita una entrega confiable d
   caption: [Comparación entre HTTP, CoAP y MQTT.],
 ) <tab-comparacion-protocolos>
 
-=== Protocol Buffers y JSON
+=== Protocol Buffers y JSON <sec-protobuf-json>
 
 Se definirá brevemente JSON, para posteriormente contrastarlo con Protocol Buffers.
 
