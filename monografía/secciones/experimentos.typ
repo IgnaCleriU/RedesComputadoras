@@ -18,7 +18,7 @@
 === Plataforma común
 
 // Placas ESP32 emuladas con QEMU, broker Mosquitto y backend; restricciones de la emulación.
-// TODO(mapeo tecnológico) Indicar qué hardware real reemplazaría a lo emulado (modelo de placa, dónde se compra y precio) (pedido del profesor, mail del 27/10). Ver nota en desarrollo.typ.
+// TODO(mapeo tecnológico) El hardware real que reemplazaría a lo emulado se releva en @sec-mapeo-tecnologico; referenciarla acá.
 // TODO(revisión PR #322) Explicar las herramientas que el Experimento 1 menciona sin definir:
 // QEMU de Espressif, ESP-IDF, lwIP, mbedTLS, esp-mqtt, esp_http_client, nanopb,
 // interfaces TAP, puente de Linux, tc netem, dumpcap y TShark. Citar la documentación
