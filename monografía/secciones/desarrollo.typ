@@ -50,8 +50,12 @@ TCP 1883, sin cifrado, y 8883, sobre TLS, y, cuando una red restrictiva solo dej
 @mqtt50, a cambio de la sobrecarga de ese protocolo adicional.
 
 La contracara de este esquema es que las entradas de la tabla no son permanentes. El NAT no tiene forma de saber si una conexión inactiva sigue en
-uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF (Internet Engineering Task Force) una organización internacional abierta de normalización, que tiene como objetivos el contribuir a la ingeniería de internet, exige que ese tiempo no sea menor que dos horas y cuatro minutos @rfc5382. En las mediciones sobre gateways domésticos que cita el RFC 8323, el promedio para TCP fue seis horas y veintiseis minutos @rfc8323, pero se trata de un mínimo recomendado y no de una garantía, para un equipo que no lo cumple, o un firewall intermedio configurado con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera. El
-siguiente segmento del broker hacia el dispositivo se descarta en el NAT, y el siguiente del dispositivo genera una entrada nueva, con otro puerto
+uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF (Internet Engineering Task Force) una organización 
+internacional abierta de normalización, que tiene como objetivos el contribuir a la ingeniería de internet, exige que ese tiempo no sea menor que dos 
+horas y cuatro minutos @rfc5382. En las mediciones sobre gateways domésticos que cita el RFC 8323, el promedio para TCP fue seis horas y veintiseis 
+minutos @rfc8323, pero se trata de un mínimo recomendado y no de una garantía, para un equipo que no lo cumple, o un firewall intermedio configurado 
+con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera. 
+El siguiente segmento del broker hacia el dispositivo se descarta en el NAT, y el siguiente del dispositivo genera una entrada nueva, con otro puerto
 público, que el broker no reconoce como parte de ninguna conexión. El resultado es una conexión que figura como abierta en ambos extremos pero que ya
 no transporta datos, situación especialmente grave para un suscriptor que espera comandos y no transmite por iniciativa propia.
 
