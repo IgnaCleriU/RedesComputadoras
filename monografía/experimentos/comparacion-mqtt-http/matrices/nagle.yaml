@@ -1,0 +1,23 @@
+# Efecto de Nagle en HTTP (ver docs/resultados/nagle.md): diseño factorial 2x2 nodelay x TLS
+# para los dos modos HTTP, con la configuración base del experimento.
+design: factorial
+duration_s: 120
+repetitions: 3
+seed: 7
+
+base:
+  nodes: 8
+  period_ms: 1000
+  tls: true
+  loss_pct: 0
+  rtt_ms: 0
+  serialization: pb
+
+transports: [http_reuse, http_req]
+
+period_overrides:
+  http_req: 10000
+
+factors:
+  nodelay: [false, true]
+  tls: [false, true]
