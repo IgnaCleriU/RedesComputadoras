@@ -124,8 +124,7 @@ El síndrome c4 c2 c1 = `101` = 5 es directamente la posición del bit erróneo,
 
 #### Por qué es superior a la demostración del laboratorio
 
-La comparación es a favor de Hamming(7,4) en todo, lo cual tiene sentido teniendo en cuenta que contiene mas redundacia qua la paridad bidimensional.
-Aqui la comparacion con 50 bits de datos:
+La siguiente tabla compara ambos métodos sobre un mensaje de 50 bits de datos.
 
 | | Paridad bidimensional | Hamming (7,4) |
 | --- | --- | --- |
@@ -148,15 +147,15 @@ Hamming es superior en lo que importa para corregir:
 
 Su límite son las ráfagas: dos errores seguidos en el mismo bloque lo engañan. Si eso preocupa, se puede entrelazar: transmitir primero el bit 1 de todos los bloques, después el bit 2, y así sucesivamente, de modo que una ráfaga se reparta entre bloques distintos y quede un solo error en cada uno.
 
-#### Aplicación y paquete de datos
+#### Codificación de la carga útil del desafío
 
-Tenemos una captura del desafio, esta no contiene el link ganador pero va a fucionar lo mismo:
+Se utiliza uno de los mensajes capturados en el desafío:
 
 ```json
 {"SIZE": "99,9", "PL": "https://www.youtube.com/watch?v=msX4oAXpvUE", "CHECK": "https://www.youtube.com/shorts/nw7pN6XW9e4"}
 ```
 
-**Como carga útil vamos a usar solo el primer enlace**, el del campo `PL`:
+La carga útil es el contenido del campo `PL` (del inglés *payload*):
 
 ```text
 https://www.youtube.com/watch?v=msX4oAXpvUE
@@ -164,13 +163,13 @@ https://www.youtube.com/watch?v=msX4oAXpvUE
 
 Para proteger la carga útil, cada byte se divide en dos mitades de 4 bits y cada mitad se codifica en un bloque de Hamming (7,4). Se usan los 8 bits de cada byte, tal como viajan en el datagrama, y no los 7 del laboratorio, para que el método sirva con cualquier contenido y no solo con texto ASCII. Como cada byte da exactamente dos bloques, no hace falta relleno: los 43 bytes del enlace (344 bits) se convierten en 86 bloques (602 bits).
 
-El paquete completo, resulta:
+El paquete propuesto mantiene el formato JSON del mensaje del desafío. `SIZE` pasa a indicar el tamaño de la carga útil en bytes, `PL` lleva los bloques codificados y el campo nuevo `CODE` indica el código usado, para que el receptor sepa cómo decodificarlo. Con la carga útil de arriba, el paquete resulta:
 
 ```json
 {"SIZE": "43", "CODE": "HAMMING(7,4)", "PL": "11001101110000000111110011000001111100110000011110000000000111110000111000011101101001010101111111010101011111110001111000111100011110001111000111100011110101010001011000011110011001110011011111110001111010010100011111001100000111101001011100110010101011001100100101010101000101101100110100001111001101111111110011010101010101010111111100011110001111110011011010010001111100110011001101000011110011011100001000011111111100011111100110100001110101011100110101010100011111000011010010111100001000011100110011001101111111100110011010010100101111000000011110000000000111111001100100101010010110011000100101"}
 ```
 
-El siguiente script arma el paquete y lo pone a prueba. Para correrlo, hay que guardarlo como `hamming.py` y ejecutar `python hamming.py`.
+El siguiente script arma el paquete y lo somete a dos pruebas independientes. Cada prueba parte de una copia del paquete sin errores, invierte a propósito algunos bits de su campo `PL`, como haría el ruido del canal, y la decodifica para ver si se recupera la carga útil original. La prueba 1 introduce un error en cada bloque, y la prueba 2, sobre otra copia, dos errores en un mismo bloque. Para correrlo, hay que guardarlo como `hamming.py` y ejecutar `python hamming.py`.
 
 ```python
 #!/usr/bin/env python3
@@ -245,41 +244,45 @@ if __name__ == "__main__":
     print(f"Carga útil: {paquete['SIZE']} bytes -> {n} bloques, {len(paquete['PL'])} bits")
     print(json.dumps(paquete))
 
-    # Prueba 1: un error en cada bloque, en una posición al azar (semilla fija).
+    # Prueba 1: sobre una copia del paquete sin errores, un error en cada
+    # bloque, en una posición al azar (semilla fija).
     rng = random.Random(7)
     pl = paquete["PL"]
     for b in range(n):
         pl = invertir(pl, 7 * b + rng.randrange(7))
     texto, corr = decodificar({**paquete, "PL": pl})
-    print(f"\n1 error en cada bloque ({n} errores): {len(corr)} corregidos,",
+    print(f"\nPrueba 1, un error en cada bloque ({n} errores): {len(corr)} corregidos,",
           "recuperado OK" if texto == CARGA_UTIL else "recuperado MAL")
+    print("Recuperado en la prueba 1:", texto)
 
-    # Prueba 2: dos errores en un mismo bloque, en las posiciones 1 y 2 del
-    # bloque que lleva la segunda mitad de la "m" de "v=msX4oAXpvUE".
+    # Prueba 2: sobre otra copia del paquete sin errores, dos errores en las
+    # posiciones 1 y 2 del bloque que lleva la segunda mitad de la "m" de
+    # "v=msX4oAXpvUE".
     b = 2 * CARGA_UTIL.index("v=m") + 5  # índice (desde 0) de ese bloque
     pl = invertir(invertir(paquete["PL"], 7 * b), 7 * b + 1)
     texto, corr = decodificar({**paquete, "PL": pl})
-    print(f"2 errores en el bloque {b + 1} (posiciones 1 y 2): síndrome {corr[0][1]},",
+    print(f"\nPrueba 2, dos errores en el bloque {b + 1} (posiciones 1 y 2): síndrome {corr[0][1]},",
           "recuperado OK" if texto == CARGA_UTIL else "recuperado MAL")
-    print("Recuperado:", texto)
+    print("Recuperado en la prueba 2:", texto)
 ```
 
 - `codificar_bloque` ubica los 4 bits de datos en las posiciones 3, 5, 6 y 7 y calcula cada paridad sobre las posiciones que cubre, igual que en la tabla de arriba.
 - `sindrome` hace el XOR de las posiciones que tienen un 1. En un bloque correcto da 0, y con un bit invertido da su posición, que `decodificar_bloque` vuelve a invertir.
 - `codificar` y `decodificar` pasan de la carga útil al paquete y del paquete a la carga útil, bloque por bloque.
 
-La salida, con el paquete recortado:
+La salida del script, con el paquete recortado, es la siguiente:
 
 ```text
 $ python hamming.py
 Carga útil: 43 bytes -> 86 bloques, 602 bits
 {"SIZE": "43", "CODE": "HAMMING(7,4)", "PL": "11001101110000…"}
 
-1 error en cada bloque (86 errores): 86 corregidos, recuperado OK
-2 errores en el bloque 66 (posiciones 1 y 2): síndrome 3, recuperado MAL
-Recuperado: https://www.youtube.com/watch?v=esX4oAXpvUE
+Prueba 1, un error en cada bloque (86 errores): 86 corregidos, recuperado OK
+Recuperado en la prueba 1: https://www.youtube.com/watch?v=msX4oAXpvUE
+
+Prueba 2, dos errores en el bloque 66 (posiciones 1 y 2): síndrome 3, recuperado MAL
+Recuperado en la prueba 2: https://www.youtube.com/watch?v=esX4oAXpvUE
 ```
 
 - **Prueba 1.** Con un error en cada uno de los 86 bloques (86 bits invertidos, uno de cada 7), el enlace se recupera completo.
-
-- **Prueba 2.** Con dos errores en el mismo bloque, en las posiciones 1 y 2, dan síndrome 1 ⊕ 2 = 3, y el receptor invierte el bit 3, que no era un bit erroneo.
+- **Prueba 2.** Los dos errores del bloque 66, en las posiciones 1 y 2, dan síndrome 1 ⊕ 2 = 3, y el receptor invierte el bit 3, que había llegado bien. Ese bloque lleva la segunda mitad de la "m" de `v=msX4oAXpvUE`, que se decodifica como "e". El enlace recuperado tiene un formato válido pero es distinto del original, y el receptor no tiene forma de notarlo.
