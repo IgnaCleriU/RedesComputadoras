@@ -109,31 +109,47 @@ $ Omega = overline(omega) = 1/N sum_(i=1)^N omega_i $ <ec-frecuencia-comun>
 
 Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. Desde ahí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$. Con retardo en el acoplamiento, la frecuencia común deja de ser igual a la media.
 
-*Límite de infinitos osciladores.* Con frecuencias tomadas de una distribución $g(omega)$ unimodal y simétrica, aparece una transición en el acoplamiento crítico
+*Límite de infinitos osciladores.* El primer resultado sobre el umbral de sincronización es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se toman de una densidad $g(Delta)$ unimodal y simétrica, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a velocidad uniforme. Si las fases se miden desde $psi$, la @ec-campo-medio se reduce a
 
-$ K_c = 2/(pi g(0)) $
+$ dot(theta)_i = Delta_i - K r sin theta_i $
 
-Para una distribución de Lorentz de ancho $gamma$, $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$. Con pocos nodos este resultado queda solo como contexto, y $K_c$ se calcula como se muestra a continuación.
+Según el valor de $Delta_i$, los osciladores se separan en dos grupos. Los que cumplen $|Delta_i| <= K r$ tienden a un punto fijo con $Delta_i = K r sin theta_i$ y $|theta_i| <= pi\/2$, y quedan enganchados. Los que tienen $|Delta_i| > K r$ no alcanzan ningún punto fijo y derivan alrededor del círculo.
 
-*Umbral exacto con $N$ finito.* En el marco que gira a $overline(omega)$, un estado enganchado cumple
+El valor de $r$ tiene que ser coherente con estas dos poblaciones. La simetría de $g$ anula la contribución de los osciladores a la deriva al centroide, y también la parte imaginaria de la contribución de los enganchados. Solo queda el promedio de $cos theta$ sobre los enganchados, y con el cambio de variable $Delta = K r sin theta$ resulta
+
+$ r = integral_(-K r)^(K r) cos theta(Delta) thin g(Delta) dif Delta = K r integral_(-pi\/2)^(pi\/2) cos^2 theta thin g(K r sin theta) dif theta $
+
+Esta ecuación siempre admite la solución $r = 0$, que corresponde al estado incoherente. Las demás soluciones, con sincronización parcial, se obtienen dividiendo por $r$:
+
+$ 1 = K integral_(-pi\/2)^(pi\/2) cos^2 theta thin g(K r sin theta) dif theta $ <ec-rama-parcial>
+
+El acoplamiento crítico es el valor en el que esta rama nace desde $r = 0$. Al tomar $r -> 0^+$ en la @ec-rama-parcial, $g$ se evalúa en 0 y la integral de $cos^2 theta$ vale $pi\/2$, de modo que $1 = K_c g(0) pi\/2$, es decir
+
+$ K_c = 2/(pi g(0)) $ <ec-kc-infinito>
+
+Para una distribución de Lorentz de ancho $gamma$, $g(0) = 1\/(pi gamma)$, por lo que $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$ @strogatz2000. Estas expresiones valen en el límite de infinitos osciladores. Con $N$ finito, $r$ fluctúa con una amplitud del orden de $N^(-1\/2)$ @strogatz2000. Por eso, en este trabajo la @ec-kc-infinito queda solo como contexto, y $K_c$ se calcula como se muestra a continuación.
+
+*Umbral exacto con $N$ finito.* Verwoerd y Mason estudian el mismo modelo para una cantidad finita de osciladores @verwoerd2008, y definen el acoplamiento crítico como el menor $K$ para el que existe un estado enganchado. No es el mismo umbral que el de la @ec-kc-infinito: aquel marca el comienzo de la sincronización parcial, y este, el enganche de todos los osciladores.
+
+En un estado enganchado, $dot(theta)_i = overline(omega)$ para todo $i$. Reemplazando en la @ec-campo-medio se obtiene
 
 $ Delta_i = u sin(theta_i - psi), quad u = K r $
 
-Cada oscilador necesita $|Delta_i| <= u$ y queda con un desfasaje $theta_i - psi = arcsin(Delta_i\/u)$. Reemplazando en la @ec-orden, con todos los cosenos positivos, se obtiene la condición de autoconsistencia:
+Por lo tanto, cada oscilador necesita $|Delta_i| <= u$. De la parte real de la @ec-orden, multiplicada por $e^(-i psi)$, sale $r = 1\/N sum_i cos(theta_i - psi)$, y cada coseno vale $plus.minus sqrt(1 - (Delta_i\/u)^2)$. Verwoerd y Mason demuestran que existe un estado enganchado si y solo si la ecuación resultante tiene solución con todos los signos positivos @verwoerd2008, lo que da la condición de autoconsistencia:
 
 $ r = u/K = f(u) = 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u)^2), quad u >= max_i |Delta_i| $ <ec-autoconsistencia>
 
-El estado enganchado existe si $K$ alcanza el mínimo de $u\/f(u)$:
+Despejando, $K = u\/f(u)$, y el menor acoplamiento para el que hay solución es
 
 $ K_c = min_(u >= max_i |Delta_i|) u/f(u) $ <ec-kc-finito>
 
+Al derivar $u\/f(u)$ e igualar a cero, el mínimo queda en el valor $u^*$ que cumple
+
+$ 2 dot 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u^*)^2) = 1/N sum_(i=1)^N 1/sqrt(1 - (Delta_i/u^*)^2) $
+
+Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad. Ese punto se comprueba con la simulación.
+
 Con esto se calculan, para las frecuencias concretas de cada corrida, el umbral de enganche total, el $r$ final y el desfasaje de cada nodo. Con $N = 2$ se obtiene $K_c = |Delta omega|$.
-
-*$N = 3$ simétrico.* Con frecuencias $overline(omega) - Delta$, $overline(omega)$ y $overline(omega) + Delta$, por simetría el oscilador central queda alineado con $psi$ y los otros dos a $plus.minus alpha$. La condición de equilibrio del oscilador rápido es
-
-$ Delta = K/3 (sin alpha + sin 2 alpha) $
-
-El máximo de $sin alpha + sin 2 alpha$ es aproximadamente 1,760, en $alpha approx$ 53,6°, de modo que $K_c approx$ 1,704 $Delta$. El oscilador central hace de puente entre los extremos.
 
 *Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro nodo deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada nodo. Como el acoplamiento se divide por $N$, al agregar nodos con el mismo $K$ cada interacción individual se debilita. Si cada nodo dividiera por la cantidad de fases recibidas en lugar de un $N$ fijo, el modelo cambiaría cuando se pierden mensajes; por eso conviene usar $N$ fijo.
 
