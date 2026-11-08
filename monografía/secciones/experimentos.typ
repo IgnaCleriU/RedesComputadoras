@@ -721,56 +721,47 @@ $ 2 dot 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u^*)^2) = 1/N sum_(i=1)^N 1/sqrt(1 - (
 
 Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad. Ese punto se comprueba mediante la simulación numérica del modelo.
 
-Con esto se calculan, para un conjunto dado de frecuencias naturales, el umbral de enganche total, el valor de $r$ y el desfasaje de cada oscilador respecto de la fase media, que es $theta_i - psi = arcsin(Delta_i\/u)$. Con $N = 2$ y $Delta omega = omega_2 - omega_1$ se obtiene $K_c = |Delta omega|$.
+Con esto se calculan, para un conjunto dado de frecuencias naturales, el umbral de enganche total, el valor de $r$ y el desfasaje de cada oscilador respecto de la fase media, que es $theta_i - psi = arcsin(Delta_i\/u)$. Verwoerd y Mason prueban además que $max_i |Delta_i| <= K_c <= 2 max_i |Delta_i|$ @verwoerd2008. El caso $N = 2$, que sirve de ejemplo, alcanza la cota superior: con $Delta omega = omega_2 - omega_1$, las desintonías valen $plus.minus Delta omega\/2$ y resulta $K_c = |Delta omega|$.
 
 *Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador, es decir, la velocidad media a la que avanza su fase. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
 
-/* PENDIENTE: efectos de la red sobre el modelo. Queda fuera del documento hasta retomarlo.
+*El modelo en los nodos.* El modelo anterior supone que cada oscilador conoce en todo instante la fase exacta de los demás. En la implementación esto no se cumple, porque la fase de cada nodo llega a los otros como un mensaje MQTT, con demora y solo cada cierto tiempo. Si $tau_(i j)(t)$ es la antigüedad, en el instante $t$, de la última fase del nodo $j$ que conoce el nodo $i$, la evolución de cada nodo está dada por
 
-Frases sacadas de los párrafos anteriores:
-- Con retardo en el acoplamiento, la frecuencia común deja de ser igual a la media.
-- Si cada nodo dividiera por la cantidad de fases recibidas en lugar de un $N$ fijo, el modelo cambiaría cuando se pierden mensajes; por eso conviene usar $N$ fijo.
+$ dot(theta)_i (t) = omega_i + K/N sum_(j != i) sin(theta_j (t - tau_(i j)(t)) - theta_i (t)) $ <ec-nodo>
 
-*Efecto de la red: retardo.* En la red, cada nodo conoce las fases de los demás con un retardo $tau$:
+La suma excluye $j = i$ porque cada nodo conoce su propia fase sin demora, y ese término es nulo. El divisor $N$ es la cantidad total de nodos y permanece fijo aunque falte alguna fase, de modo que un mensaje ausente no altera el peso de los demás. Con todos los retardos nulos, la @ec-nodo coincide con la @ec-kuramoto.
 
-$ dot(theta)_i = omega_i + K/N sum_(j != i) sin(theta_j (t - tau) - theta_i (t)) $ <ec-retardo>
+La antigüedad $tau_(i j)$ reúne varias demoras. Una fase recorre dos conexiones TCP, del publicador al broker y del broker al suscriptor (@sec-pubsub), y pasa por la cola del broker. Además, entre dos publicaciones sucesivas la fase conocida envejece: si cada nodo publica con período $h$, esa espera agrega en promedio alrededor de $h\/2$. Por último, MQTT delega la entrega en TCP (@sec-mqtt), de modo que un paquete descartado en la red no se pierde, sino que se retransmite y llega más tarde. Mientras la conexión se mantiene, la pérdida de paquetes se manifiesta entonces como un aumento y una variación de $tau_(i j)$. Si un mensaje no llega, el nodo sigue usando la última fase recibida, cuya antigüedad continúa creciendo. Con la política alternativa, usar solo las fases recibidas en cada paso y mantener $N$ fijo, una fracción $p$ de mensajes ausentes reduciría el acoplamiento a aproximadamente $K(1 - p)$.
 
-La suma excluye $j = i$ porque cada nodo conoce su propia fase sin demora. Para osciladores idénticos, si se incluyera ese término propio, la frecuencia común cumpliría $Omega = omega - K sin(Omega tau)$, y el estado en fase sería estable si $K cos(Omega tau) > 0$. En la implementación ese término no existe.
+Si se corta la conexión o cae el broker, que es el punto de falla del sistema (@sec-casos-sintesis), dejan de llegar fases de todos los nodos. Las fases guardadas ya no representan a los demás, por lo que el acoplamiento se anula, cada nodo vuelve a su frecuencia natural y se espera que $r$ decaiga.
 
-*$N = 2$ con retardo.* Con $phi = theta_2 - theta_1$ y $Delta omega = omega_2 - omega_1$, el estado enganchado de la @ec-retardo cumple
+Cada nodo integra la @ec-nodo con un paso fijo $T_s$, que no tiene por qué coincidir con $h$, mediante el método de Euler:
+
+$ theta_i [k + 1] = theta_i [k] + T_s (omega_i + K/N sum_(j != i) sin(hat(theta)_j [k] - theta_i [k])) $ <ec-nodo-discreta>
+
+donde $hat(theta)_j [k]$ es la última fase recibida del nodo $j$ al llegar el paso $k$. Sin retardo y cerca de la sincronía, una perturbación de las fases se multiplica por $1 - K T_s$ en cada paso, por lo que la integración exige $0 < K T_s < 2$.
+
+*Efecto del retardo.* Yeung y Strogatz analizan el modelo de Kuramoto con un retardo $tau$ constante e igual para todos los pares, incluido el término de cada oscilador consigo mismo @yeung1999. Para osciladores idénticos, con $omega_i = omega_0$, existe una solución en la que todos giran en fase a una frecuencia $Omega$ que cumple
+
+$ Omega = omega_0 - K sin(Omega tau) $ <ec-retardo-omega>
+
+y esa solución es estable si $cos(Omega tau) > 0$ @yeung1999. El retardo, por lo tanto, corre la frecuencia común respecto de la natural, y lo que determina la estabilidad no es $tau$ por sí solo, sino el producto $Omega tau$. Con acoplamiento débil, $Omega approx omega_0$ y la condición se cumple mientras el retardo sea menor que un cuarto del período de oscilación. El retardo se compara, entonces, con el período de oscilación y no con la desintonía: la frecuencia de oscilación define cuánta latencia tolera el sistema. A 1 Hz, ese cuarto de período equivale a 250 ms, y a 0,5 Hz, a 500 ms. Para determinadas combinaciones de $K$ y $tau$, la sincronía estable directamente no existe @yeung1999.
+
+El mismo trabajo trata frecuencias distribuidas según una Lorentziana de ancho $gamma$ centrada en $omega_0$, para $N -> infinity$. Sin ruido, el acoplamiento crítico es
+
+$ K_c = (2 gamma)/cos(Omega_c tau), quad Omega_c = omega_0 - gamma tan(Omega_c tau) $ <ec-kc-retardo-lorentz>
+
+que con $tau = 0$ se reduce al valor $2 gamma$ del caso sin retardo @yeung1999. El retardo aumenta así el acoplamiento necesario para sincronizar. Yeung y Strogatz incluyen además un ruido blanco en las frecuencias, de intensidad $D$, que en esta expresión se suma a $gamma$ y también eleva el umbral.
+
+Estos resultados no se aplican de forma directa a la @ec-nodo, y se utilizan como referencia. La diferencia del término propio es menor: al repetir el planteo para osciladores idénticos sin ese término, quedan $N - 1$ sumandos con retardo, y la condición pasa a ser $Omega = omega_0 - K (N - 1)\/N sin(Omega tau)$, que tiende a la @ec-retardo-omega cuando $N$ crece. No se dispone, en cambio, de un resultado cerrado para frecuencias arbitrarias, $N$ finito y retardos que varían en el tiempo. Se espera que la variación del retardo, o _jitter_, actúe como un ruido sobre las fases recibidas, baje $r$ en régimen y suba el $K_c$ medido, aunque no equivale al ruido blanco del modelo de Yeung y Strogatz. Ese caso se estudia comparando la simulación del modelo con las mediciones.
+
+*Ejemplo con $N = 2$.* Con $phi = theta_2 - theta_1$, restar las dos ecuaciones del modelo sin retardo da $dot(phi) = Delta omega - K sin phi$, que tiene puntos fijos solo si $K >= |Delta omega|$, en acuerdo con el valor de $K_c$ ya obtenido. Con un retardo $tau$ igual en ambos sentidos en la @ec-nodo, y siguiendo el mismo razonamiento de @yeung1999, un estado enganchado debe cumplir
 
 $ Delta omega = K sin phi cos(Omega tau), quad Omega = overline(omega) - K/2 cos phi sin(Omega tau) $
 
-La primera condición solo tiene solución si $K |cos(Omega tau)| >= |Delta omega|$. Aproximando $Omega approx overline(omega)$:
+Hay solución solo si $K |cos(Omega tau)| >= |Delta omega|$. El umbral crece entonces como $1\/|cos(Omega tau)|$, de forma análoga a la @ec-kc-retardo-lorentz.
 
-$ K_c (tau) approx (|Delta omega|)/(|cos(overline(omega) tau)|) $ <ec-kc-retardo>
-
-Una simulación con $overline(omega) = 2 pi$ rad/s y $Delta omega =$ 0,2 rad/s dio el primer $K$ con enganche en 0,200 sin retardo, 0,247 con $tau =$ 100 ms y 0,647 con $tau =$ 200 ms, y la frecuencia común bajó de 6,283 a 6,178 rad/s. La @ec-kc-retardo da así una predicción de $K_c$ y de $Omega$ en función de la latencia.
-
-El retardo entra multiplicado por la frecuencia absoluta de parpadeo $overline(omega)$, no por la desintonía. A 1 Hz, con 250 ms de latencia ya no hay enganche con un $K$ moderado; a 0,5 Hz el límite pasa a 500 ms. La frecuencia de parpadeo define cuánta latencia tolera el sistema.
-
-*Pérdida de paquetes.* MQTT viaja sobre TCP: si se descarta un paquete, TCP lo retransmite y el mensaje llega igual, más tarde, aun con QoS 0. La pérdida de paquetes se traduce en retardo adicional y jitter, no en mensajes perdidos. Los mensajes se pierden de verdad solo si se descartan en la aplicación o si se corta la conexión. En ese caso, el efecto depende de la política del nodo:
-- si mantiene la última fase recibida, la pérdida aumenta la edad de la información y actúa como retardo adicional;
-- si usa solo lo recibido en cada paso, con $N$ fijo, el acoplamiento efectivo baja a aproximadamente $K(1 - p)$.
-
-*Actualización discreta.* Cada nodo integra su fase con un paso propio y publica con un período $h$. Son dos parámetros distintos. Con integración de Euler, el lazo es estable si $0 < K h < 2$, pero con valores reales $K h approx$ 0,05, así que ese límite no influye. El período de publicación determina cada cuánto llega información nueva, y actúa como un retardo adicional de alrededor de $h\/2$.
-
-*Jitter y caída del broker.* La variación del retardo actúa como ruido en la fase: baja $r$ en régimen y sube el $K_c$ medido. Si cae el broker, el acoplamiento se anula y cada nodo vuelve a su frecuencia natural.
-
-*Acoplamiento efectivo.* $K$ es una ganancia del software de cada nodo: se fija al comienzo de cada corrida y no cambia durante ella. No depende de la red y no cambia el tráfico, que lo determinan $h$ y el tamaño de los mensajes. La red no modifica $K$, pero sí el acoplamiento efectivo (@tab-acople-efectivo). Por eso hace falta un $K$ mayor que el teórico para lograr el enganche, y la diferencia entre el $K_c$ teórico y el medido es lo que el stack le quita a la sincronización.
-
-#figure(
-  table(
-    columns: (auto, 1fr),
-    table.header[Efecto de la red][Acoplamiento efectivo],
-    [Latencia $tau$], [Con $N = 2$, el enganche exige $K |cos(overline(omega) tau)| >= |Delta omega|$],
-    [Pérdida de mensajes (solo lo recibido, $N$ fijo)], [Aproximadamente $K(1 - p)$],
-    [Período de publicación $h$], [Información vieja: retardo adicional de alrededor de $h\/2$],
-    [Caída del broker], [Nulo],
-  ),
-  caption: [Efecto de la red sobre el acoplamiento efectivo.],
-) <tab-acople-efectivo>
-*/
+*Acoplamiento efectivo.* $K$ es una ganancia del software de cada nodo, que se fija al comienzo de cada corrida y no cambia durante ella. Tampoco modifica el tráfico, que depende de $h$ y del tamaño de los mensajes. La red no altera $K$, pero sí el efecto que tiene sobre la dinámica, de modo que hace falta un acoplamiento mayor que el teórico para lograr el enganche. La diferencia entre el $K_c$ teórico y el medido cuantifica, entonces, lo que el stack le quita a la sincronización.
 
 ==== Implementación
 
