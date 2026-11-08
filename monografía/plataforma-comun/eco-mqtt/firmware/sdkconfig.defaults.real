@@ -1,0 +1,7 @@
+CONFIG_EXAMPLE_CONNECT_WIFI=y
+CONFIG_EXAMPLE_CONNECT_ETHERNET=n
+CONFIG_ECO_NODE_ID="real"
+# El SSID, la contraseña y la IP del broker van en sdkconfig.defaults.local (no se versiona):
+#   CONFIG_EXAMPLE_WIFI_SSID="..."
+#   CONFIG_EXAMPLE_WIFI_PASSWORD="..."
+#   CONFIG_ECO_BROKER_URI="mqtt://<IP de la PC>:1883"

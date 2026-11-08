@@ -1,0 +1,6 @@
+firmware/build-*/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/sdkconfig.defaults.local
+backend/eco
+*.pcap

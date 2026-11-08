@@ -1,0 +1,5 @@
+CONFIG_EXAMPLE_CONNECT_WIFI=n
+CONFIG_EXAMPLE_CONNECT_ETHERNET=n
+CONFIG_ECO_TAP=y
+# El puente br-eco es 10.10.0.1; 53317/tcp ya está abierto en el firewall de la PC.
+CONFIG_ECO_BROKER_URI="mqtt://10.10.0.1:53317"
