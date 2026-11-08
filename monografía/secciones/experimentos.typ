@@ -35,7 +35,7 @@ Este esquema aprovecha las características del stack presentadas en el marco te
 
 ==== Planteo
 
-*El modelo.* Cada oscilador tiene una frecuencia natural $omega_i$, que es fija, y una fase $theta_i$, que evoluciona según
+*El modelo.* El experimento se basa en el modelo de osciladores acoplados que propuso Kuramoto @kuramoto1975. Para presentarlo se sigue la revisión de Strogatz @strogatz2000, y para el caso de una cantidad finita de osciladores, el trabajo de Verwoerd y Mason @verwoerd2008. Cada oscilador se describe solo por su fase y está acoplado a todos los demás con el mismo peso. Tiene una frecuencia natural $omega_i$, que es fija, y una fase $theta_i$, que evoluciona según
 
 $ dot(theta)_i = omega_i + K/N sum_(j=1)^N sin(theta_j - theta_i), quad i = 1, dots, N $ <ec-kuramoto>
 
@@ -45,17 +45,69 @@ donde $K$ es la intensidad del acoplamiento, en rad/s. El acoplamiento cambia la
 
 $ r e^(i psi) = 1/N sum_(j=1)^N e^(i theta_j) $ <ec-orden>
 
-$r$ vale 0 si las fases están dispersas y 1 si coinciden; $psi$ es la fase media. Con esta definición, la @ec-kuramoto se reescribe en forma de campo medio, que vale para cualquier $N$:
+$r$ vale 0 si las fases están dispersas y 1 si coinciden; $psi$ es la fase media @strogatz2000. La @fig-orden muestra ambas situaciones.
+
+// Dibuja N fases (en grados) sobre el círculo unitario con su centroide, calculado a partir de esas mismas fases.
+#import "@preview/cetz:0.4.2"
+#let circulo-orden(fases, detalle: false) = cetz.canvas(length: 1.5cm, {
+  import cetz.draw: *
+  let n = fases.len()
+  let cx = fases.map(t => calc.cos(t * 1deg)).sum() / n
+  let cy = fases.map(t => calc.sin(t * 1deg)).sum() / n
+  let r = calc.sqrt(cx * cx + cy * cy)
+  let media = calc.atan2(cx, cy)
+  let eje = 0.4pt + gray
+  line((-1.25, 0), (1.25, 0), stroke: eje)
+  line((0, -1.25), (0, 1.25), stroke: eje)
+  circle((0, 0), radius: 1, stroke: 0.7pt)
+  for t in fases {
+    circle((calc.cos(t * 1deg), calc.sin(t * 1deg)), radius: 0.06, fill: white, stroke: 0.7pt)
+  }
+  line((0, 0), (cx, cy), stroke: 1pt, mark: (end: ">", fill: black, scale: 0.6))
+  circle((cx, cy), radius: 0.04, fill: black, stroke: none)
+  if detalle {
+    arc((0, 0), start: 0deg, stop: media, radius: 0.3, anchor: "origin", stroke: 0.6pt)
+    content((0.47 * calc.cos(media / 2), 0.47 * calc.sin(media / 2)), $psi$)
+    content((cx / 2 - 0.14 * calc.sin(media), cy / 2 + 0.14 * calc.cos(media)), $r$)
+    let t = fases.last()
+    content((1.26 * calc.cos(t * 1deg), 1.26 * calc.sin(t * 1deg)), $theta_j$)
+  }
+  content((0, -1.5), [$r approx$ #str(calc.round(r, digits: 2)).replace(".", ",")])
+})
+
+#figure(
+  grid(
+    columns: 2,
+    column-gutter: 2.5em,
+    circulo-orden((12, 68, 128, 172, 233, 262, 308, 349)),
+    circulo-orden((22, 34, 47, 60, 71, 84, 97, 116), detalle: true),
+  ),
+  caption: [Fases de ocho osciladores sobre el círculo unitario (círculos vacíos) y su centroide $r e^(i psi)$ (punto negro). A la izquierda, fases dispersas; a la derecha, fases agrupadas.],
+) <fig-orden>
+
+Si se multiplica la @ec-orden por $e^(-i theta_i)$ y se toma la parte imaginaria, resulta
+
+$ r sin(psi - theta_i) = 1/N sum_(j=1)^N sin(theta_j - theta_i) $
+
+Al reemplazar esa suma en la @ec-kuramoto se obtiene la forma de campo medio @strogatz2000, que vale para cualquier $N$:
 
 $ dot(theta)_i = omega_i + K r sin(psi - theta_i) $ <ec-campo-medio>
 
 Cada oscilador es atraído hacia la fase media con una fuerza $K r$. Es la forma que se implementa en los nodos. El promedio de fases tiene que ser circular: se suman los vectores $(cos theta_j, sin theta_j)$ y se toman el módulo y el ángulo de la suma. Promediar los ángulos directamente falla en el corte entre $2 pi$ y 0.
 
-*Frecuencia común.* Como el acoplamiento es simétrico, al sumar todas las ecuaciones los senos se cancelan de a pares:
+*Frecuencia común.* Para saber a qué frecuencia gira el grupo cuando se engancha, se suma la @ec-kuramoto sobre todos los osciladores:
 
-$ d/(d t) sum_i theta_i = sum_i omega_i quad => quad Omega = overline(omega) = 1/N sum_i omega_i $
+$ sum_(i=1)^N dot(theta)_i = sum_(i=1)^N omega_i + K/N sum_(i=1)^N sum_(j=1)^N sin(theta_j - theta_i) $
 
-Si el grupo se engancha, gira a la frecuencia media $Omega$. Desde ahí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$. Con retardo en el acoplamiento, esta propiedad deja de valer.
+La suma doble vale cero. Como el seno es impar, $sin(theta_j - theta_i) = -sin(theta_i - theta_j)$, de modo que el término del par $(i, j)$ se cancela con el del par $(j, i)$, y los términos con $i = j$ ya son nulos. Queda entonces
+
+$ d/(d t) sum_(i=1)^N theta_i = sum_(i=1)^N omega_i $ <ec-suma-fases>
+
+Esta relación vale siempre, haya o no enganche: el acoplamiento redistribuye las velocidades entre los osciladores, pero no cambia su suma. Si además todos están enganchados, $dot(theta)_i = Omega$ para todo $i$, y la @ec-suma-fases da $N Omega = sum_i omega_i$, es decir
+
+$ Omega = overline(omega) = 1/N sum_(i=1)^N omega_i $ <ec-frecuencia-comun>
+
+Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. Desde ahí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$. Con retardo en el acoplamiento, la frecuencia común deja de ser igual a la media.
 
 *Límite de infinitos osciladores.* Con frecuencias tomadas de una distribución $g(omega)$ unimodal y simétrica, aparece una transición en el acoplamiento crítico
 
