@@ -200,3 +200,20 @@ pérdida, ±20 % y 1,5·K_c, las 3 corridas engancharon.
 
 Limitaciones: pocas semillas, y cada copia sortea su retardo de forma independiente, por lo que no reproduce la
 correlación del bloqueo en cabeza de línea de TCP. No emula el costo de CPU de los nodos.
+
+### Frecuencias iguales y distintas, con y sin ruido
+
+N = 40, h = 1 s, f̄ = 0,1 Hz, 3 semillas. Corridas enganchadas de 3, y Ω medida contra la predicción con τ + h/2 en el caso de iguales:
+
+| Perfil | Distintas ±20 %: 1,2·K_c | 1,5·K_c | 2·K_c | Iguales, K = 0,2: Ω / predicción |
+|---|---|---|---|---|
+| Sin ruido | 2 | 3 | 3 | 0,572 / 0,572 |
+| Jitter | 1 | 3 | 3 | 0,571 / 0,571 |
+| WiFi | 2 | 3 | 3 | 0,571 / 0,571 |
+| WiFi + 1 % de pérdida | 0 | 3 | 3 | 0,553 / 0,570 |
+| WiFi + 5 % de pérdida | 0 | 2 | 3 | 0,541 / 0,570 |
+
+### Extrapolar la fase recibida
+
+Si el receptor adelanta cada fase con la velocidad publicada y su antigüedad, el efecto de h casi desaparece: a 1 Hz, ±5 % y h = 1 s engancharon las 3 semillas desde 1,05·K_c, con r igual a la teoría (sin extrapolar, ninguna). Requiere relojes sincronizados y reduce justamente el efecto de la red que el experimento quiere medir, así que se plantea como comparación aparte.
+

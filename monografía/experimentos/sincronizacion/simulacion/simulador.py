@@ -48,6 +48,7 @@ class Red:
     perdida: float = 0.0  # probabilidad de que una copia no llegue nunca
     perfil: str = ""  # clave de PERFILES_MEDIDOS; se suma a tau
     desfase: bool = True  # cada nodo publica con un desfase propio dentro de h
+    extrapolar: bool = False  # el receptor adelanta la fase con la velocidad publicada y su antigüedad
 
 
 @dataclass
@@ -93,6 +94,9 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
     # Última fase conocida por cada receptor (fila) de cada emisor (columna).
     hat = np.zeros((n, n))
     conocida = np.zeros((n, n), dtype=bool)
+    hat_velocidad = np.zeros((n, n))
+    hat_paso = np.zeros((n, n), dtype=np.int64)
+    velocidad = omega.copy()
     ultima_seq = -np.ones((n, n), dtype=int)
     pendientes = deque()  # (seq, fases publicadas, paso de llegada por copia)
 
@@ -125,7 +129,7 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
             np.fill_diagonal(llegada, NUNCA)
             llegada[:, ~publican] = NUNCA
             if llegada.min() < NUNCA:
-                pendientes.append([llegada.min(), seq, theta.copy(), llegada])
+                pendientes.append([llegada.min(), seq, theta.copy(), llegada, velocidad.copy(), paso])
             seq += 1
 
         # Solo se revisan las publicaciones que tienen alguna copia por llegar en este paso.
@@ -133,21 +137,25 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
         for pendiente in pendientes:
             if pendiente[0] > paso:
                 continue
-            _, numero, publicadas, llegada = pendiente
+            _, numero, publicadas, llegada, velocidades, paso_publicado = pendiente
             llegaron = llegada <= paso
             # Una copia solo reemplaza a la guardada si es más nueva.
             filas, columnas = np.nonzero(llegaron & (numero > ultima_seq))
             hat[filas, columnas] = publicadas[columnas]
             conocida[filas, columnas] = True
             ultima_seq[filas, columnas] = numero
+            hat_velocidad[filas, columnas] = velocidades[columnas]
+            hat_paso[filas, columnas] = paso_publicado
             llegada[llegaron] = NUNCA
             pendiente[0] = llegada.min()
             hubo_vacias = hubo_vacias or pendiente[0] == NUNCA
         if hubo_vacias:
             pendientes = deque(p for p in pendientes if p[0] < NUNCA)
 
-        acople = np.sin(hat - theta[:, None]) * conocida
-        theta = theta + t_s * (omega + k / n * acople.sum(axis=1))
+        estimada = hat + hat_velocidad * (paso - hat_paso) * t_s if red.extrapolar else hat
+        acople = np.sin(estimada - theta[:, None]) * conocida
+        velocidad = omega + k / n * acople.sum(axis=1)
+        theta = theta + t_s * velocidad
 
     if theta_ventana is None:
         theta_ventana = theta.copy()

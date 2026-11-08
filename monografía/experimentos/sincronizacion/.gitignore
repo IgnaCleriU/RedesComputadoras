@@ -1,2 +1,9 @@
 __pycache__/
 simulacion/datos/
+
+# Corridas de host/correr.py: se versionan config.json, nodos.csv, serie.csv,
+# nodos_analisis.csv y resumen.csv; los registros crudos y las capturas pesan demasiado.
+resultados/*/*/*.log
+resultados/*/*/*.pcap
+resultados/*/*/fin.ok
+resultados/*/*/fallo.txt

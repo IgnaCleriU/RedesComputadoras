@@ -35,6 +35,7 @@ def argumentos():
     p.add_argument("--jitter", type=float, default=0.0, help="desvío del jitter en s")
     p.add_argument("--perdida", type=float, default=0.0, help="copias que no llegan nunca (desconexión, no pérdida de TCP)")
     p.add_argument("--perfil", choices=sorted(PERFILES_MEDIDOS), default="", help="retardo sorteado de lo medido")
+    p.add_argument("--extrapolar", action="store_true", help="el receptor adelanta la fase publicada")
     p.add_argument("--t-s", type=float, default=0.01, help="paso de integración en s")
     p.add_argument("--duracion", type=float, default=600.0, help="duración de cada corrida en s")
     p.add_argument("--semillas", type=int, default=3, help="repeticiones con fases iniciales distintas")
@@ -56,10 +57,10 @@ def main():
         k_c = 0.0
         valores_k = a.k
 
-    red = Red(h=a.h, tau=a.tau, jitter=a.jitter, perdida=a.perdida, perfil=a.perfil)
+    red = Red(h=a.h, tau=a.tau, jitter=a.jitter, perdida=a.perdida, perfil=a.perfil, extrapolar=a.extrapolar)
     tau_medio = a.tau + (1e-3 * PERFILES_MEDIDOS[a.perfil][0] if a.perfil else 0.0)
     a.salida.parent.mkdir(parents=True, exist_ok=True)
-    campos = ["config", "n", "f", "ancho", "perfil", "k", "k_sobre_kc", "semilla", "h", "tau", "jitter", "perdida",
+    campos = ["config", "n", "f", "ancho", "perfil", "extrapolar", "k", "k_sobre_kc", "semilla", "h", "tau", "jitter", "perdida",
               "r_medio", "r_teorico", "enganchado", "t_sinc", "omega_comun", "omega_teorica"]
 
     with a.salida.open("w", newline="") as archivo:
@@ -69,12 +70,12 @@ def main():
             r_teorico = te.r_enganchado(omega, k)
             umbral = 0.9 * r_teorico if r_teorico is not None else 0.9
             # Predicción solo para osciladores idénticos; el período h suma alrededor de h / 2 al retardo.
-            omega_teorica = te.frecuencia_con_retardo(omega_media, k, tau_medio + a.h / 2.0, n=a.n) if a.config == "iguales" else None
+            omega_teorica = te.frecuencia_con_retardo(omega_media, k, tau_medio + a.h / 2.0, n=a.n) if a.config == "iguales" and not a.extrapolar else None
             for semilla in range(a.semillas):
                 resultado = simular(omega, k, red, duracion=a.duracion, t_s=a.t_s, semilla=semilla)
                 t_sinc = tiempo_de_sincronizacion(resultado, umbral)
                 escritor.writerow({
-                    "config": a.config, "n": a.n, "f": a.f, "ancho": a.ancho, "perfil": a.perfil, "k": f"{k:.6f}",
+                    "config": a.config, "n": a.n, "f": a.f, "ancho": a.ancho, "perfil": a.perfil, "extrapolar": int(a.extrapolar), "k": f"{k:.6f}",
                     "k_sobre_kc": f"{k / k_c:.4f}" if k_c > 0.0 else "",
                     "semilla": semilla, "h": a.h, "tau": a.tau, "jitter": a.jitter, "perdida": a.perdida,
                     "r_medio": f"{r_medio(resultado):.5f}",
