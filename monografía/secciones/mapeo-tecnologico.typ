@@ -67,3 +67,25 @@ La @tab-mapeo resume los componentes relevados.
 ) <tab-mapeo>
 
 Con conectividad Wi-Fi, poner en marcha los ocho nodos requiere unos USD 80 en placas y USD 5 por mes para el broker. Con conectividad celular, la inversión inicial sube a unos USD 250 entre placas y tarjetas SIM, y el costo mensual a unos USD 21, de los cuales 16 corresponden a los datos. En ambos casos, el sistema estudiado puede implementarse con equipos de bajo costo y de amplia disponibilidad. La principal incertidumbre no es el precio sino la cobertura. Ninguno de los proveedores globales con tarifas públicas declara operar sobre la red de Personal, por lo que antes de un despliegue habría que verificar qué operador tiene señal en el lugar de instalación.
+
+=== Escalabilidad
+
+El escenario de ocho nodos es solo un caso de uso entre muchos posibles, y cada componente de la @tab-mapeo crece con una variable distinta.
+
+- Las placas y las tarjetas SIM crecen con la cantidad de nodos y se pagan una sola vez.
+- El cargo fijo mensual de las tarjetas crece con la cantidad de nodos.
+- Los datos celulares crecen con la cantidad de nodos, la frecuencia de envío y el tamaño de cada lectura.
+- El broker contratado crece con la cantidad de mensajes, sin importar su tamaño.
+- El broker propio crece de a escalones, según el tamaño de servidor que exige la carga, y por transferencia solo cuando el tráfico supera el volumen incluido en el plan.
+
+Según el caso de uso, el costo total queda dominado por uno u otro de estos componentes.
+
+Cuando se supervisan variables que cambian lentamente, como una temperatura o el nivel de un tanque, basta con enviar una lectura por minuto o incluso menos. Un nodo celular con esa frecuencia transfiere unos 6 MB por mes y, con las tarifas relevadas, paga alrededor de USD 1,2, de los cuales USD 1 corresponde al cargo fijo de la tarjeta @hologram-precios. En este caso, reducir el tamaño de los mensajes casi no modifica la factura, y el costo lo definen el hardware y la cantidad de nodos.
+
+La situación se invierte en una flota grande conectada por celular que envía datos con frecuencia, como la de mil nodos con una lectura cada 10 s considerada en la @tab-proyeccion. Los datos pasan a ser el componente principal, del orden de USD 2000 por mes para toda la flota, y cada decisión del stack se multiplica por la cantidad de nodos. Enviar JSON en lugar de Protocol Buffers aumentaría el volumen de datos de toda la flota en alrededor de un 40 %, y usar HTTP en lugar de MQTT lo multiplicaría casi por cuatro, con el consiguiente aumento de la parte del costo que depende del volumen. También cambia la elección del broker. Con esa carga, un servicio que cobra por mensaje costaría alrededor de USD 260 por mes. Un servidor propio también tiene costos que crecen con el uso, por el cómputo y la transferencia de datos, pero lo hacen de a escalones. El tráfico de toda la flota, de algunas decenas de gigabytes por mes, queda muy por debajo del volumen que incluyen incluso los planes más chicos, y aun un servidor varias veces más grande que el de la @tab-mapeo cuesta una fracción del servicio contratado. El servidor propio pasa a ser así la alternativa más económica, a pesar del trabajo que implica operarlo. A esta escala, de todos modos, los precios de lista pierden representatividad, porque los operadores negocian los planes M2M con descuentos por volumen, y las cifras deben leerse como órdenes de magnitud.
+
+En un depósito con robots móviles (@sec-caso-robotica), el tráfico también es intenso, porque cada robot publica su posición y su estado de forma continua, pero viaja por la red Wi-Fi de la instalación, que no cobra por byte. El costo de comunicación se reduce al broker y resulta despreciable frente al valor de los robots. En este caso, la ventaja del stack no se mide en dinero, sino en la latencia y en el uso de la red.
+
+La mensajería (@sec-caso-mensajeria) se ubica en el extremo opuesto. Los datos viajan por el plan de telefonía de cada usuario, que es quien paga el tramo celular, y el costo de la empresa se concentra en mantener conexiones persistentes con millones de dispositivos móviles. A esa escala, el broker deja de ser un producto que se contrata y pasa a desarrollarse a medida, como muestra la evolución de Messenger.
+
+Estos casos muestran que el ahorro de bytes del stack se convierte en dinero solo cuando la conexión se cobra por volumen y la frecuencia de envío es alta. En los demás, la elección de MQTT y Protocol Buffers se justifica por la latencia y el uso de la red más que por el costo.
