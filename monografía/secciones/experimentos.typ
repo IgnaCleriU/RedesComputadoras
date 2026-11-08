@@ -590,7 +590,7 @@ Para un sistema de telemetría como el estudiado, los resultados sugieren cuatro
 - Si se usa HTTP, conviene reutilizar la conexión y desactivar Nagle, o escribir cada solicitud con una sola llamada a `send()`. Con eso la latencia queda en el mismo orden que la de MQTT, aunque el costo en bytes sigue siendo unas tres veces mayor.
 - Mientras la conexión TCP se mantiene, QoS 1 no mejora la entrega y agrega duplicados, por lo que la aplicación debe poder descartarlos, por ejemplo con el número de secuencia. Su valor aparece ante cortes de conexión, que este experimento no midió.
 - Protocol Buffers ahorra lo mismo en todos los transportes, pero su efecto relativo es mayor justamente en MQTT, donde el resto de la lectura ya es chico.
-
+|
 === Experimento 2: sincronización de osciladores acoplados <sec-exp-sincronizacion>
 
 La sincronización colectiva aparece cuando un conjunto de osciladores, cada uno con su propio ritmo, termina funcionando a una frecuencia común sin que nadie la imponga. Las diferencias entre las frecuencias naturales no desaparecen, pero la interacción alcanza para compensarlas. En biología se observa en las células marcapasos del corazón, en las células del núcleo supraquiasmático que regulan los ritmos circadianos, en suspensiones de levaduras, en las luciérnagas que destellan al unísono y en los grillos que cantan a la vez. En física e ingeniería aparece en arreglos de láseres, en osciladores de microondas y en uniones de Josephson @strogatz2000.
@@ -607,17 +607,17 @@ La aplicación también expone los costos del stack. El broker agrega un salto a
 
 ==== Planteo
 
-*El modelo.* El experimento se basa en el modelo de osciladores acoplados que propuso Kuramoto @kuramoto1975. Para presentarlo se sigue la revisión de Strogatz @strogatz2000, y para el caso de una cantidad finita de osciladores, el trabajo de Verwoerd y Mason @verwoerd2008. Cada oscilador se describe solo por su fase y está acoplado a todos los demás con el mismo peso. Tiene una frecuencia natural $omega_i$, que es fija, y una fase $theta_i$, que evoluciona según
+*El modelo.* El experimento se basa en el modelo de osciladores acoplados que propuso Kuramoto @kuramoto1975. Para presentarlo se sigue la revisión de Strogatz @strogatz2000, y para el caso de una cantidad finita de osciladores, el trabajo de Verwoerd y Mason @verwoerd2008. Se consideran $N$ osciladores, cada uno descrito solo por su fase y acoplado a todos los demás con el mismo peso. El oscilador $i$ tiene una frecuencia natural $omega_i$, en rad/s, que es fija, y una fase $theta_i$, en radianes, que evoluciona según
 
 $ dot(theta)_i = omega_i + K/N sum_(j=1)^N sin(theta_j - theta_i), quad i = 1, dots, N $ <ec-kuramoto>
 
-donde $K$ es la intensidad del acoplamiento, en rad/s. El acoplamiento cambia la velocidad instantánea $dot(theta)_i$: si el oscilador $j$ va adelantado, $sin(theta_j - theta_i) > 0$ y el oscilador $i$ se acelera; si va atrasado, se frena.
+donde el punto indica la derivada respecto del tiempo. El acoplamiento es la influencia que los osciladores ejercen entre sí, representada por el término de la sumatoria, que depende de las diferencias de fase. Su intensidad es $K$, en rad/s: con $K = 0$, cada oscilador avanza a su frecuencia natural sin afectar a los demás. El acoplamiento cambia la velocidad instantánea $dot(theta)_i$: si el oscilador $j$ va adelantado, $sin(theta_j - theta_i) > 0$ y el oscilador $i$ se acelera; si va atrasado, se frena.
 
 *Parámetro de orden y campo medio.* El grado de sincronía se mide con el centroide de las fases sobre el círculo unitario:
 
-$ r e^(i psi) = 1/N sum_(j=1)^N e^(i theta_j) $ <ec-orden>
+$ r e^(upright(i) psi) = 1/N sum_(j=1)^N e^(upright(i) theta_j) $ <ec-orden>
 
-$r$ vale 0 si las fases están dispersas y 1 si coinciden; $psi$ es la fase media @strogatz2000. La @fig-orden muestra ambas situaciones.
+donde $upright(i)$ es la unidad imaginaria. El módulo $r$, entre 0 y 1, se denomina parámetro de orden: vale 0 si las fases están dispersas y 1 si coinciden. El ángulo $psi$ es la fase media del grupo @strogatz2000. La @fig-orden muestra ambas situaciones.
 
 // Dibuja N fases (en grados) sobre el círculo unitario con su centroide, calculado a partir de esas mismas fases.
 #import "@preview/cetz:0.4.2"
@@ -654,10 +654,10 @@ $r$ vale 0 si las fases están dispersas y 1 si coinciden; $psi$ es la fase medi
     circulo-orden((12, 68, 128, 172, 233, 262, 308, 349)),
     circulo-orden((22, 34, 47, 60, 71, 84, 97, 116), detalle: true),
   ),
-  caption: [Fases de ocho osciladores sobre el círculo unitario (círculos vacíos) y su centroide $r e^(i psi)$ (punto negro). A la izquierda, fases dispersas; a la derecha, fases agrupadas.],
+  caption: [Fases de ocho osciladores sobre el círculo unitario (círculos vacíos) y su centroide $r e^(upright(i) psi)$ (punto negro). A la izquierda, fases dispersas; a la derecha, fases agrupadas.],
 ) <fig-orden>
 
-Si se multiplica la @ec-orden por $e^(-i theta_i)$ y se toma la parte imaginaria, resulta
+Si se multiplica la @ec-orden por $e^(-upright(i) theta_i)$ y se toma la parte imaginaria, resulta
 
 $ r sin(psi - theta_i) = 1/N sum_(j=1)^N sin(theta_j - theta_i) $
 
@@ -667,39 +667,39 @@ $ dot(theta)_i = omega_i + K r sin(psi - theta_i) $ <ec-campo-medio>
 
 Cada oscilador es atraído hacia la fase media con una fuerza $K r$. Es la forma que se implementa en los nodos. El promedio de fases tiene que ser circular: se suman los vectores $(cos theta_j, sin theta_j)$ y se toman el módulo y el ángulo de la suma. Promediar los ángulos directamente falla en el corte entre $2 pi$ y 0.
 
-*Frecuencia común.* Para saber a qué frecuencia gira el grupo cuando se engancha, se suma la @ec-kuramoto sobre todos los osciladores:
+*Frecuencia común.* Se dice que el grupo está enganchado cuando todos los osciladores giran a una misma frecuencia, que se denota $Omega$, y sus diferencias de fase permanecen constantes. Para hallar $Omega$, se suma la @ec-kuramoto sobre todos los osciladores:
 
 $ sum_(i=1)^N dot(theta)_i = sum_(i=1)^N omega_i + K/N sum_(i=1)^N sum_(j=1)^N sin(theta_j - theta_i) $
 
 La suma doble vale cero. Como el seno es impar, $sin(theta_j - theta_i) = -sin(theta_i - theta_j)$, de modo que el término del par $(i, j)$ se cancela con el del par $(j, i)$, y los términos con $i = j$ ya son nulos. Queda entonces
 
-$ d/(d t) sum_(i=1)^N theta_i = sum_(i=1)^N omega_i $ <ec-suma-fases>
+$ sum_(i=1)^N dot(theta)_i = sum_(i=1)^N omega_i $ <ec-suma-fases>
 
-Esta relación vale siempre, haya o no enganche: el acoplamiento redistribuye las velocidades entre los osciladores, pero no cambia su suma. Si además todos están enganchados, $dot(theta)_i = Omega$ para todo $i$, y la @ec-suma-fases da $N Omega = sum_i omega_i$, es decir
+Esta relación vale siempre, haya o no enganche: el acoplamiento redistribuye las velocidades entre los osciladores, pero no cambia su suma. Si el grupo está enganchado, $dot(theta)_i = Omega$ para todo $i$, y la @ec-suma-fases da $N Omega = sum_i omega_i$, es decir
 
 $ Omega = overline(omega) = 1/N sum_(i=1)^N omega_i $ <ec-frecuencia-comun>
 
-Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. Desde ahí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$.
+Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. A partir de aquí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$, que indican cuánto se aparta cada frecuencia natural de la media.
 
-*Límite de infinitos osciladores.* El primer resultado sobre el umbral de sincronización es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se toman de una densidad $g(Delta)$ unimodal y simétrica, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a velocidad uniforme. Si las fases se miden desde $psi$, la @ec-campo-medio se reduce a
+*Límite de infinitos osciladores.* Se denomina acoplamiento crítico $K_c$ al valor de $K$ a partir del cual aparece la sincronización. El primer resultado sobre este umbral es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se distribuyen según una densidad de probabilidad $g(Delta)$ simétrica y con un único máximo en $Delta = 0$, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a la velocidad uniforme $Omega$. En lo que sigue, $theta_i$ denota la fase medida desde $psi$, con lo que la @ec-campo-medio se reduce a
 
 $ dot(theta)_i = Delta_i - K r sin theta_i $
 
-Según el valor de $Delta_i$, los osciladores se separan en dos grupos. Los que cumplen $|Delta_i| <= K r$ tienden a un punto fijo con $Delta_i = K r sin theta_i$ y $|theta_i| <= pi\/2$, y quedan enganchados. Los que tienen $|Delta_i| > K r$ no alcanzan ningún punto fijo y derivan alrededor del círculo.
+Según el valor de $Delta_i$, los osciladores se separan en dos grupos. Los que cumplen $|Delta_i| <= K r$ tienden a un punto fijo, en el que su fase relativa deja de cambiar, con $Delta_i = K r sin theta_i$ y $|theta_i| <= pi\/2$, y quedan enganchados. Los que tienen $|Delta_i| > K r$ no alcanzan ningún punto fijo y derivan alrededor del círculo.
 
-El valor de $r$ tiene que ser coherente con estas dos poblaciones. La simetría de $g$ anula la contribución de los osciladores a la deriva al centroide, y también la parte imaginaria de la contribución de los enganchados. Solo queda el promedio de $cos theta$ sobre los enganchados, y con el cambio de variable $Delta = K r sin theta$ resulta
+El valor de $r$ tiene que ser coherente con estas dos poblaciones. La simetría de $g$ anula la contribución de los osciladores a la deriva al centroide, y también la parte imaginaria de la contribución de los enganchados. Solo queda el promedio de $cos theta$ sobre los enganchados, donde $theta(Delta)$ es la fase que cumple $Delta = K r sin theta$, y con ese cambio de variable resulta
 
 $ r = integral_(-K r)^(K r) cos theta(Delta) thin g(Delta) dif Delta = K r integral_(-pi\/2)^(pi\/2) cos^2 theta thin g(K r sin theta) dif theta $
 
-Esta ecuación siempre admite la solución $r = 0$, que corresponde al estado incoherente. Las demás soluciones, con sincronización parcial, se obtienen dividiendo por $r$:
+Esta ecuación siempre admite la solución $r = 0$, que corresponde al estado incoherente, en el que las fases están repartidas sin un ritmo común. Las demás soluciones, que forman una rama de sincronización parcial, se obtienen dividiendo por $r$:
 
 $ 1 = K integral_(-pi\/2)^(pi\/2) cos^2 theta thin g(K r sin theta) dif theta $ <ec-rama-parcial>
 
-El acoplamiento crítico es el valor en el que esta rama nace desde $r = 0$. Al tomar $r -> 0^+$ en la @ec-rama-parcial, $g$ se evalúa en 0 y la integral de $cos^2 theta$ vale $pi\/2$, de modo que $1 = K_c g(0) pi\/2$, es decir
+El acoplamiento crítico es el valor en el que esa rama nace desde $r = 0$. Al tomar $r -> 0^+$ en la @ec-rama-parcial, $g$ se evalúa en 0 y la integral de $cos^2 theta$ vale $pi\/2$, de modo que $1 = K_c g(0) pi\/2$, es decir
 
 $ K_c = 2/(pi g(0)) $ <ec-kc-infinito>
 
-Para una distribución de Lorentz de ancho $gamma$, $g(0) = 1\/(pi gamma)$, por lo que $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$ @strogatz2000. Estas expresiones valen en el límite de infinitos osciladores. Con $N$ finito, $r$ fluctúa con una amplitud del orden de $N^(-1\/2)$ @strogatz2000. Por eso, en este trabajo la @ec-kc-infinito queda solo como contexto, y $K_c$ se calcula como se muestra a continuación.
+Para una distribución de Lorentz de ancho $gamma$, $g(Delta) = gamma\/(pi (gamma^2 + Delta^2))$ y $g(0) = 1\/(pi gamma)$, por lo que $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$ @strogatz2000. Estas expresiones valen en el límite de infinitos osciladores. Con $N$ finito, $r$ fluctúa con una amplitud del orden de $N^(-1\/2)$ @strogatz2000. Por eso, en este trabajo la @ec-kc-infinito queda solo como contexto, y $K_c$ se calcula como se muestra a continuación.
 
 *Umbral exacto con $N$ finito.* Verwoerd y Mason estudian el mismo modelo para una cantidad finita de osciladores @verwoerd2008, y definen el acoplamiento crítico como el menor $K$ para el que existe un estado enganchado. No es el mismo umbral que el de la @ec-kc-infinito: aquel marca el comienzo de la sincronización parcial, y este, el enganche de todos los osciladores.
 
@@ -707,7 +707,7 @@ En un estado enganchado, $dot(theta)_i = overline(omega)$ para todo $i$. Reempla
 
 $ Delta_i = u sin(theta_i - psi), quad u = K r $
 
-Por lo tanto, cada oscilador necesita $|Delta_i| <= u$. De la parte real de la @ec-orden, multiplicada por $e^(-i psi)$, sale $r = 1\/N sum_i cos(theta_i - psi)$, y cada coseno vale $plus.minus sqrt(1 - (Delta_i\/u)^2)$. Verwoerd y Mason demuestran que existe un estado enganchado si y solo si la ecuación resultante tiene solución con todos los signos positivos @verwoerd2008, lo que da la condición de autoconsistencia:
+La magnitud $u$ es la fuerza con la que el grupo atrae a cada oscilador, y como el seno no supera 1 en módulo, cada oscilador necesita $|Delta_i| <= u$. De la parte real de la @ec-orden, multiplicada por $e^(-upright(i) psi)$, sale $r = 1\/N sum_i cos(theta_i - psi)$, y cada coseno vale $plus.minus sqrt(1 - (Delta_i\/u)^2)$. Verwoerd y Mason demuestran que existe un estado enganchado si y solo si la ecuación resultante tiene solución con todos los signos positivos @verwoerd2008, lo que da la condición de autoconsistencia:
 
 $ r = u/K = f(u) = 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u)^2), quad u >= max_i |Delta_i| $ <ec-autoconsistencia>
 
@@ -715,15 +715,15 @@ Despejando, $K = u\/f(u)$, y el menor acoplamiento para el que hay solución es
 
 $ K_c = min_(u >= max_i |Delta_i|) u/f(u) $ <ec-kc-finito>
 
-Al derivar $u\/f(u)$ e igualar a cero, el mínimo queda en el valor $u^*$ que cumple
+Al derivar $u\/f(u)$ e igualar a cero se obtiene $f(u) = u f'(u)$, y al desarrollar $f'(u)$, el mínimo queda en el valor $u^*$ que cumple
 
 $ 2 dot 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u^*)^2) = 1/N sum_(i=1)^N 1/sqrt(1 - (Delta_i/u^*)^2) $
 
-Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad. Ese punto se comprueba con la simulación.
+Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad. Ese punto se comprueba mediante la simulación numérica del modelo.
 
-Con esto se calculan, para las frecuencias concretas de cada corrida, el umbral de enganche total, el $r$ final y el desfasaje de cada nodo. Con $N = 2$ se obtiene $K_c = |Delta omega|$.
+Con esto se calculan, para un conjunto dado de frecuencias naturales, el umbral de enganche total, el valor de $r$ y el desfasaje de cada oscilador respecto de la fase media, que es $theta_i - psi = arcsin(Delta_i\/u)$. Con $N = 2$ y $Delta omega = omega_2 - omega_1$ se obtiene $K_c = |Delta omega|$.
 
-*Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
+*Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador, es decir, la velocidad media a la que avanza su fase. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
 
 /* PENDIENTE: efectos de la red sobre el modelo. Queda fuera del documento hasta retomarlo.
 
