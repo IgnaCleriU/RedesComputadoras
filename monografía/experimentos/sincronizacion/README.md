@@ -14,6 +14,7 @@ correr, y las mediciones que fijan sus límites:
 | Firmware ESP-IDF de medición, para placa real y QEMU | Firmware con la fase, el acoplamiento y el LED |
 | Backend Go de latencia y throughput | Backend o analizador de r(t), Ω y K_c |
 | Hasta 60 nodos QEMU sobre tap + puente | `.proto` del mensaje de fase |
+| Simulación ideal del modelo de los nodos (`simulacion/`) | |
 | Delay de difusión, todos-a-todos y ruido con `netem` | Corridas del experimento y su análisis |
 
 El firmware actual publica mensajes con secuencia, índice del emisor y relleno. No calcula ninguna
@@ -107,6 +108,9 @@ nodo tiene una sola conexión con el broker.
 | Bajar la frecuencia de parpadeo | Con h = 1 s, la información vieja suma unos h/2 = 500 ms y a 1 Hz rompe el estado en fase |
 | Tap + puente para varios nodos | Da a cada nodo una interfaz propia donde aplicar `netem` |
 | `netem` con `slot` | `delay X Y` reordena paquetes y dispara retransmisiones |
+| Dos configuraciones de frecuencias | Iguales para medir Ω con retardo (K_c = 0); equiespaciadas para medir K_c |
+| Divisor N fijo y última fase recibida | Un mensaje ausente no cambia el peso de los demás |
+| Fuentes del modelo | Strogatz 2000, Verwoerd y Mason 2008, Yeung y Strogatz 1999 |
 
 ## Ideas
 
@@ -121,7 +125,8 @@ nodo actualiza la suya.
 
 1. Calibrar τ₀ con todos-a-todos y el h elegido.
 2. Barrer K sin retardo agregado y comparar el K_c medido con el exacto para N finito.
-3. Agregar retardo con `netem` (τ₀ + 0 a 250 ms) y medir K_c(τ) contra la predicción.
+3. Agregar retardo con `netem` (τ₀ + 0 a 250 ms) y medir K_c(τ) contra la predicción. Para frecuencias
+   equiespaciadas y N = 40 no hay fórmula cerrada: la predicción sale de la simulación.
 
 **Descartado o reemplazado:**
 
@@ -143,11 +148,55 @@ nodo actualiza la suya.
 
 ## Pendiente de definir
 
-- **Valor exacto de la frecuencia.** Se acordó bajarla; 0,1 Hz solo se evaluó como ejemplo
-  (ω̄·h/2 ≈ 0,31 rad).
+- **Valor exacto de la frecuencia y su dispersión.** Se acordó bajarla. La simulación favorece 0,1 Hz con
+  ±20 % (ver la tabla de abajo); falta decidirlo.
+- **Entrega propia.** Un nodo suscrito con comodín recibe su propia fase: son N² entregas por ronda, salvo
+  que se active No Local de MQTT 5.
+- **Reloj común para r(t).** Captura de tráfico en la PC, o SNTP como en el experimento 1.
 - **Extrapolar la fase recibida.** Quedó como alternativa a bajar la frecuencia, y cambia el modelo.
 - **`.proto` del experimento.** El de `contenido/igna` (`Flash`, `PhaseReport`, `RxEvent` y
   `ExperimentConfig`) sirve de punto de partida, pero está pensado para varios LEDs por placa.
 - **Validar con TLS.** Todas las mediciones de todos-a-todos son sin TLS.
 - **Texto de la plataforma común** en `secciones/experimentos.typ`: describe la red de usuario de
   QEMU y las mediciones con varios nodos usan tap, puente y `netem`.
+
+## Simulación ideal
+
+Integra la ecuación discreta del nodo sin red real, con período de publicación, desfase por nodo, retardo
+y los percentiles medidos en la sección de ruido. Requiere Python 3 con `numpy` y `scipy`.
+
+| Archivo | Qué hace |
+|---|---|
+| `simulacion/teoria.py` | K_c para N finito, r, desfasajes y frecuencia común con retardo |
+| `simulacion/simulador.py` | Modelo de los nodos y modelo de entrega de los mensajes |
+| `simulacion/verificar.py` | Compara teoría y simulador con los resultados conocidos |
+| `simulacion/barrido.py` | Barre K y escribe un CSV (`simulacion/datos/`, no se versiona) |
+
+```bash
+cd simulacion
+python3 verificar.py
+python3 barrido.py --config distintas --n 40 --f 0.1 --ancho 0.2 --perfil sin-ruido --salida datos/d.csv
+python3 barrido.py --config iguales --n 40 --f 0.1 --k 0.05 0.2 --perfil sin-ruido --salida datos/i.csv
+```
+
+`verificar.py` comprueba K_c con N = 2 y N = 40, r contra la autoconsistencia, el umbral de N = 2 con retardo y Ω
+de osciladores idénticos con retardo. El retardo adicional de h/2 es una aproximación: con h = 100 ms y nodos
+desfasados, Ω dio 6,0230 rad/s contra 6,0165 de la predicción.
+
+### Puntos de operación con N = 40, h = 1 s y el retardo medido sin ruido
+
+Corridas con 3 semillas por punto. Cantidad de corridas enganchadas, de 3:
+
+| f̄ | Dispersión | 1,05·K_c | 1,2·K_c | 1,5·K_c | 2·K_c | Tiempo de sincronización a 1,5·K_c |
+|---|---|---|---|---|---|---|
+| 1 Hz | ±5 % | 0 | 0 | 0 | 0 | no sincroniza (r ≈ 0,12) |
+| 0,25 Hz | ±20 % | 0 | 0 | 0 | 3 | no sincroniza |
+| 0,1 Hz | ±5 % | 0 | 3 | 3 | 3 | 78–222 s |
+| 0,1 Hz | ±20 % | 0 | 2 | 3 | 3 | 20–56 s |
+| 0,1 Hz | ±40 % | 0 | 3 | 3 | 3 | 10–34 s |
+
+Con osciladores iguales a 0,1 Hz, Ω coincide con la predicción usando τ + h/2. Con el perfil WiFi con 1 % de
+pérdida, ±20 % y 1,5·K_c, las 3 corridas engancharon.
+
+Limitaciones: pocas semillas, y cada copia sortea su retardo de forma independiente, por lo que no reproduce la
+correlación del bloqueo en cabeza de línea de TCP. No emula el costo de CPU de los nodos.
