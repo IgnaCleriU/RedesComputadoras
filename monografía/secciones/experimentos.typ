@@ -32,7 +32,7 @@ La emulación impone algunas restricciones. Los tiempos de ejecución no son los
 
 === Experimento 1: MQTT contra HTTPS para telemetría <sec-exp-mqtt-https>
 
-Este experimento es el caso base de la parte experimental. Mide cuánto cuesta, en bytes y en latencia, enviar una lectura de un sensor por MQTT y por HTTP, y separa ese costo en sus componentes: la conexión, el protocolo de aplicación, el cifrado y la serialización. Sus resultados sirven de referencia para el segundo experimento (@sec-exp-sincronizacion), que compara las mismas combinaciones en la sincronización de osciladores acoplados, una aplicación de tiempo real con intercambio de mensajes a alta frecuencia.
+Este experimento es el caso base de la parte experimental. Mide cuánto cuesta, en bytes y en latencia, enviar una lectura de un sensor por MQTT y por HTTP, y separa ese costo en sus componentes: la conexión, el protocolo de aplicación, el cifrado y la serialización. Sus resultados sirven de referencia para el segundo experimento (@sec-exp-sincronizacion), que aplica el stack MQTT y Protocol Buffers a la sincronización de osciladores acoplados, una aplicación en la que todos los nodos intercambian mensajes entre sí.
 
 ==== Conceptos previos <sec-conceptos-exp1>
 
