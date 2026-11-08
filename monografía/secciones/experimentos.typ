@@ -107,7 +107,7 @@ Esta relación vale siempre, haya o no enganche: el acoplamiento redistribuye la
 
 $ Omega = overline(omega) = 1/N sum_(i=1)^N omega_i $ <ec-frecuencia-comun>
 
-Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. Desde ahí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$. Con retardo en el acoplamiento, la frecuencia común deja de ser igual a la media.
+Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. Desde ahí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$.
 
 *Límite de infinitos osciladores.* El primer resultado sobre el umbral de sincronización es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se toman de una densidad $g(Delta)$ unimodal y simétrica, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a velocidad uniforme. Si las fases se miden desde $psi$, la @ec-campo-medio se reduce a
 
@@ -151,7 +151,13 @@ Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/
 
 Con esto se calculan, para las frecuencias concretas de cada corrida, el umbral de enganche total, el $r$ final y el desfasaje de cada nodo. Con $N = 2$ se obtiene $K_c = |Delta omega|$.
 
-*Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro nodo deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada nodo. Como el acoplamiento se divide por $N$, al agregar nodos con el mismo $K$ cada interacción individual se debilita. Si cada nodo dividiera por la cantidad de fases recibidas en lugar de un $N$ fijo, el modelo cambiaría cuando se pierden mensajes; por eso conviene usar $N$ fijo.
+*Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
+
+/* PENDIENTE: efectos de la red sobre el modelo. Queda fuera del documento hasta retomarlo.
+
+Frases sacadas de los párrafos anteriores:
+- Con retardo en el acoplamiento, la frecuencia común deja de ser igual a la media.
+- Si cada nodo dividiera por la cantidad de fases recibidas en lugar de un $N$ fijo, el modelo cambiaría cuando se pierden mensajes; por eso conviene usar $N$ fijo.
 
 *Efecto de la red: retardo.* En la red, cada nodo conoce las fases de los demás con un retardo $tau$:
 
@@ -192,6 +198,7 @@ El retardo entra multiplicado por la frecuencia absoluta de parpadeo $overline(o
   ),
   caption: [Efecto de la red sobre el acoplamiento efectivo.],
 ) <tab-acople-efectivo>
+*/
 
 ==== Implementación
 
