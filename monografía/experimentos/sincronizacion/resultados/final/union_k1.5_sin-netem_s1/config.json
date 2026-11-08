@@ -1,0 +1,196 @@
+{
+ "matriz": "final",
+ "entrada": "union",
+ "corrida": "union_k1.5_sin-netem_s1",
+ "n": 20,
+ "config": "distintas",
+ "f_hz": 0.2,
+ "ancho": 0.2,
+ "k_entrada": 1.5,
+ "h_ms": 500,
+ "ts_ms": 10,
+ "duracion_s": 90,
+ "semilla": 1,
+ "perfil": "",
+ "extrapolar": 0,
+ "arranque": "enganchado",
+ "keepalive_s": 0,
+ "qos": 0,
+ "will": 0,
+ "alias": 0,
+ "captura": 0,
+ "esquema": 0,
+ "nodo_union": 20,
+ "t_union_s": 45,
+ "eventos": [],
+ "k_rad_s": 0.5025023628987881,
+ "kc_rad_s": 0.3350015752658588,
+ "k_veces_kc": 1.5,
+ "perfil_args": "",
+ "sntp": 1,
+ "red": "tap",
+ "server_ip": "10.10.0.1",
+ "nodos": [
+  {
+   "id": 1,
+   "omega": 1.0053096491487339,
+   "theta0": 4.157477053028965,
+   "desfase_ms": 31,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 2,
+   "omega": 1.0317651662315952,
+   "theta0": 4.221817530953958,
+   "desfase_ms": 140,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 3,
+   "omega": 1.0582206833144565,
+   "theta0": 4.284004284026438,
+   "desfase_ms": 249,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 4,
+   "omega": 1.084676200397318,
+   "theta0": 4.344460344753213,
+   "desfase_ms": 242,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 5,
+   "omega": 1.1111317174801796,
+   "theta0": 4.403528003338882,
+   "desfase_ms": 58,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 6,
+   "omega": 1.137587234563041,
+   "theta0": 4.461492789837885,
+   "desfase_ms": 490,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 7,
+   "omega": 1.1640427516459024,
+   "theta0": 4.5185998177551125,
+   "desfase_ms": 374,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 8,
+   "omega": 1.1904982687287637,
+   "theta0": 4.575065435415393,
+   "desfase_ms": 480,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 9,
+   "omega": 1.216953785811625,
+   "theta0": 4.631085926334826,
+   "desfase_ms": 46,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 10,
+   "omega": 1.2434093028944868,
+   "theta0": 4.686844346846787,
+   "desfase_ms": 362,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 11,
+   "omega": 1.269864819977348,
+   "theta0": 4.742516225344747,
+   "desfase_ms": 146,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 12,
+   "omega": 1.2963203370602094,
+   "theta0": 4.798274645856706,
+   "desfase_ms": 270,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 13,
+   "omega": 1.322775854143071,
+   "theta0": 4.854295136776139,
+   "desfase_ms": 462,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 14,
+   "omega": 1.3492313712259323,
+   "theta0": 4.91076075443642,
+   "desfase_ms": 138,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 15,
+   "omega": 1.3756868883087936,
+   "theta0": 4.967867782353648,
+   "desfase_ms": 362,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 16,
+   "omega": 1.4021424053916551,
+   "theta0": 5.0258325688526515,
+   "desfase_ms": 80,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 17,
+   "omega": 1.4285979224745167,
+   "theta0": 5.08490022743832,
+   "desfase_ms": 161,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 18,
+   "omega": 1.4550534395573778,
+   "theta0": 5.145356288165093,
+   "desfase_ms": 484,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 19,
+   "omega": 1.4815089566402395,
+   "theta0": 5.207543041237575,
+   "desfase_ms": 210,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 20,
+   "omega": 1.5079644737231008,
+   "theta0": 5.271883519162568,
+   "desfase_ms": 258,
+   "esquema": 0,
+   "t_union_s": 45
+  }
+ ],
+ "t_inicio_ms": 1794179156892
+}

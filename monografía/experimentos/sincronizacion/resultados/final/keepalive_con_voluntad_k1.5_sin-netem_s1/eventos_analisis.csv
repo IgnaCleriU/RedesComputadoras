@@ -1,0 +1,3 @@
+evento;nodo;t_s;dur_s;r_antes;r_al_terminar;r_min;t_recuperacion_s;desfase_nodo_rad;cliente_detecta_s;cliente_reconecta_s;voluntad_llega_s
+corte_on;10;30.0;2.0;0.9371;0.9266;0.9169;0.0;0.5102;3.064;16.064;3.315
+corte_on;11;80.0;15.0;0.9371;0.8843;0.8542;8.0;1.4032;5.038;5.038;6.865

@@ -1,0 +1,2 @@
+corrida;n;h_ms;alias;qos;duracion_captura_s;tramas_subida;bytes_subida;tramas_bajada;bytes_bajada;bytes_por_s_total;bytes_por_s_subida_nodo;bytes_por_s_bajada_nodo;publish_subida_B;cabecera_mqtt_subida_B;topico_subida_B;protobuf_subida_B;publish_bajada_B;cabecera_mqtt_bajada_B;topico_bajada_B;protobuf_bajada_B;retransmisiones
+escala_n5_k1.5_sin-netem_s1;5;500;0;0;45.0;1557;103876;2183;197050;6687.2;461.7;875.8;44;21;16;23;44;21;16;23;0

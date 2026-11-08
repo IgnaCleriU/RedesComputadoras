@@ -1,0 +1,116 @@
+{
+ "matriz": "final",
+ "entrada": "escala_n10",
+ "corrida": "escala_n10_k1.5_sin-netem_s1",
+ "n": 10,
+ "config": "distintas",
+ "f_hz": 0.2,
+ "ancho": 0.2,
+ "k_entrada": 1.5,
+ "h_ms": 500,
+ "ts_ms": 10,
+ "duracion_s": 45,
+ "semilla": 1,
+ "perfil": "",
+ "extrapolar": 0,
+ "arranque": "enganchado",
+ "keepalive_s": 0,
+ "qos": 0,
+ "will": 0,
+ "alias": 0,
+ "captura": 1,
+ "esquema": 0,
+ "nodo_union": 0,
+ "t_union_s": 0,
+ "eventos": [],
+ "k_rad_s": 0.5248827404985513,
+ "kc_rad_s": 0.34992182699903424,
+ "k_veces_kc": 1.5,
+ "perfil_args": "",
+ "sntp": 1,
+ "red": "tap",
+ "server_ip": "10.10.0.1",
+ "nodos": [
+  {
+   "id": 1,
+   "omega": 1.0053096491487339,
+   "theta0": 4.203089123243303,
+   "desfase_ms": 418,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 2,
+   "omega": 1.0611601852125523,
+   "theta0": 4.329359023000962,
+   "desfase_ms": 269,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 3,
+   "omega": 1.117010721276371,
+   "theta0": 4.449095211432618,
+   "desfase_ms": 408,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 4,
+   "omega": 1.1728612573401895,
+   "theta0": 4.564742939177645,
+   "desfase_ms": 164,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 5,
+   "omega": 1.228711793404008,
+   "theta0": 4.678130725577447,
+   "desfase_ms": 226,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 6,
+   "omega": 1.2845623294678266,
+   "theta0": 4.79079426080807,
+   "desfase_ms": 394,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 7,
+   "omega": 1.3404128655316452,
+   "theta0": 4.904182047207874,
+   "desfase_ms": 61,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 8,
+   "omega": 1.3962634015954638,
+   "theta0": 5.019829774952901,
+   "desfase_ms": 151,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 9,
+   "omega": 1.4521139376592822,
+   "theta0": 5.139565963384555,
+   "desfase_ms": 62,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 10,
+   "omega": 1.5079644737231008,
+   "theta0": 5.265835863142215,
+   "desfase_ms": 226,
+   "esquema": 0,
+   "t_union_s": 0
+  }
+ ],
+ "t_inicio_ms": 1794180099004
+}

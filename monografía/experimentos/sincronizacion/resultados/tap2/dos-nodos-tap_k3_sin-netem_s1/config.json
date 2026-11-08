@@ -1,0 +1,52 @@
+{
+ "matriz": "tap2",
+ "entrada": "dos-nodos-tap",
+ "corrida": "dos-nodos-tap_k3_sin-netem_s1",
+ "n": 2,
+ "config": "distintas",
+ "f_hz": 0.2,
+ "ancho": 0.2,
+ "k_entrada": 3.0,
+ "h_ms": 1000,
+ "ts_ms": 10,
+ "duracion_s": 60,
+ "semilla": 1,
+ "perfil": "",
+ "extrapolar": 0,
+ "arranque": "azar",
+ "keepalive_s": 0,
+ "qos": 0,
+ "will": 0,
+ "alias": 0,
+ "captura": 0,
+ "esquema": 0,
+ "nodo_union": 0,
+ "t_union_s": 0,
+ "eventos": [],
+ "k_rad_s": 1.5079644737231008,
+ "kc_rad_s": 0.5026548245743669,
+ "k_veces_kc": 3.0,
+ "perfil_args": "",
+ "sntp": 1,
+ "red": "tap",
+ "server_ip": "10.10.0.1",
+ "nodos": [
+  {
+   "id": 1,
+   "omega": 1.0053096491487339,
+   "theta0": 3.2158701122134374,
+   "desfase_ms": 34,
+   "esquema": 0,
+   "t_union_s": 0
+  },
+  {
+   "id": 2,
+   "omega": 1.5079644737231008,
+   "theta0": 5.971939531762716,
+   "desfase_ms": 144,
+   "esquema": 0,
+   "t_union_s": 0
+  }
+ ],
+ "t_inicio_ms": 1794177423173
+}

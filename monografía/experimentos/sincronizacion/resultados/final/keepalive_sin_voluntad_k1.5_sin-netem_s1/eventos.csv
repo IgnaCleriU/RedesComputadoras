@@ -1,0 +1,5 @@
+t_epoch;t_previsto_s;accion;nodo
+1794179326.257;30.0;corte_on;10
+1794179328.240;32.0;corte_off;10
+1794179376.277;80.0;corte_on;11
+1794179391.242;95.0;corte_off;11

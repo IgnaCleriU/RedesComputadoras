@@ -1,0 +1,3 @@
+corrida;entrada;config;n;f_hz;ancho;k_entrada;k_rad_s;kc_rad_s;k_veces_kc;h_ms;perfil;extrapolar;semilla;sntp;nodos_con_datos;mensajes;perdida_pct;r_medio;r_teorico;enganchado;omega_dispersion;omega_comun;t_sync_s;omega_pred_retardo;tau_usado_ms;retardo_p50_ms;retardo_p95_ms;r_grupo_a;r_grupo_b;estado
+dos-nodos-tap_k3_sin-netem_s1;dos-nodos-tap;distintas;2;0.2;0.2;3.0;1.5079644737231008;0.5026548245743669;3.0;1000;;0;1;1;2;120;0.0;0.98148;0.9856;1;2e-06;0.94383;3.7;;5.12;5.12;7.5;;;ok
+dos-nodos-tap_k3_wifi-perdida-1_s1;dos-nodos-tap;distintas;2;0.2;0.2;3.0;1.5079644737231008;0.5026548245743669;3.0;1000;wifi-perdida-1;0;1;1;2;120;0.0;0.98138;0.9856;1;0.000204;0.938816;3.69;;15.56;15.56;38.04;;;ok
