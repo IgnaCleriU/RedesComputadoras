@@ -1,0 +1,22 @@
+{
+  "defecto": {"n": 20, "config": "distintas", "f_hz": 0.2, "ancho": 0.2, "h_ms": 500, "ts_ms": 10,
+              "semillas": [1], "perfil": [""], "extrapolar": 0, "k": [1.5], "arranque": "enganchado"},
+  "entradas": [
+    {"nombre": "calibracion", "duracion_s": 60, "captura": 1},
+    {"nombre": "modelo", "k": [0.8, 1.2, 1.5, 2], "arranque": "azar", "duracion_s": 150},
+    {"nombre": "iguales_v2", "config": "iguales", "ancho": 0.0, "k": [0.4], "esquema": 1, "duracion_s": 90},
+    {"nombre": "cruzado", "esquema": 2, "duracion_s": 120},
+    {"nombre": "broker", "duracion_s": 240,
+     "eventos": [{"t": 30, "tipo": "broker", "dur": 5}, {"t": 120, "tipo": "broker", "dur": 20}]},
+    {"nombre": "union", "nodo_union": 20, "t_union_s": 45, "duracion_s": 90},
+    {"nombre": "keepalive_sin_voluntad", "keepalive_s": 5, "will": 0, "duracion_s": 150,
+     "eventos": [{"t": 30, "tipo": "corte", "nodo": 10, "dur": 2}, {"t": 80, "tipo": "corte", "nodo": 11, "dur": 15}]},
+    {"nombre": "keepalive_con_voluntad", "keepalive_s": 5, "will": 1, "duracion_s": 150,
+     "eventos": [{"t": 30, "tipo": "corte", "nodo": 10, "dur": 2}, {"t": 80, "tipo": "corte", "nodo": 11, "dur": 15}]},
+    {"nombre": "qos0_perdida", "qos": 0, "perfil": ["perdida-5"], "duracion_s": 90, "captura": 1},
+    {"nombre": "qos1_perdida", "qos": 1, "perfil": ["perdida-5"], "duracion_s": 90, "captura": 1},
+    {"nombre": "alias", "alias": 1, "duracion_s": 30, "captura": 1},
+    {"nombre": "escala_n5", "n": 5, "duracion_s": 45, "captura": 1},
+    {"nombre": "escala_n10", "n": 10, "duracion_s": 45, "captura": 1}
+  ]
+}

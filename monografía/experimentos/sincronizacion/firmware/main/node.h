@@ -14,6 +14,11 @@
 
 #define MAX_N 128 // cantidad máxima de nodos (tamaño de la tabla de fases)
 
+// Variantes del contrato de datos, para ensayar la compatibilidad de Protocol Buffers.
+#define ESQ_NORMAL 0
+#define ESQ_V2 1      // agrega al mensaje un campo 6 que los demás no conocen
+#define ESQ_CRUZADO 2 // en la red, theta va en el campo 3 y velocidad en el 2
+
 typedef struct {
     uint32_t id;          // número de nodo, 1..n
     uint32_t n;           // cantidad total de nodos (divisor del acoplamiento)
@@ -31,6 +36,12 @@ typedef struct {
     uint32_t duracion_s;
     bool extrapolar;
     bool sntp;
+    uint32_t keepalive_s; // keep-alive de MQTT; 0 = el valor por defecto de esp-mqtt (120 s)
+    uint32_t qos;         // QoS de publicación y de suscripción: 0 | 1
+    bool will;            // última voluntad en kuramoto/estado/<id> y reacción a la de los demás
+    bool alias;           // acepta alias de tópico del broker hacia el nodo
+    uint32_t esquema;     // ESQ_NORMAL, ESQ_V2 o ESQ_CRUZADO
+    uint32_t t_union_s;   // si no es 0, se conecta al broker recién t_union_s después de t_inicio
     bool red_tap;         // true = tap (IP estática), false = user (DHCP)
 } node_config_t;
 

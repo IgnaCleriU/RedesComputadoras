@@ -35,7 +35,7 @@ COLUMNAS = [
     "k_veces_kc", "h_ms", "perfil", "extrapolar", "semilla", "sntp", "nodos_con_datos",
     "mensajes", "perdida_pct", "r_medio", "r_teorico", "enganchado", "omega_dispersion",
     "omega_comun", "t_sync_s", "omega_pred_retardo", "tau_usado_ms", "retardo_p50_ms",
-    "retardo_p95_ms", "estado",
+    "retardo_p95_ms", "r_grupo_a", "r_grupo_b", "estado",
 ]
 
 
@@ -110,6 +110,8 @@ def leer_fases(ruta):
             if len(partes) != 3:
                 malas += 1
                 continue
+            if "/estado/" in partes[1]:  # última voluntad: no es un PhaseReport
+                continue
             try:
                 m = decodificar(bytes.fromhex(partes[2]))
                 recv = float(partes[0])
@@ -123,6 +125,46 @@ def leer_fases(ruta):
         a = np.array(v)
         datos[i] = {"t": a[:, 0], "theta": a[:, 1], "vel": a[:, 2], "seq": a[:, 3], "recv": a[:, 4]}
     return datos, malas
+
+
+def leer_uart(directorio):
+    """Fase real de cada nodo y sus eventos, de las líneas F y EV de uart<i>.log.
+
+    Devuelve (dict id -> dict de arreglos, lista de eventos (id, tipo, t_epoch, otro nodo)).
+    Las líneas truncadas al final del archivo se ignoran.
+    """
+    filas, eventos = {}, []
+    for ruta in Path(directorio).glob("uart*.log"):
+        nodo = int(ruta.stem[4:])
+        with open(ruta, "r", errors="replace") as f:
+            for linea in f:
+                p = linea.split()
+                try:
+                    if len(p) == 6 and p[0] == "F":
+                        filas.setdefault(int(p[1]), []).append(
+                            (int(p[3]) * 1e-6, float(p[4]), float(p[5]), int(p[2]), np.nan))
+                    elif len(p) == 3 and p[0] == "EV":
+                        eventos.append((nodo, p[1], int(p[2]) * 1e-6, 0))
+                    elif len(p) == 4 and p[0] == "EV":
+                        eventos.append((nodo, p[1], int(p[3]) * 1e-6, int(p[2])))
+                except ValueError:
+                    continue
+    datos = {}
+    for i, v in filas.items():
+        a = np.array(v)
+        datos[i] = {"t": a[:, 0], "theta": a[:, 1], "vel": a[:, 2], "seq": a[:, 3], "recv": a[:, 4]}
+    return datos, eventos
+
+
+def leer_voluntades(ruta):
+    """Instantes en que el broker publicó una última voluntad: [(id, hora de llegada)]."""
+    res = []
+    with open(ruta, "r", errors="replace") as f:
+        for linea in f:
+            p = linea.split()
+            if len(p) >= 2 and "/estado/" in p[1]:
+                res.append((int(p[1].rsplit("/", 1)[1]), float(p[0])))
+    return res
 
 
 # --- Reconstrucción de la fase ------------------------------------------------------------
@@ -180,17 +222,23 @@ def analizar_corrida(directorio, dt=0.1, ventana_frac=0.2, tol_omega=0.01, umbra
         perfil=cfg["perfil"], extrapolar=cfg["extrapolar"], semilla=cfg["semilla"], sntp=sntp,
     )
 
-    datos, _ = leer_fases(directorio / "fases.log")
-    datos = {i: limpiar(d) for i, d in datos.items() if len(d["t"]) >= 3}
+    red, _ = leer_fases(directorio / "fases.log")
+    red = {i: limpiar(d) for i, d in red.items() if len(d["t"]) >= 3}
+    # La UART trae la fase real aunque el broker o el enlace estén caídos, y sin importar con
+    # qué esquema viajó. fases.log queda para contar mensajes y medir el retardo.
+    uart, eventos_uart = leer_uart(directorio)
+    uart = {i: limpiar(d) for i, d in uart.items() if len(d["t"]) >= 3}
+    datos = uart or red
     fila["nodos_con_datos"] = len(datos)
     if len(datos) < 2:
         fila["estado"] = "sin_datos"
         return fila
 
-    mensajes = sum(len(d["t"]) for d in datos.values())
-    esperados = sum(int(d["seq"].max() - d["seq"].min() + 1) for d in datos.values())
-    fila["mensajes"] = mensajes
-    fila["perdida_pct"] = round(100.0 * (1 - mensajes / esperados), 3)
+    if red:
+        mensajes = sum(len(d["t"]) for d in red.values())
+        esperados = sum(int(d["seq"].max() - d["seq"].min() + 1) for d in red.values())
+        fila["mensajes"] = mensajes
+        fila["perdida_pct"] = round(100.0 * (1 - mensajes / esperados), 3)
 
     # Fase sin reducir de cada nodo y grilla común.
     ids = sorted(datos)
@@ -207,6 +255,13 @@ def analizar_corrida(directorio, dt=0.1, ventana_frac=0.2, tol_omega=0.01, umbra
         for i in ids])
     r, psi = parametro_de_orden(theta)
     t_rel = grilla - t_ref
+
+    # Con dos esquemas conviviendo, el orden de cada grupo por separado.
+    esquema = {x["id"]: x.get("esquema", 0) for x in cfg["nodos"]}
+    grupos = sorted({esquema[i] for i in ids})
+    r_grupos = None
+    if len(grupos) == 2:
+        r_grupos = [parametro_de_orden(theta[[esquema[i] == g for i in ids]])[0] for g in grupos]
 
     # Ventana final.
     ancho_v = ventana_frac * (t_hi - t_lo)
@@ -235,7 +290,7 @@ def analizar_corrida(directorio, dt=0.1, ventana_frac=0.2, tol_omega=0.01, umbra
             t_sync = float(t_rel[debajo[-1] + 1])
 
     # Retardo de entrega (solo tiene sentido con relojes sincronizados por SNTP).
-    retardos = {i: (datos[i]["recv"] - datos[i]["t"]) * 1e3 for i in ids} if sntp else {}
+    retardos = {i: (red[i]["recv"] - red[i]["t"]) * 1e3 for i in red} if sntp else {}
     todos = np.concatenate(list(retardos.values())) if retardos else np.array([])
     tau_ms = float(np.median(todos)) if len(todos) else 0.0
 
@@ -257,14 +312,18 @@ def analizar_corrida(directorio, dt=0.1, ventana_frac=0.2, tol_omega=0.01, umbra
         tau_usado_ms=round(tau_ms, 2),
         retardo_p50_ms=round(float(np.percentile(todos, 50)), 2) if len(todos) else "",
         retardo_p95_ms=round(float(np.percentile(todos, 95)), 2) if len(todos) else "",
+        r_grupo_a="" if r_grupos is None else round(float(r_grupos[0][en_ventana].mean()), 5),
+        r_grupo_b="" if r_grupos is None else round(float(r_grupos[1][en_ventana].mean()), 5),
         estado="ok" if len(datos) == n else f"faltan_{n - len(datos)}_nodos",
     )
 
     if escribir:
         with open(directorio / "serie.csv", "w", newline="") as f:
             w = csv.writer(f, delimiter=";")
-            w.writerow(["t_s", "r", "psi"])
-            w.writerows(zip(np.round(t_rel, 3), np.round(r, 5), np.round(psi, 5)))
+            w.writerow(["t_s", "r", "psi"] + (["r_grupo_a", "r_grupo_b"] if r_grupos else []))
+            cols = [np.round(t_rel, 3), np.round(r, 5), np.round(psi, 5)]
+            cols += [np.round(x, 5) for x in r_grupos] if r_grupos else []
+            w.writerows(zip(*cols))
         with open(directorio / "nodos_analisis.csv", "w", newline="") as f:
             w = csv.writer(f, delimiter=";")
             w.writerow(["id", "omega_natural", "omega_efectiva", "mensajes", "perdidos",
@@ -277,7 +336,81 @@ def analizar_corrida(directorio, dt=0.1, ventana_frac=0.2, tol_omega=0.01, umbra
                     len(d["t"]), int(d["seq"].max() - d["seq"].min() + 1 - len(d["t"])),
                     "" if rt is None else round(float(np.percentile(rt, 50)), 2),
                     "" if rt is None else round(float(np.percentile(rt, 95)), 2)])
+        analizar_eventos(directorio, cfg, t_ref, t_rel, r, theta, psi, ids, eventos_uart)
     return fila
+
+
+def analizar_eventos(directorio, cfg, t_ref, t_rel, r, theta, psi, ids, eventos_uart):
+    """Escribe eventos_analisis.csv: efecto de cada caída del broker, corte o nodo que se suma."""
+    ruta = directorio / "eventos.csv"
+    filas = []
+    if ruta.exists():
+        with open(ruta, newline="") as f:
+            # Instante programado: el registrado puede ser posterior a la acción.
+            acciones = [(t_ref + float(x["t_previsto_s"]), x["accion"], int(x["nodo"]))
+                        for x in csv.DictReader(f, delimiter=";")]
+        voluntades = leer_voluntades(directorio / "fases.log")
+        inicios = [a for a in acciones if a[1] in ("broker_cae", "corte_on")]
+        for t_on, accion, nodo in inicios:
+            cierre = "broker_vuelve" if accion == "broker_cae" else "corte_off"
+            t_off = min(a[0] for a in acciones if a[1] == cierre and a[2] == nodo and a[0] > t_on)
+            siguiente = min([a[0] for a in inicios if a[0] > t_on], default=np.inf)
+            on, off, limite = t_on - t_ref, t_off - t_ref, min(siguiente - t_ref, t_rel[-1])
+            antes = (t_rel >= on - 5.0) & (t_rel < on)
+            r_antes = float(r[antes].mean()) if antes.any() else float("nan")
+            durante = (t_rel >= on) & (t_rel <= limite)
+            despues = (t_rel >= off) & (t_rel <= limite)
+            debajo = np.nonzero(r[despues] < 0.95 * r_antes)[0]
+            t_rec = 0.0 if len(debajo) == 0 else None
+            if len(debajo) and debajo[-1] + 1 < despues.sum():
+                t_rec = float(t_rel[despues][debajo[-1] + 1] - off)
+
+            afectados = [nodo] if nodo else ids
+            def primera_demora(tipo, desde):
+                d = [min((t for i, ti, t, _ in eventos_uart if i == a and ti == tipo and t >= desde),
+                         default=np.nan) - desde for a in afectados]
+                return "" if np.all(np.isnan(d)) else round(float(np.nanmedian(d)), 3)
+
+            desfase = ""
+            if nodo in ids:
+                k = ids.index(nodo)
+                en_off = np.argmin(np.abs(t_rel - off))
+                desfase = round(abs(float(envolver(theta[k, en_off] - psi[en_off]))), 4)
+            # Solo hasta el próximo evento: al apagar los QEMU el broker publica todas las voluntades.
+            will = [t - t_on for j, t in voluntades
+                    if t_on <= t <= limite + t_ref and (not nodo or j == nodo)]
+            filas.append({
+                "evento": accion, "nodo": nodo, "t_s": round(on, 2), "dur_s": round(off - on, 2),
+                "r_antes": round(r_antes, 4),
+                "r_al_terminar": round(float(r[np.argmin(np.abs(t_rel - off))]), 4),
+                "r_min": round(float(r[durante].min()), 4) if durante.any() else "",
+                "t_recuperacion_s": "" if t_rec is None else round(t_rec, 2),
+                "desfase_nodo_rad": desfase,
+                "cliente_detecta_s": primera_demora("DESC", t_on),
+                "cliente_reconecta_s": primera_demora("CONN", t_off),
+                "voluntad_llega_s": round(min(will), 3) if will else "",
+            })
+    for i, tipo, t, _ in eventos_uart:
+        if tipo == "UNION" and i in ids:
+            k, on = ids.index(i), t - t_ref
+            des = np.abs(envolver(theta[k] - psi))
+            desp = t_rel >= on
+            # Integrado: su desfase respecto de psi queda cerca del valor con el que termina.
+            final = t_rel >= t_rel[-1] - 10.0
+            fuera = np.nonzero(np.abs(des[desp] - des[final].mean()) >= 0.15)[0]
+            filas.append({
+                "evento": "union", "nodo": i, "t_s": round(on, 2), "dur_s": "",
+                "r_antes": "", "r_al_terminar": "", "r_min": "",
+                "t_recuperacion_s": "" if len(fuera) and fuera[-1] + 1 >= desp.sum() else
+                    (0.0 if len(fuera) == 0 else round(float(t_rel[desp][fuera[-1] + 1] - on), 2)),
+                "desfase_nodo_rad": round(float(des[desp][-1]), 4), "cliente_detecta_s": "",
+                "cliente_reconecta_s": "", "voluntad_llega_s": "",
+            })
+    if filas:
+        with open(directorio / "eventos_analisis.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(filas[0]), delimiter=";")
+            w.writeheader()
+            w.writerows(filas)
 
 
 def main():

@@ -1,4 +1,5 @@
 __pycache__/
+.venv/
 simulacion/datos/
 
 # Corridas de host/correr.py: se versionan config.json, nodos.csv, serie.csv,

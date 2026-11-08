@@ -15,6 +15,13 @@ Formato de la matriz (JSON):
                  "ancho": 0.2, "k": [0.8, 1.05], "h_ms": 1000, "ts_ms": 10,
                  "duracion_s": 600, "semillas": [1, 2, 3],
                  "perfil": ["jitter", "wifi"], "extrapolar": 0}]}
+  Claves opcionales de una entrada:
+    arranque "azar" | "enganchado" (fases iniciales del estado enganchado teórico)
+    keepalive_s, qos (0|1), will (0|1), alias (0|1), captura (0|1)
+    esquema (0|1|2): lo usan los nodos de id impar; los demás, el esquema normal
+    nodo_union, t_union_s: ese nodo se conecta al broker t_union_s después de t_inicio
+    eventos: [{"t": 30, "tipo": "broker", "dur": 5}, {"t": 60, "tipo": "corte", "nodo": 7, "dur": 15}]
+      (t en segundos desde t_inicio; cada acción queda en eventos.csv)
   config "distintas": frecuencias equiespaciadas en f +- ancho*f; k son múltiplos de K_c
   (teoria.kc_finito). config "iguales": todas en f; k en rad/s.
   k, perfil y semillas son listas que se expanden; "" en perfil es sin netem.
@@ -25,6 +32,7 @@ Uso:  correr.py --matriz matrices/principal.json [--solo patrón] [--dry-run] [-
 import argparse
 import csv
 import fnmatch
+import getpass
 import itertools
 import json
 import os
@@ -58,6 +66,7 @@ IP_PC = "10.10.0.1"
 IP_PC_LOCAL = "10.0.2.2"  # la PC vista desde la red de usuario de QEMU
 PUERTO_MQTT = 1883
 TOPICO = "kuramoto/phase/+"
+TOPICO_ESTADO = "kuramoto/estado/+"
 
 # Perfiles de netem por sentido, copiados de plataforma-comun/eco-mqtt/ruido_medir.sh.
 # La variación va con "slot" (ráfagas en orden): "delay X Y" reordena y TCP lo vive como pérdida.
@@ -67,11 +76,14 @@ PERFILES = {
     "wifi": "delay 3ms slot distribution paretonormal 4ms 4ms",
     "wifi-perdida-1": "delay 3ms slot distribution paretonormal 4ms 4ms loss 1%",
     "wifi-perdida-5": "delay 3ms slot distribution paretonormal 4ms 4ms loss 5%",
+    "perdida-5": "loss 5%",  # solo pérdida: no le agrega retardo a la resincronización SNTP
 }
 
 DEFECTO = {
     "n": 40, "config": "distintas", "f_hz": 0.1, "ancho": 0.2, "k": [1.5], "h_ms": 1000,
     "ts_ms": 10, "duracion_s": 600, "semillas": [1], "perfil": [""], "extrapolar": 0,
+    "arranque": "azar", "keepalive_s": 0, "qos": 0, "will": 0, "alias": 0, "captura": 0,
+    "esquema": 0, "nodo_union": 0, "t_union_s": 0, "eventos": [],
 }
 
 SOBRECOSTO_S = 15  # arranque de procesos y cierre, para la estimación de duración
@@ -108,6 +120,10 @@ def expandir(matriz, nombre_matriz):
                 "ancho": float(e["ancho"]), "k_entrada": float(k), "h_ms": int(e["h_ms"]),
                 "ts_ms": int(e["ts_ms"]), "duracion_s": int(e["duracion_s"]),
                 "semilla": int(semilla), "perfil": perfil, "extrapolar": int(e["extrapolar"]),
+                "arranque": e["arranque"], "keepalive_s": int(e["keepalive_s"]), "qos": int(e["qos"]),
+                "will": int(e["will"]), "alias": int(e["alias"]), "captura": int(e["captura"]),
+                "esquema": int(e["esquema"]), "nodo_union": int(e["nodo_union"]),
+                "t_union_s": int(e["t_union_s"]), "eventos": e["eventos"],
             })
     nombres = [c["corrida"] for c in corridas]
     if len(set(nombres)) != len(nombres):
@@ -134,6 +150,13 @@ def parametros_de_corrida(c, local=False):
         k_veces_kc = None
     rng = np.random.default_rng(c["semilla"])
     theta0 = rng.uniform(0.0, 2 * np.pi, n)
+    if c["arranque"] == "enganchado":
+        d = teoria.desfasajes(omega, k)
+        if d is None:
+            raise ValueError(f"{c['corrida']}: con K < K_c no existe el estado enganchado")
+        theta0 = np.mod(d + rng.uniform(0.0, 2 * np.pi), 2 * np.pi)
+    elif c["arranque"] != "azar":
+        raise ValueError(f"arranque desconocido: {c['arranque']}")
     desfase = rng.integers(0, c["h_ms"], n)  # uniforme en [0, h), en ms enteros
     p = dict(c)
     p.update(
@@ -144,6 +167,8 @@ def parametros_de_corrida(c, local=False):
         nodos=[{
             "id": i + 1, "omega": float(omega[i]), "theta0": float(theta0[i]),
             "desfase_ms": int(desfase[i]),
+            "esquema": c["esquema"] if (i + 1) % 2 else 0,
+            "t_union_s": c["t_union_s"] if i + 1 == c["nodo_union"] else 0,
         } for i in range(n)],
     )
     return p
@@ -169,6 +194,8 @@ def texto_config(p, nodo, t_inicio_ms, local):
         ("t_inicio_ms", t_inicio_ms), ("duracion_s", p["duracion_s"]),
         ("extrapolar", p["extrapolar"]), ("sntp", 0 if local else 1),
         ("red", "user" if local else "tap"),
+        ("keepalive_s", p["keepalive_s"]), ("qos", p["qos"]), ("will", p["will"]),
+        ("alias", p["alias"]), ("esquema", nodo["esquema"]), ("t_union_s", nodo["t_union_s"]),
     ]
     return ENCABEZADO + "".join(f"{k}={v}\n" for k, v in claves)
 
@@ -244,15 +271,20 @@ class Procesos:
     def __init__(self):
         self.lista = []
 
-    def arrancar(self, nombre, args, stdout=None, **kw):
+    def arrancar(self, nombre, args, stdout=None, sesion_propia=True, **kw):
+        # sudo guarda el permiso por terminal: un proceso bajo sudo no puede abrir sesión propia.
         p = subprocess.Popen(args, stdout=stdout, stderr=subprocess.STDOUT if stdout else None,
-                             stdin=subprocess.DEVNULL, start_new_session=True, **kw)
+                             stdin=subprocess.DEVNULL, start_new_session=sesion_propia, **kw)
         self.lista.append((nombre, p))
         return p
 
     def detener(self, prefijo=""):
         for nombre, p in reversed(self.lista):
             if not nombre.startswith(prefijo) or p.poll() is not None:
+                continue
+            if nombre == "tcpdump":  # corre bajo sudo, en la sesión de quien lanzó correr.py
+                subprocess.run(como_root(["kill", "-TERM", str(p.pid)]), check=False,
+                               capture_output=True)
                 continue
             try:
                 os.killpg(p.pid, signal.SIGTERM)
@@ -266,7 +298,11 @@ class Procesos:
                 p.wait(timeout=max(0.1, limite - time.time()))
             except subprocess.TimeoutExpired:
                 try:
-                    os.killpg(p.pid, signal.SIGKILL)
+                    if nombre == "tcpdump":
+                        subprocess.run(como_root(["kill", "-KILL", str(p.pid)]), check=False,
+                                       capture_output=True)
+                    else:
+                        os.killpg(p.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
                 p.wait()
@@ -329,6 +365,27 @@ class Nodo:
                 self.error = l
 
 
+def plan_de_acciones(p, t0):
+    """Lista ordenada de (instante epoch, acción, nodo, t desde el inicio) de la corrida."""
+    acciones = []
+    for ev in p["eventos"]:
+        t, dur = float(ev["t"]), float(ev["dur"])
+        if ev["tipo"] == "broker":
+            acciones += [(t0 + t, "broker_cae", 0, t), (t0 + t + dur, "broker_vuelve", 0, t + dur)]
+        elif ev["tipo"] == "corte":
+            nodo = int(ev["nodo"])
+            acciones += [(t0 + t, "corte_on", nodo, t), (t0 + t + dur, "corte_off", nodo, t + dur)]
+        else:
+            raise ValueError(f"evento desconocido: {ev['tipo']}")
+    return sorted(acciones)
+
+
+def necesita_root(c, args):
+    """La corrida usa netem, cortes o tcpdump (en --local no se usa ninguno)."""
+    return not args.local and bool(c["perfil"] or c["captura"] or args.captura or
+                                   any(e["tipo"] == "corte" for e in c["eventos"]))
+
+
 def escribir_nodos_csv(ruta, nodos):
     with open(ruta, "w", newline="") as f:
         w = csv.writer(f, delimiter=";")
@@ -353,27 +410,33 @@ def correr_una(p, args, flash, directorio, tmp):
     try:
         conf = AQUI / ("mosquitto-local.conf" if local else "mosquitto.conf")
         log_mosq = open(directorio / "mosquitto.log", "wb")
-        procs.arrancar("mosquitto", [args.mosquitto, "-c", str(conf)], stdout=log_mosq)
-        if not esperar_puerto("127.0.0.1", PUERTO_MQTT):
+        def arrancar_broker():
+            procs.arrancar("mosquitto", [args.mosquitto, "-c", str(conf)], stdout=log_mosq)
+            return esperar_puerto("127.0.0.1", PUERTO_MQTT)
+
+        if not arrancar_broker():
             return "mosquitto no abrió el puerto 1883 (ver mosquitto.log)"
 
         if not local:
             srv = ServidorSNTP(args.sntp_bind, args.sntp_puerto)
             srv.start()
-            if p["perfil_args"]:
-                netem = True
-                subprocess.run(como_root([str(AQUI / "red.sh"), "netem", p["perfil_args"]]), check=True)
 
         fases = open(directorio / "fases.log", "wb")
-        procs.arrancar("logger", [
-            args.mosquitto_sub, "-h", "127.0.0.1", "-V", "5", "-t", TOPICO,
-            "-F", "%U %t %x"], stdout=fases)
+
+        def arrancar_logger():
+            procs.arrancar("logger", [
+                args.mosquitto_sub, "-h", "127.0.0.1", "-V", "5", "-t", TOPICO, "-t", TOPICO_ESTADO,
+                "-F", "%U %t %x"], stdout=fases)
+
+        arrancar_logger()
         time.sleep(0.5)
         if procs.caido("logger"):
             return "el logger (mosquitto_sub) terminó al arrancar"
-        if args.captura and not local:
+        if (args.captura or p["captura"]) and not local:
+            # Sin recortar: la anatomía de los mensajes necesita el paquete completo.
             procs.arrancar("tcpdump", como_root(
-                ["tcpdump", "-i", "br-kur", "-s", "256", "-w", str(directorio / "captura.pcap")]))
+                ["tcpdump", "-i", "br-kur", "-s", "0", "-Z", getpass.getuser(),
+                 "-w", str(directorio / "captura.pcap"), "tcp port 1883"]), sesion_propia=False)
 
         # t_inicio: hora común de arranque. Con SNTP es epoch en ms; en --local (sin SNTP)
         # es ms desde el arranque de cada nodo.
@@ -424,15 +487,54 @@ def correr_una(p, args, flash, directorio, tmp):
             time.sleep(0.5)
         print(f"    {n} nodos READY ({time.time() - lanzado:.0f} s tras el lanzamiento)", flush=True)
 
+        # netem recién ahora: la primera sincronización SNTP tiene que hacerse con la red limpia.
+        if p["perfil_args"]:
+            netem = True
+            subprocess.run(como_root([str(AQUI / "red.sh"), "netem", p["perfil_args"]]), check=True)
+
+        acciones = plan_de_acciones(p, lanzado + margen)
+        if local and any(a[1].startswith("corte") for a in acciones):
+            return "los cortes de enlace necesitan tap: no se pueden usar con --local"
+        reg_eventos = open(directorio / "eventos.csv", "w", newline="")
+        w_eventos = csv.writer(reg_eventos, delimiter=";")
+        w_eventos.writerow(["t_epoch", "t_previsto_s", "accion", "nodo"])
+
+        def ejecutar(accion, nodo, t_previsto):
+            nonlocal netem
+            antes = time.time()  # detener el broker no es instantáneo: importa cuándo empezó
+            if accion == "broker_cae":
+                procs.detener("logger")
+                procs.detener("mosquitto")
+            elif accion == "broker_vuelve":
+                if not arrancar_broker():
+                    raise RuntimeError("mosquitto no volvió a abrir el puerto 1883")
+                arrancar_logger()
+            else:
+                netem = True
+                subprocess.run(como_root([str(AQUI / "red.sh"), "corte", str(nodo),
+                                          "on" if accion == "corte_on" else "off"]), check=True)
+            w_eventos.writerow([f"{antes:.3f}", t_previsto, accion, nodo])
+            reg_eventos.flush()
+
         # DONE de todos.
         limite = lanzado + margen + p["duracion_s"] + args.espera_done
-        while not all(nd.done for nd in nodos):
-            if (m := revisar()):
-                return m
-            if time.time() > limite:
-                faltan = [nd.id for nd in nodos if not nd.done]
-                return f"timeout esperando DONE de los nodos {faltan}"
-            time.sleep(0.5)
+        proxima_revision = 0.0
+        while True:
+            ahora = time.time()
+            while acciones and ahora >= acciones[0][0]:
+                _, accion, nodo, t_previsto = acciones.pop(0)
+                ejecutar(accion, nodo, t_previsto)
+                ahora = time.time()
+            if ahora >= proxima_revision:
+                proxima_revision = ahora + 0.5
+                if (m := revisar()):
+                    return m
+                if all(nd.done for nd in nodos) and not acciones:
+                    break
+                if ahora > limite:
+                    faltan = [nd.id for nd in nodos if not nd.done]
+                    return f"timeout esperando DONE de los nodos {faltan}"
+            time.sleep(0.05)
         time.sleep(2)  # los últimos mensajes llegan al logger
         return None
     finally:
@@ -458,6 +560,10 @@ def mantener_sudo(parar):
 
 def comprobar_entorno(args, corridas):
     if shutil.which(args.qemu) is None and not Path(args.qemu).exists():
+        hallados = sorted(Path.home().glob(".espressif/tools/qemu-xtensa/*/qemu/bin/qemu-system-xtensa"))
+        if hallados:
+            args.qemu = str(hallados[-1])
+    if shutil.which(args.qemu) is None and not Path(args.qemu).exists():
         sys.exit(f"no se encuentra qemu-system-xtensa ({args.qemu}); usar --qemu")
     for exe in (args.mosquitto, args.mosquitto_sub):
         if shutil.which(exe) is None:
@@ -471,9 +577,9 @@ def comprobar_entorno(args, corridas):
     for i in range(1, n + 1):
         if subprocess.run(["ip", "link", "show", f"tapk{i}"], capture_output=True).returncode:
             sys.exit(f"falta tapk{i}: correr `sudo host/red.sh up {n}`")
-    if not args.local and any(c["perfil"] for c in corridas) and os.geteuid() != 0:
+    if any(necesita_root(c, args) for c in corridas) and os.geteuid() != 0:
         if subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode:
-            sys.exit("hay perfiles de netem y sudo pide contraseña: correr antes `sudo -v`")
+            sys.exit("netem, cortes o captura necesitan sudo: correr antes `sudo -v`")
 
 
 # --- Principal ----------------------------------------------------------------------------
@@ -532,7 +638,7 @@ def main():
     comprobar_entorno(args, pendientes)
     flash = cargar_flash(args.flash, permitir_falta=False)
     parar_sudo = threading.Event()
-    if any(c["perfil"] for c in pendientes) and os.geteuid() != 0 and not args.local:
+    if any(necesita_root(c, args) for c in pendientes) and os.geteuid() != 0:
         threading.Thread(target=mantener_sudo, args=(parar_sudo,), daemon=True).start()
 
     def al_terminar(signo, _marco):

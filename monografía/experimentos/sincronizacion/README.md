@@ -217,3 +217,35 @@ N = 40, h = 1 s, f̄ = 0,1 Hz, 3 semillas. Corridas enganchadas de 3, y Ω medid
 
 Si el receptor adelanta cada fase con la velocidad publicada y su antigüedad, el efecto de h casi desaparece: a 1 Hz, ±5 % y h = 1 s engancharon las 3 semillas desde 1,05·K_c, con r igual a la teoría (sin extrapolar, ninguna). Requiere relojes sincronizados y reduce justamente el efecto de la red que el experimento quiere medir, así que se plantea como comparación aparte.
 
+## Matriz final
+
+`matrices/final.json` ensaya qué aporta y qué cuesta cada mecanismo de MQTT y Protocol Buffers. Son 16 corridas
+con N = 20, h = 500 ms y f̄ = 0,2 Hz, unos 50 min en total. Respecto de 0,1 Hz y h = 1 s, la dinámica es la misma con
+el tiempo a la mitad. Las herramientas de Python corren con `uv` (`uv sync`, y después `uv run --no-sync python ...`).
+
+| Entrada | Qué varía | Qué muestra |
+|---|---|---|
+| `calibracion` | Captura sin eventos | Carga de la PC y anatomía de un PUBLISH |
+| `modelo` | K = 0,8, 1,2, 1,5 y 2·K_c, desde fases al azar | r(K) contra la teoría |
+| `iguales_v2` | Frecuencias iguales; los nodos impares agregan un campo 6 | Ω y compatibilidad hacia adelante |
+| `cruzado` | Los nodos impares intercambian los campos 2 y 3 | Esquema incompatible sin error de decodificación |
+| `broker` | Caída del broker de 5 s y de 20 s | Punto único de falla y reconexión |
+| `union` | Un nodo se conecta al broker a los 45 s | Desacoplamiento en el espacio |
+| `keepalive_*` | Corte de un nodo de 2 s y de 15 s, keep-alive de 5 s, con y sin última voluntad | Regímenes de corte |
+| `qos*_perdida` | QoS 0 y 1 con 5 % de pérdida | Costo y beneficio de QoS 1 |
+| `alias` | Alias de tópico del broker hacia los nodos | Bytes ahorrados |
+| `escala_n*` | N = 5 y 10 | Carga del broker contra N |
+
+```bash
+sudo host/red.sh up 20
+sudo ufw allow in on br-kur   # si el firewall está activo
+sudo -v                       # netem, cortes y tcpdump usan sudo -n desde el mismo terminal
+uv run --no-sync python host/correr.py --matriz matrices/final.json
+uv run --no-sync python host/analizar.py resultados/final
+uv run --no-sync python host/trafico.py resultados/final
+```
+
+Además de lo que deja cada corrida (ver `host/README.md`), `eventos.csv` registra cada acción programada,
+`eventos_analisis.csv` su efecto, y `trafico.csv` los bytes por sentido y la anatomía del PUBLISH. La fase de cada nodo
+sale de su UART (`uart<i>.log`, líneas `F`), porque el logger no ve nada mientras el broker está caído; `fases.log`
+queda para contar mensajes y medir el retardo de subida.

@@ -17,6 +17,7 @@
 //   extrapolar=0            0 | 1
 //   sntp=1                  0 | 1
 //   red=tap                 tap | user
+//   keepalive_s=5  qos=0  will=0  alias=0  esquema=0  t_union_s=0   (opcionales)
 // seguido de '\0' y el resto en 0xFF (flash "vacía").
 //
 // Sin la cabecera KURCFG1 el nodo imprime CFGERR y no arranca. Texto y no NVS
@@ -61,6 +62,12 @@ static bool apply(node_config_t *c, const char *k, const char *v)
     else if (!strcmp(k, "duracion_s")) c->duracion_s = strtoul(v, NULL, 10);
     else if (!strcmp(k, "extrapolar")) c->extrapolar = (v[0] == '1');
     else if (!strcmp(k, "sntp")) c->sntp = (v[0] == '1');
+    else if (!strcmp(k, "keepalive_s")) c->keepalive_s = strtoul(v, NULL, 10);
+    else if (!strcmp(k, "qos")) c->qos = strtoul(v, NULL, 10);
+    else if (!strcmp(k, "will")) c->will = (v[0] == '1');
+    else if (!strcmp(k, "alias")) c->alias = (v[0] == '1');
+    else if (!strcmp(k, "esquema")) c->esquema = strtoul(v, NULL, 10);
+    else if (!strcmp(k, "t_union_s")) c->t_union_s = strtoul(v, NULL, 10);
     else if (!strcmp(k, "red")) {
         if (!strcmp(v, "tap")) c->red_tap = true;
         else if (!strcmp(v, "user")) c->red_tap = false;
@@ -113,6 +120,7 @@ bool config_load(node_config_t *cfg)
     }
     if (!cfg->id || !cfg->n || cfg->n > MAX_N || cfg->id > cfg->n || !cfg->server_ip[0] ||
         !cfg->h_ms || !cfg->ts_ms || (cfg->ts_ms % 10) || !cfg->duracion_s || !cfg->t_inicio_ms ||
+        cfg->qos > 1 || cfg->esquema > ESQ_CRUZADO ||
         (cfg->red_tap && (!cfg->ip[0] || !cfg->mac_set))) {
         printf("CFGERR faltan claves o valores fuera de rango\n");
         return false;
