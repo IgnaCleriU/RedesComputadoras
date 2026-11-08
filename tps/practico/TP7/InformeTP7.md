@@ -104,7 +104,7 @@ El código de Hamming (7,4) transmite cada grupo de 4 bits de datos en un bloque
 | Cubierta por p2 |        | ✔         | ✔         |           |           | ✔         | ✔         |
 | Cubierta por p4 |        |           |           | ✔         | ✔         | ✔         | ✔         |
 
-Cada bit de paridad se elige, igual que en el laboratorio, para que la cantidad de unos de su grupo sea par.
+Cada bit de paridad se elige, igual que con el método utilizado en el laboratorio, para que la cantidad de unos de su grupo sea par.
 
 **Codificación.** Para los datos `1011` (d1 = 1, d2 = 0, d3 = 1, d4 = 1):
 
