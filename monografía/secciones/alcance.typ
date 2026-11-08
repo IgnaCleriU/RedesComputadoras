@@ -27,7 +27,7 @@ Los casos de uso abarcan la mensajería (Facebook Messenger), la robótica móvi
 
 === Mapeo tecnológico
 
-El trabajo incluye además un mapeo tecnológico, desarrollado en la @sec-mapeo-tecnologico, con los equipos reales con los que se implementaría el escenario de telemetría del primer experimento (@sec-exp-mqtt-https) en lugar de los equipos emulados. Se relevan los dispositivos de borde, el broker, ya sea en un servidor propio o como servicio administrado, y la conectividad, y para cada uno se indica el modelo, el proveedor y un precio de referencia con su fecha y moneda. El objetivo es estimar la viabilidad de una solución considerando la calidad técnica, el plazo y el presupuesto, y no proponer la alternativa de máxima prestación.
+El trabajo incluye además un mapeo tecnológico, desarrollado en la @sec-mapeo-tecnologico, con los equipos reales con los que se implementaría el escenario de telemetría del primer experimento (@sec-exp-mqtt-https) en lugar de los equipos emulados. Se relevan los nodos, el broker, ya sea en un servidor propio o como servicio administrado, y la conectividad, y para cada uno se indica el modelo, el proveedor y un precio de referencia con su fecha y moneda. El objetivo es estimar la viabilidad de una solución considerando la calidad técnica, el plazo y el presupuesto, y no proponer la alternativa de máxima prestación.
 
 === Parte experimental
 
