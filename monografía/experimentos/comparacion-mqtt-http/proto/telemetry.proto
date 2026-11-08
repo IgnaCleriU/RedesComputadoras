@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package exp;
+
+option go_package = "wireguardians/exp/internal/pb";
+
+// Mensaje único de telemetría, idéntico para MQTT y HTTP(S).
+// El JSON usa los mismos nombres de campo. A partir de este archivo se generan:
+//  - firmware/main/telemetry.pb.{c,h} para nanopb (cómo regenerarlo: telemetry.pb.h)
+//  - backend/internal/pb/telemetry.pb.go para Go:
+//      cd backend && protoc -I ../proto --go_out=. --go_opt=module=wireguardians/exp ../proto/telemetry.proto
+message Telemetry {
+  uint32 esp_id = 1;
+  uint32 seq    = 2;
+  uint64 t_us   = 3;  // hora de creación de la lectura en el nodo (epoch, µs, sincronizada por SNTP)
+  float  value  = 4;
+  uint32 status = 5;
+}

@@ -62,7 +62,7 @@
 
   titulo: [Taller de armado y verificación de cables Cat5/Cat5e bajo estándar T568A/B],
   resumen: [*_Objetivo_ --- Tomar contacto con elementos de la capa física y ganar experiencia en armado y
-verificación de conexiones de red.*],
+  verificación de conexiones de red.*],
 
   fecha: datetime.today().display("[year]-[month]-[day]"),
 )
@@ -81,6 +81,9 @@ verificación de conexiones de red.*],
       it.element.numbering,
       ..counter(math.equation).at(it.element.location()),
     ))
+  } else if it.element != none and it.element.func() == heading and it.element.numbering == none {
+    // Los títulos no tienen número: la referencia muestra el texto del título
+    link(it.element.location(), it.element.body)
   } else {
     // Otras referencias quedan igual
     it
@@ -114,6 +117,19 @@ verificación de conexiones de red.*],
   spacing: 1.2em,
 )
 
+// Muestra solo una parte de una foto. `tam-img` es el tamaño de la foto en píxeles
+// (ancho, alto); `x`, `y`, `ancho` y `alto` delimitan el recorte, también en píxeles;
+// `altura` es el alto con el que se dibuja el recorte.
+#let recorte(ruta, tam-img, x, y, ancho, alto, altura) = {
+  let s = altura / alto
+  box(clip: true, width: ancho * s, height: altura, place(
+    top + left,
+    dx: -x * s,
+    dy: -y * s,
+    image(ruta, width: tam-img.at(0) * s, height: tam-img.at(1) * s),
+  ))
+}
+
 #pagebreak()
 
 
@@ -121,20 +137,128 @@ verificación de conexiones de red.*],
 
 == Consigna 1
 
-Investigar los pasos para crimpar un cable bajo la norma T568A/B DERECHO. No cruzado.
+_Investigar los pasos para crimpar un cable bajo la norma T568A/B DERECHO. No cruzado._
+
+Un cable *derecho* (_straight-through_) tiene los dos extremos armados con la misma norma, T568A en ambos o T568B en ambos, de modo que cada pin de un conector queda unido al mismo pin del otro (1 con 1, 2 con 2, …, 8 con 8). Es el cable que se usa entre una PC y un switch. Si un extremo es T568A y el otro T568B, el cable es *cruzado*.
+
+#figure(
+  table(
+    columns: 4,
+    align: center + horizon,
+    table.header([*Pin*], [*T568A*], [*T568B*], [*Uso en 10/100BASE-TX*]),
+    [1], [Blanco-verde], [Blanco-naranja], [Transmite (+)],
+    [2], [Verde], [Naranja], [Transmite (−)],
+    [3], [Blanco-naranja], [Blanco-verde], [Recibe (+)],
+    [4], [Azul], [Azul], [—],
+    [5], [Blanco-azul], [Blanco-azul], [—],
+    [6], [Naranja], [Verde], [Recibe (−)],
+    [7], [Blanco-marrón], [Blanco-marrón], [—],
+    [8], [Marrón], [Marrón], [—],
+  ),
+  caption: [Orden de colores de las dos normas y uso de cada pin del lado de la PC. 1000BASE-T usa los cuatro pares.],
+) <tab-t568>
+
+- Las dos normas solo intercambian el par naranja con el verde. Para un cable derecho da lo mismo cuál se use, siempre que los dos extremos tengan la misma.
+- Los pines 3 y 6 forman un par aunque no estén juntos, por eso el orden no va par por par. Hay que respetar los colores, si los dos hilos de un par quedan en pines que no se corresponden, se pierde el efecto del trenzado, que es cancelar la interferencia entre pares (diafonía). Ese cable puede pasar el tester y aun así andar mal.
+
+*Materiales*
+
++ Cable UTP Cat5/Cat5e (4 pares trenzados, 24 AWG).
++ Dos conectores RJ45 (8P8C) aptos para la categoría y para el tipo de conductor (macizo o multifilar).
++ Pinza crimpeadora para RJ45, que suele traer cuchilla para cortar y pelar.
++ Tester de cables Ethernet.
+
+*Pasos*
+
++ Cortar el cable al largo deseado (en el TP, 1 a 1,5 m) con un corte recto.
++ Pelar unos 2,5 a 3 cm de la vaina exterior sin cortar el aislante de los conductores. Si el cable tiene hilo de nylon hay que cortarlo.
++ Destrenzar los pares solo lo necesario y enderezar los conductores.
++ Ordenarlos según la norma (@tab-t568), mirando el conector con la traba hacia abajo y los contactos hacia uno, el pin 1 queda a la izquierda.
++ Alinear los 8 conductores planos y paralelos, y cortarlos rectos a unos 13 mm (aproximadamente) del borde de la vaina. Así la vaina entra en el conector y el tramo destrenzado no supera los 13 mm que admite la norma TIA-568 para Cat5e.
++ Insertarlos en el conector sin que cambien de orden, empujando hasta que los 8 toquen la pared del frente. La vaina tiene que quedar adentro del conector, debajo de la cuña de sujeción.
++ Revisar a través del plástico el orden de colores, que todos lleguen al frente y que la vaina esté adentro.
++ Meter el conector en la crimpeadora y apretar a fondo. La pinza baja los 8 contactos, que perforan el aislante y tocan el cobre, y baja la cuña que traba la vaina.
++ Repetir en el otro extremo *con la misma norma*.
++ Verificar con el tester (Consigna 3).
+
+== Consigna 2
+
+_Construir 1 (un) cable por grupo, de 1 - 1.5 m. aproximadamente. Tipo DERECHO, NO CRUZADO._
+
+Armamos un cable derecho con la norma T568A en los dos extremos (lo verificamos en la Consigna 3). El primer conector salió mal, así que lo cortamos y lo volvimos a crimpar.
+
+
+#figure(
+  grid(
+    columns: 2,
+    gutter: 8pt,
+    recorte("Experimento/conector-rj45-superior-1.jpg", (868, 1156), 200, 370, 300, 280, 6cm),
+    recorte("Experimento/conector-rj45-superior-2.jpg", (868, 1156), 290, 370, 260, 280, 6cm),
+  ),
+  caption: [Vistas frontales del conector final: los 8 contactos a la misma altura y, detrás, las puntas de los conductores.],
+) <fig-rj45-frente>
+
+#figure(
+  recorte("Experimento/conector-rj45-superior-3.jpg", (1156, 868), 400, 220, 480, 280, 6cm),
+  caption: [Vista lateral del conector final, con los contactos hacia la cámara y el cable a la derecha. El pin 1 queda abajo y el 8 arriba.],
+) <fig-rj45-lateral>
+
 
 == Consigna 3
 
-VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables.
+_VERIFICAR la buena construcción de un cable. Para ello, buscar otro grupo e intercambiar cables._
 
-== Punto a)
+Intercambiamos cables con el grupo *WAN-direction* y verificamos el suyo. Las fotos de esta sección son de ese cable.
 
-Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen.
+=== Punto a)
+
+_Inspección visual para la calidad constructiva (sean extremadamente críticos 😈) tomen fotos, indiquen que ven bien y que ven mal. Justifiquen._
+
+#figure(
+  grid(
+    columns: 1,
+    gutter: 6pt,
+    recorte("Experimento/conectores-cable-otro-grupo.jpg", (964, 1280), 400, 440, 380, 180, 3.5cm),
+    recorte("Experimento/conectores-cable-otro-grupo.jpg", (964, 1280), 380, 920, 400, 180, 3.5cm),
+  ),
+  caption: [Los dos extremos del cable del otro grupo, con el cable a la izquierda. En los dos, el pin 1 queda abajo y el 8 arriba.],
+) <fig-otro-conectores>
+
+En la punta de los dos conectores (@fig-otro-conectores), de arriba hacia abajo y con la misma separación entre ellos, se ven el marrón, el verde, el azul y el naranja. Son los pines 8, 6, 4 y 2 de la norma T568B (@tab-t568). Los blancos de cada par van en los pines intermedios y en la foto casi no se distinguen.
+
+*Lo que está bien*
+
+- Misma norma en los dos extremos, los dos conectores tienen el mismo orden de colores, así que es un cable derecho. Usaron una norma distinta a la nuestra, pero es un cable derecho asi que da lo mismo.
+- Los conductores llegan hasta el frente del conector, donde están los contactos, al menos hasta donde deja ver la resolución de la foto.
+
+*Lo que está mal*
+
+- La vaina no entra en ninguno de los dos conectores, termina unos milímetros antes de la parte trasera y entre la vaina negra y el plástico quedan los conductores al aire. La cuña de sujeción, que al crimpar tendría que apretar la vaina, aprieta los conductores sueltos.
+- Como la vaina queda afuera los pares van destrenzados desde antes del conector hasta los contactos.
+- Hay conductores cruzados adentro del conector en el extremo de abajo
+
+En estas fotos no se ven los contactos, así que no pudimos revisar si bajaron todos a la misma altura.
+
+=== Punto b)
+
+_Verificación eléctrica utilizando un tester para cables ethernet._
+
+#figure(
+  recorte("Experimento/tester-cable-otro-grupo.jpg", (964, 1280), 185, 600, 530, 640, 8cm),
+  caption: [Tester NSHL468 con el cable del otro grupo: unidad principal (_master_) a la izquierda y remota a la derecha. En este paso se enciende el LED 4 de las dos.],
+) <fig-tester>
+
+Usamos un tester de cables NSHL468 (@fig-tester). Tiene dos partes que van una en cada extremo del cable: la principal, que manda la señal, y la remota. El tester recorre los pines de a uno y en cada paso enciende, en la principal, el LED del pin que prueba y, en la remota, el del pin al que llega ese hilo
+
+El LED G no se enciende en ningún paso porque el cable es UTP, sin malla.
+
+En la foto se ve que el pin 4 anda bien el tester, el tester solo probó que cada pin llegue al que le corresponde. No detecta el destrenzado ni la vaina afuera del punto a), que afectan la diafonía y la resistencia mecánica del cable, así que un cable puede pasar esta prueba y aun así andar mal.
 
 == Consigna 4
 
-Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación.
+_Documentar con que grupo intercambiaron cables (pueden intercambiar más de una vez, no importa, mientras no tengan su propio cable). Tomar fotografías que evidencien el proceso técnico de verificación._
 
+Mas arriba se adjuntaron imagenes del cable del grupo *WAN-direction*
 
 #pagebreak();
 
@@ -142,11 +266,220 @@ Documentar con que grupo intercambiaron cables (pueden intercambiar más de una 
 
 En esta parte armamos una LAN con dos computadoras de nuestro grupo, a las que llamamos PC A y PC B, conectadas a un switch Cisco Catalyst 2950 del laboratorio, verificamos la conectividad con `ping` y generamos tráfico UDP con `ncat`, que capturamos con Wireshark. Todo el material (fotos, capturas de pantalla y archivos `.pcapng`) está en la carpeta `Experimento/`.
 
+== Opcional
+
+=== Consigna 1
+
+_Utilizando internet y el datasheet del switch Cisco, documentar las características principales del mismo._
+
+El switch del laboratorio es un Cisco Catalyst 2950. El modelo fue extraido de el mensaje CDP (_Cisco Discovery Protocol_) enviado por el switch durante la captura de la Consigna 4 (`captura-udp-ncat.pcapng`):
+
+#figure(
+  image("Experimento/captura-udp-ncat-cisco-cdp.png"),
+  caption: [Trama CDP capturada por Wireshark. El switch anuncia su modelo, versión de IOS y puerto donde está conectada la PC B.],
+) <fig-cdp>
+
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    table.header([*Campo CDP*], [*Valor*]),
+    [Plataforma], [`cisco WS-C2950-24`],
+    [Software], [IOS `C2950-I6Q4L2-M`, versión 12.1(22)EA8a, compilada en 2006],
+    [Nombre (_Device ID_)], [`Switch`, el nombre de fábrica],
+    [IP de administración], [`192.168.1.2`],
+    [Puerto], [`FastEthernet0/1`, donde estaba conectada la PC B],
+    [VLAN nativa], [1],
+    [Dúplex], [Full],
+  ),
+  caption: [Contenido del anuncio CDP del switch.],
+) <tab-cdp>
+
+#figure(
+  image("Experimento/switch-puertos-conectados.jpg", width: 55%),
+  caption: [Frente del switch C2950-24: los 24 puertos RJ-45 en dos bloques de 12 y, a la izquierda, la conexión a la PCB en el puerto FastEthernet0/1.],
+) <fig-switch>
+
+Del datasheet @cisco2950ds, para el modelo WS-C2950-24:
+
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    table.header([*Característica*], [*Valor*]),
+    [Tipo], [Switch administrable, independiente y de configuración fija, de 1 RU de alto],
+    [Puertos],
+    [24 × 10/100 Mbps RJ-45, con detección automática de velocidad y autonegociación de dúplex. No tiene uplinks Gigabit (otros modelos de la serie, como el 2950SX-24 o el 2950T-48, sí)],
+
+    [Cableado], [10BASE-T: UTP categoría 3, 4 o 5. 100BASE-TX: UTP categoría 5],
+    [Consola], [RJ-45 de 8 pines, con cable RJ-45–DB9 para la PC],
+    [_Switching fabric_], [8,8 Gbps],
+    [Ancho de banda de reenvío], [4,8 Gbps],
+    [Tasa de reenvío], [3,6 Mpps (paquetes de 64 bytes)],
+    [Memoria], [16 MB de DRAM, 8 MB de Flash y 8 MB de buffer de paquetes compartido por todos los puertos],
+    [Tabla MAC], [Hasta 8000 direcciones],
+    [Alimentación],
+    [Fuente interna de 100–240 VAC, 47–63 Hz, 30 W máximo. Conector para la fuente redundante Cisco RPS 675],
+
+    [Dimensiones y peso], [4,36 × 44,45 × 24,18 cm, 3 kg],
+    [Ambiente], [0 a 45 °C en funcionamiento, humedad 10–85 % sin condensación],
+    [MTBF], [398 240 horas (unos 45 años)],
+    [Software], [_Standard Image_ (SI). No se puede actualizar a _Enhanced Image_],
+  ),
+  caption: [Especificaciones principales del Catalyst 2950-24.],
+) <tab-switch>
+
+Los números de rendimiento se explican como:
+
+- *Ancho de banda:* 24 puertos × 100 Mbps × 2 (full dúplex: transmite y recibe a la vez) = 4,8 Gbps.
+- *Tasa de reenvío:* la trama Ethernet más chica ocupa en el cable 64 bytes, más 8 de preámbulo y 12 de separación entre tramas: 84 bytes = 672 bits. A 100 Mbps entran 148 810 tramas por segundo en cada puerto, que por 24 puertos dan 3,57 Mpps. Es decir, el switch reenvía a velocidad de línea (_wire-speed_) en todos los puertos a la vez.
+- *_Fabric_:* el _switching fabric_ es el camino interno por el que el switch lleva cada trama del puerto de entrada al de salida, y su capacidad es el tráfico total que puede mover por dentro. En el 2950 es de memoria compartida, donde las tramas pasan por el buffer de 8 MB común a todos los puertos (@tab-switch). La capacidad del _switching fabric_ es de 8,8 Gbps, superando los 4,8 Gbps que pueden generar los puertos, por tanto no es un cuello de botella.
+
+Funciones principales del software:
+
+- *VLANs:* IEEE 802.1Q, VTP para propagar VLANs entre switches y DTP para negociar enlaces troncales. Un enlace troncal lleva tráfico de varias VLANs por la misma conexión, normalmente entre switches, con tramas etiquetadas.
+  - VTP (_VLAN Trunking Protocol_, de Cisco) distribuye la lista de VLANs por los troncales: se crean en un switch y el resto las aprende, en vez de configurarlas a mano en cada uno.
+  - DTP (_Dynamic Trunking Protocol_, de Cisco) negocia con el equipo del otro extremo si el enlace va a ser troncal o de acceso (una sola VLAN, sin etiquetas). Por eso se observaron tramas DTP enviadas del switch a las PCs (@tab-protocolos), que dado que éstas no las interpretan el puerto queda como de acceso.
+- *Spanning Tree:* Soporta los protocolos IEEE 802.1D, 802.1w (RSTP), 802.1s (MSTP) y PVST+, con las extensiones de Cisco PortFast, UplinkFast y BackboneFast. Se envían BPDUs cada 1 a 2 s, observadas en la captura. Spanning Tree evita los bucles cuando hay caminos redundantes entre switches, bloqueando los puertos que cerrarían un bucle y reactivándolos si se cae el camino principal. Los switches se coordinan intercambiando BPDUs (_Bridge Protocol Data Units_).
+- *Agregación de enlaces:* EtherChannel (PAgP) y LACP (IEEE 802.3ad) para sumar varios puertos en un enlace lógico. El enlace agrupado tiene la suma de los anchos de banda y, si se corta un cable, el tráfico sigue por los demás.
+  - PAgP (_Port Aggregation Protocol_, de Cisco) y LACP (_Link Aggregation Control Protocol_, estándar) negocian el grupo automáticamente con el otro extremo. LACP sirve también con equipos de otras marcas.
+- *QoS:* clasificación por CoS (IEEE 802.1p), 4 colas por puerto de salida, prioridad estricta y _Weighted Round Robin_. QoS (_Quality of Service_) permite priorizar un tipo de tráfico sobre otro, por ejemplo la voz sobre una descarga.
+  - CoS (_Class of Service_) es un valor de prioridad de 0 a 7 que viaja en la etiqueta 802.1Q de la trama. Si la trama no lo trae, el switch le asigna el CoS por defecto del puerto.
+  - Según su CoS, cada trama va a una de las 4 colas del puerto de salida. Con prioridad estricta, la cola más prioritaria se atiende siempre primero. Con _Weighted Round Robin_ las colas se atienden por turnos, cada una con un peso, para que las de baja prioridad no se queden sin salir nunca.
+- *Multicast:* IGMP _snooping_ (hasta IGMPv3), para mandar el tráfico multicast solo a los puertos que lo pidieron. Multicast es el envío de un mismo flujo a un grupo de receptores. Sin _snooping_ el switch lo inunda por todos los puertos, como un broadcast. Con _snooping_ escucha los mensajes IGMP con los que cada equipo se une a un grupo o lo abandona, y reenvía el flujo solo a esos puertos.
+- *Seguridad:* _port security_ por MAC, autenticación IEEE 802.1x con RADIUS o TACACS+, _private VLAN edge_ y _storm control_.
+  - _Port security_ limita qué direcciones MAC pueden usar un puerto. Si se conecta otro equipo, el puerto se bloquea.
+  - Con 802.1x el equipo tiene que autenticarse antes de que el puerto le deje pasar tráfico. El switch no guarda las credenciales sino que se las consulta a un servidor RADIUS o TACACS+.
+  - _Private VLAN edge_ aísla entre sí puertos del mismo switch: solo pueden hablar con el puerto de subida, no entre ellos.
+  - _Storm control_ limita el broadcast, multicast y unicast de cada puerto, para que un equipo que funciona mal no sature la red.
+- *Administración:* CLI por consola, Telnet y SNMP v1/v2/v3, interfaz web embebida (_Cisco Device Manager_), RMON, SPAN (copia del tráfico de un puerto a otro para analizarlo), CDP, NTP y TFTP para actualizar el IOS.
+  - SNMP (_Simple Network Management Protocol_) permite que una estación de gestión lea y modifique parámetros del switch, como contadores de tráfico o el estado de los puertos.
+  - RMON (_Remote Monitoring_) hace que el propio switch guarde estadísticas, historial y alarmas de tráfico, sin depender de una estación que lo consulte todo el tiempo.
+  - CDP (_Cisco Discovery Protocol_) anuncia a los equipos vecinos el modelo, el IOS y la IP del switch (@tab-cdp).
+  - NTP (_Network Time Protocol_) sincroniza el reloj del switch, para que los registros tengan la hora correcta.
+  - TFTP (_Trivial File Transfer Protocol_) es una transferencia de archivos simple, sin autenticación, que se usa para cargar el IOS o copias de la configuración.
+- *LEDs:* por puerto (enlace, actividad, velocidad y dúplex) y de sistema (SYST, RPS y utilización).
+
+=== Consigna 2
+
+_Elaborar checklists (manuales, indicaciones) de procedimientos para las siguientes actividades:_
+
+==== Acceso a la consola del switch <sec-acceso-consola>
+
+_Conectar una PC al puerto de consola del switch Cisco a 9600 baudios utilizando PUTTY. Turnense para verificar el acceso a la consola del Switch._
+
+El puerto de consola es una interfaz serie RS-232 que da acceso a la CLI del switch sin pasar por la red (administración _fuera de banda_). Funciona aunque el switch no tenga IP o no esté configurado.
+
+*Materiales*
+
++ Cable de consola de Cisco (_rollover_, celeste): RJ-45 en un extremo y DB9 hembra en el otro.
++ Adaptador USB-serie RS-232, porque las notebooks no tienen puerto DB9.
++ Una PC con PuTTY instalado.
+
+*Conexión física*
+
++ Encender el switch y esperar a que termine de iniciar (LED SYST en verde, cerca de un minuto).
++ Conectar el RJ-45 del cable en el puerto `CONSOLE`, en la parte trasera del switch. El conector es igual al de los puertos Ethernet del frente.
++ Conectar el DB9 al adaptador USB-serie y el adaptador a la PC.
++ Identificar el puerto serie del adaptador:
+  - Windows: Administrador de dispositivos → Puertos (COM y LPT), por ejemplo `COM3`.
+  - Linux: `sudo dmesg | grep tty`, por ejemplo `/dev/ttyUSB0`. El usuario tiene que estar en el grupo `dialout` (Debian/Ubuntu) o `uucp` (Arch) para poder abrirlo.
+
+*Configuración de PuTTY*
+
++ En _Session_, elegir _Connection type: Serial_.
++ En _Serial line_, poner el puerto del paso anterior (`COM3` o `/dev/ttyUSB0`).
++ En _Speed_, poner `9600`.
++ En _Connection → Serial_, verificar 8 _data bits_, 1 _stop bit_, _parity: None_ y _flow control: None_. Es la configuración "9600 8N1" que espera la consola del switch.
++ Presionar _Open_.
+
+*Verificación*
+
++ Presionar Enter. Tiene que aparecer el prompt `Switch>` (modo usuario).
++ Si el switch no tiene configuración, pregunta `Would you like to enter the initial configuration dialog? [yes/no]:`. Responder `no`.
++ Probar un comando de solo lectura, por ejemplo `show version`: debe mostrar el modelo `WS-C2950-24` y la versión del IOS.
++ Salir con `exit`, cerrar PuTTY y pasar el cable al siguiente.
+
+==== Acceso a la administración y levantamiento de interfaces
+
+_Acceder a las opciones de administración del switch y levantar varias interfaces para usar en el laboratorio._
+
+La CLI del IOS tiene modos jerárquicos, y cada uno se reconoce por el prompt:
+
+#figure(
+  table(
+    columns: 4,
+    align: (left, left, left, left),
+    table.header([*Modo*], [*Prompt*], [*Acceso*], [*Uso*]),
+    [Usuario], [`Switch>`], [Al conectarse], [`show` básicos y `ping`],
+    [Privilegiado], [`Switch#`], [`enable`], [Ver toda la configuración, guardarla, reiniciar],
+    [Configuración global], [`Switch(config)#`], [`configure terminal`], [Cambios que afectan a todo el switch],
+    [Configuración de interfaz], [`Switch(config-if)#`], [`interface ...`], [Cambios en uno o varios puertos],
+  ),
+  caption: [Modos de la CLI del IOS.],
+) <tab-modos>
+
+*Entrar a la administración*
+
++ Conectarse por consola (@sec-acceso-consola).
++ Ejecutar `enable`. Ingresar la contraseña de ser necesario.
++ Revisar el estado actual con `show version` y `show running-config`.
++ Ver los puertos con `show interfaces status`. Cada uno aparece como `connected` (enlace arriba), `notconnect` (sin cable o con el otro extremo apagado), `disabled` (apagado a mano con `shutdown`) o `err-disabled` (bloqueado por un error, por ejemplo de _port security_).
+
+*Levantar las interfaces*
+
+Por ejemplo, los puertos 1 a 8:
+
+```
+Switch# configure terminal
+Switch(config)# interface range fastEthernet 0/1 - 8
+Switch(config-if-range)# description Lab - PCs
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport nonegotiate
+Switch(config-if-range)# switchport access vlan 1
+Switch(config-if-range)# speed auto
+Switch(config-if-range)# duplex auto
+Switch(config-if-range)# spanning-tree portfast
+Switch(config-if-range)# no shutdown
+Switch(config-if-range)# end
+```
+
+- `interface range fastEthernet 0/1 - 8`: aplica la misma configuración a varios puertos a la vez. En este IOS los espacios alrededor del guion son obligatorios.
+- `description`: una etiqueta que aparece en `show interfaces status`.
+- `switchport mode access` y `switchport nonegotiate`: el puerto queda fijo como puerto de acceso de una sola VLAN y no negocia troncales. De fábrica el 2950 está en modo `dynamic desirable` y envía DTP cada 30 s, como se muestra en la @tab-protocolos.
+- `switchport access vlan 1`: todos los puertos en la misma VLAN (la 1, la nativa según el CDP), para que las PCs se vean entre sí.
+- `speed auto` y `duplex auto`: autonegociación. Valores por defecto, que se pueden dejar explícitos.
+- `spanning-tree portfast`: el puerto pasa directo a reenviar tráfico al conectar un equipo. Si configurar esto, STP lo tiene unos 30 s en los estados _listening_ y _learning_ (LED amarillo) antes de transmitir tramas. Solo se usa en puertos con PCs, ya que en en un puerto hacia otro switch desactivar STP puede formar bucles.
+- `no shutdown`: lo que efectivamente levanta la interfaz.
+
+*Verificar*
+
++ `show interfaces status`: los puertos con una PC conectada deben figurar `connected`, `a-full` y `a-100` (autonegociados a full dúplex y 100 Mbps).
++ Los LEDs de esos puertos tienen que estar en verde.
++ `show mac address-table`: debe aparecer la MAC de cada PC en su puerto, por ejemplo `00e0.4c68.0e87` (la PC B) en `Fa0/1`.
++ `ping` entre las PCs, como en la Consigna 2.
+
+*IP de administración (opcional)*
+
+Para administrar el switch por Telnet o por la web, sin consola, hay que darle una IP en la interfaz virtual de la VLAN 1:
+
+```
+Switch(config)# interface vlan 1
+Switch(config-if)# ip address 192.168.1.2 255.255.255.0
+Switch(config-if)# no shutdown
+```
+
+El switch del laboratorio ya tenía la `192.168.1.2` (@tab-cdp). Está en otra subred que las PCs del grupo (`192.168.10.0/24`), por lo que no se pudo acceder a la administración por la red, solo por consola.
+
+*Guardar cambios*
+
++ Los cambios quedan en la `running-config` (en RAM) y se pierden al reiniciar. Para que persistan: `copy running-config startup-config`.
+
 == Levantar y testear una LAN
 
 === Consigna 1
 
-Configurar MANUALMENTE la interfaz de red de la computadora que elija el grupo para realizar la actividad.
+_Configurar MANUALMENTE la interfaz de red de la computadora que elija el grupo para realizar la actividad._
 
 Configuramos a mano la interfaz cableada de las dos computadoras del grupo (la PC B usó un adaptador USB–Ethernet Realtek, que Linux nombra `enp3s0f3u1u1`):
 
@@ -184,7 +517,7 @@ nmcli con add type ethernet ifname enp3s0f3u1u1 con-name tp-manual \
 
 ==== Punto d)
 
-Justificar las direcciones elegidas y si al final tenían o no sentido para la actividad.
+_Justificar las direcciones elegidas y si al final tenían o no sentido para la actividad._
 
 - *Direcciones IP:* elegimos el rango privado `192.168.0.0/16` (RFC 1918), que no se enruta en Internet y no choca con nada externo. Usamos la subred `192.168.10.0/24` en vez de la `192.168.1.0/24` del ejemplo de la consigna para no pisarnos con otros grupos ni con el switch, que según el CDP tiene la IP de administración `192.168.1.2`.
 - *Máscara /24:* deja las dos PCs en la misma subred, así se comunican directo por el switch, sin router. Sobran direcciones (254 hosts), pero es la máscara más simple de configurar. Tuvo sentido: `ping`, `ncat` y HTTP funcionaron.
@@ -192,7 +525,7 @@ Justificar las direcciones elegidas y si al final tenían o no sentido para la a
 
 === Consigna 2
 
-De a dos o más grupos por switch, conectarán una computadora por cada grupo al mismo utilizando los cables que tengan de la parte 1 de este TP. Verificar que pueden llegar a la PC de otro grupo usando ping.
+_De a dos o más grupos por switch, conectarán una computadora por cada grupo al mismo utilizando los cables que tengan de la parte 1 de este TP. Verificar que pueden llegar a la PC de otro grupo usando ping._
 
 La consigna propone conectar al switch una PC de cada grupo. En nuestro caso, las dos computadoras (PC A y PC B) eran de nuestro grupo, así que la prueba de conectividad se hizo entre ellas. Esto nos permitió ver los dos extremos de cada prueba (emisor y receptor) y capturar tanto lo que se enviaba como lo que llegaba.
 
@@ -202,8 +535,7 @@ Conectamos las dos notebooks al switch con cables UTP (@fig-montaje). Ninguna de
   grid(
     columns: 2,
     gutter: 8pt,
-    image("Experimento/montaje-switch-notebooks.jpg"),
-    image("Experimento/adaptador-usb-ethernet.jpg"),
+    image("Experimento/montaje-switch-notebooks.jpg"), image("Experimento/adaptador-usb-ethernet.jpg"),
   ),
   caption: [Montaje: las notebooks conectadas al switch (izquierda) y el adaptador USB–Ethernet de la PC B (derecha).],
 ) <fig-montaje>
@@ -224,7 +556,7 @@ No se perdió ningún paquete y el RTT promedio fue de 0,89 ms, coherente con do
 
 === Consigna 3
 
-Utilizando ncat, establecer un receptor UDP en una computadora y, desde la segunda computadora, enviar mensajes al receptor.
+_Utilizando ncat, establecer un receptor UDP en una computadora y, desde la segunda computadora, enviar mensajes al receptor._
 
 - En la PC B (receptor) ejecutamos `ncat -u -l 5000`: queda escuchando datagramas UDP en el puerto 5000.
 - En la PC A (emisor) ejecutamos `ncat -u 192.168.10.3 5000` y escribimos varias líneas (`hola`, `hola hola`, `jhjkhjk`, `k`, líneas vacías…).
@@ -236,15 +568,14 @@ Cada línea escrita en el emisor apareció en el receptor (@fig-ncat). En el med
     columns: 2,
     gutter: 12pt,
     align: horizon,
-    image("Experimento/ncat-emisor-pc-a.jpg", height: 8cm),
-    image("Experimento/ncat-receptor-pc-b.png", height: 8cm),
+    image("Experimento/ncat-emisor-pc-a.jpg", height: 8cm), image("Experimento/ncat-receptor-pc-b.png", height: 8cm),
   ),
   caption: [A la izquierda, el emisor (PC A) enviando mensajes. A la derecha, el receptor (PC B): el final del `ping` y los mensajes recibidos por `ncat`.],
 ) <fig-ncat>
 
 === Consigna 4
 
-Capturar los paquetes recibidos desde la computadora del otro grupo con wireshark. Documentar.
+_Capturar los paquetes recibidos desde la computadora del otro grupo con wireshark. Documentar._
 
 Como las dos PCs eran nuestras, en lugar de la computadora de otro grupo el emisor fue la PC A. Capturamos con Wireshark en la interfaz `enp3s0f3u1u1` de la PC B mientras recibía los mensajes enviados por la PC A (archivo `captura-udp-ncat.pcapng`). En 84 segundos se capturaron 70 tramas, pero solo 12 son los datagramas UDP de los mensajes. El resto es tráfico de control que genera el propio switch:
 
@@ -305,28 +636,87 @@ Lo que se observa:
 
 === Consigna 5
 
+Las respuestas se basan en `captura-udp-ncat.pcapng` (Consigna 4) y en la comparación con la descarga HTTP sobre TCP de la Parte 3 (@tab-http).
+
 ==== Punto a)
 
-¿Se observa algún procedimiento de establecimiento de conexión antes de enviar los datos?
+_¿Se observa algún procedimiento de establecimiento de conexión antes de enviar los datos?_
+
+No. El primer datagrama de la captura (trama 4, `hola\n`) ya lleva los datos de la aplicación. Antes de él solo hay dos BPDUs de STP y un LOOP del switch (@tab-protocolos). Todo esto debido a que estamos usando el protocolo UDP. En este caso tampoco hay algun procedimiento con ARP (ya que antes se habia hecho ping entre las 2 pc's)
 
 ==== Punto b)
 
-¿Existe algún mecanismo de confirmación de recepción equivalente a los ACK de TCP?
+_¿Existe algún mecanismo de confirmación de recepción equivalente a los ACK de TCP?_
 
+No. En toda la captura la PC B no le envía a la PC A ningún paquete IP: lo único que manda es la respuesta ARP de la trama 22. Con TCP, en cambio, el cliente confirmaba cada segmento con un `ACK` acumulativo (@tab-http).
 
 ==== Punto c)
 
-¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?
+_¿Qué ocurre si se envían mensajes mientras el receptor UDP no está ejecutándose?_
+
+El datagrama sale igual, porque el emisor no pregunta antes si hay alguien escuchando (punto a). UDP no se entera de que el receptor no está, pero el sistema operativo de la máquina destino si, si llega un datagrama a un puerto donde no escucha ningún programa, este lo descarta y le devuelve al emisor un ICMP _Destination Unreachable_ con código 3 (_Port Unreachable_) @rfc1122. En la captura de la Consigna 4 no hay ningún ICMP ya que todos los datagramas llegaron al receptor mientras este estaba escuchando
+
+
+```
+$ ncat -u 127.0.0.1 5999
+uno
+Ncat: Connection refused.
+```
+
+#figure(
+  table(
+    columns: 4,
+    align: (center, center, center, left),
+    table.header([*Trama*], [*Tiempo*], [*Protocolo*], [*Contenido*]),
+    [1], [0], [UDP], [`56336 → 5999`, 4 bytes de datos (`uno\n`)],
+    [2], [36 µs], [ICMP], [_Destination unreachable (Port unreachable)_],
+  ),
+  caption: [Captura en `lo` al enviar a un puerto UDP sin receptor.],
+) <tab-loopback>
 
 
 ==== Punto d)
 
-¿UDP garantiza que los mensajes lleguen en el mismo orden en que fueron enviados?
+_¿UDP garantiza que los mensajes lleguen en el mismo orden en que fueron enviados?_
 
+No. UDP no numera los datagramas, así que el receptor no puede saber si llegaron desordenados, duplicados o si falta alguno, se los entrega a la aplicación en el orden en que llegan a diferencia de TCP que se asegura de que reciba al menos el orden de los paquetes
+
+En nuestro experimento llegaron en orden. Se puede comprobar con el campo _Identification_ del encabezado IP, que en los 12 datagramas va de `0xe5b7` a `0xe5c2`, de a uno, sin saltos ni desorden: no se perdió ninguno y llegaron en el orden en que se enviaron. Pero eso se debe a la red, no a UDP:
+
+#pagebreak()
 
 ==== Punto e)
 
-¿Qué aplicaciones reales utilizan UDP y por qué?
+_¿Qué aplicaciones reales utilizan UDP y por qué?_
+
+UDP conviene cuando la demora importa más que la confiabilidad, en la siguiente tabla se enumeran los principales usos del protocolo UDP.
+
+
+#figure(
+  table(
+    columns: (auto, auto, 1fr),
+    align: (left, center, left),
+    table.header([*Aplicación*], [*Puerto UDP*], [*Por qué UDP*]),
+    [DNS],
+    [53],
+    [Una consulta y una respuesta, cada una en un solo datagrama. Con TCP, el _handshake_ duplicaría el tiempo de cada consulta. Si no llega la respuesta, el cliente vuelve a preguntar.],
+
+    [DHCP],
+    [67 y 68],
+    [El cliente todavía no tiene IP y pregunta por broadcast: no hay con quién armar una conexión. Es lo que reemplazamos al configurar las IP a mano en la Consigna 1.],
+
+    [Voz y video en vivo (RTP)],
+    [Dinámicos],
+    [Un paquete que llega tarde ya no sirve, y retransmitirlo agrega demora. Es preferible perder un fragmento de audio a que la llamada se congele.],
+
+    [Juegos en línea],
+    [Variable],
+    [Solo importa la posición más reciente de cada jugador. Una actualización vieja retransmitida no sirve.],
+  ),
+  caption: [Aplicaciones que usan UDP.],
+) <tab-apps-udp>
+
+En todos los casos, la aplicación prefiere manejar ella misma las pérdidas y el orden (o directamente no le importan) antes que esperar las retransmisiones de TCP.
 
 #pagebreak();
 
@@ -336,7 +726,7 @@ Usamos la misma LAN de la Parte 2, con las dos computadoras de nuestro grupo: la
 
 === Consigna 1
 
-En una de las computadoras, crear un directorio que contenga al menos tres archivos de diferentes tipos (por ejemplo, TXT, PDF e imagen). Iniciar un servidor HTTP utilizando Python:
+_En una de las computadoras, crear un directorio que contenga al menos tres archivos de diferentes tipos (por ejemplo, TXT, PDF e imagen). Iniciar un servidor HTTP utilizando Python:_
 
 ```zsh  python3 -m http.server 8000```
 
@@ -344,7 +734,7 @@ En la PC A lanzamos `python3 -m http.server 8000` dentro del repositorio de la m
 
 === Consigna 2
 
-Desde la segunda computadora, acceder al servidor mediante un navegador web, utilizando la dirección IP correspondiente y el puerto 8000 (o el que hayas elegido). Descargar uno de los archivos disponibles.
+_Desde la segunda computadora, acceder al servidor mediante un navegador web, utilizando la dirección IP correspondiente y el puerto 8000 (o el que hayas elegido). Descargar uno de los archivos disponibles._
 
 Desde la PC B abrimos `http://192.168.10.2:8000/` en el navegador: (@fig-navegador1).
 
@@ -359,7 +749,7 @@ Desde la PC B abrimos `http://192.168.10.2:8000/` en el navegador: (@fig-navegad
 #figure(
   grid(
     columns: 1,
-    image("Experimento/navegador-claude-md.png")
+    image("Experimento/navegador-claude-md.png"),
   ),
   caption: [Archivo CLAUDE.md por la PC A vistos desde el navegador de la PC B.],
 ) <fig-navegador2>
@@ -369,7 +759,7 @@ En las capturas se ve que los acentos aparecen rotos (`Ã¡` en lugar de `á`, `
 
 === Consigna 3
 
-Repetir la transferencia utilizando curl desde una terminal:
+_Repetir la transferencia utilizando curl desde una terminal:_
 
 Repetimos las descargas desde la terminal de la PC B con `curl` (en las peticiones se ve `User-Agent: curl/8.22.0`):
 
@@ -381,7 +771,7 @@ Repetimos las descargas desde la terminal de la PC B con `curl` (en las peticion
 
 === Consigna 4
 
-Capturar el tráfico generado con Wireshark. ¿De qué tipo es?
+_Capturar el tráfico generado con Wireshark. ¿De qué tipo es?_
 
 Es tráfico *HTTP/1.0 sobre TCP*, puerto 8000, sobre IPv4 y Ethernet. A diferencia de la Parte 2, es *orientado a conexión y confiable*. Además viaja *en texto plano*: en Wireshark se leen completos los encabezados y el contenido del archivo, porque no hay cifrado (no es HTTPS).
 

@@ -13,6 +13,7 @@
   url         = {https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html},
 }
 
+// Descargar el PDF en https://classpages.cselabs.umn.edu/Spring-2018/csci8980/Papers/PublishSubscribe/many-faces.pdf
 @article{eugster2003pubsub,
   author  = {Eugster, Patrick Th. and Felber, Pascal A. and Guerraoui, Rachid and Kermarrec, Anne-Marie},
   title   = {The many faces of publish/subscribe},
@@ -32,12 +33,46 @@
   urldate   = {2026-10-19},
 }
 
+@online{protobuf-encoding,
+  author    = {{Google}},
+  title     = {Encoding},
+  publisher = {Protocol Buffers Documentation},
+  url       = {https://protobuf.dev/programming-guides/encoding/},
+  urldate   = {2026-10-28},
+}
+
+@online{protobuf-proto3,
+  author    = {{Google}},
+  title     = {Language Guide (proto 3)},
+  publisher = {Protocol Buffers Documentation},
+  url       = {https://protobuf.dev/programming-guides/proto3/},
+  urldate   = {2026-10-28},
+}
+
+@online{protobuf-repo,
+  author    = {{protocolbuffers}},
+  title     = {protobuf: Protocol Buffers - {Google}'s data interchange format},
+  publisher = {GitHub},
+  url       = {https://github.com/protocolbuffers/protobuf},
+  urldate   = {2026-10-28},
+}
+
+@online{emqx-protobuf-mqtt,
+  author    = {{MQTTX Team}},
+  title     = {How to Publish and Receive {Protobuf} Messages within {MQTT}?},
+  publisher = {{EMQX} Blog},
+  date      = {2024-03-25},
+  url       = {https://www.emqx.com/en/blog/how-to-publish-and-receive-protobuf-messages-within-mqtt},
+  urldate   = {2026-10-28},
+}
+
 @online{zhang2011messenger,
   author    = {Zhang, Lucy},
   title     = {Building {Facebook} {Messenger}},
   publisher = {Engineering at Meta},
   date      = {2011-08-12},
   url       = {https://engineering.fb.com/2011/08/12/android/building-facebook-messenger/},
+  urldate   = {2026-10-31},
 }
 
 @online{inorbit-web,
@@ -52,7 +87,7 @@
   title     = {edge-sdk-python: {InOrbit} Python Edge {SDK}},
   publisher = {GitHub},
   url       = {https://github.com/inorbit-ai/edge-sdk-python},
-  urldate   = {2026-10-19},
+  urldate   = {2026-10-31},
 }
 
 @online{openrobops,
@@ -67,7 +102,599 @@
   title     = {oro: {OpenRobOps} open-source robot fleet management and operations platform},
   publisher = {GitHub},
   url       = {https://github.com/OpenRobOps/oro},
-  urldate   = {2026-10-19},
+  urldate   = {2026-10-31},
+}
+
+@online{protobuf-techniques,
+  author    = {{Google}},
+  title     = {Techniques},
+  publisher = {Protocol Buffers Documentation},
+  url       = {https://protobuf.dev/programming-guides/techniques/},
+  urldate   = {2026-10-28},
+}
+
+@techreport{sparkplug30,
+  author      = {{Eclipse Sparkplug Contributors}},
+  title       = {Sparkplug Specification, Version 3.0.0},
+  type        = {Especificación},
+  institution = {Eclipse Foundation},
+  year        = {2022},
+  url         = {https://sparkplug.eclipse.org/specification/version/3.0/documents/sparkplug-specification-3.0.0.pdf},
+}
+
+@online{aws-iot-protobuf,
+  author    = {{Amazon Web Services}},
+  title     = {Working with binary payloads},
+  publisher = {{AWS IoT Core} Developer Guide},
+  url       = {https://docs.aws.amazon.com/iot/latest/developerguide/binary-payloads.html},
+  urldate   = {2026-10-28},
+}
+
+@book{comer2014,
+  author    = {Comer, Douglas E.},
+  title     = {Internetworking with {TCP/IP}, Volume One: Principles, Protocols, and Architecture},
+  edition   = {6},
+  publisher = {Pearson},
+  address   = {Upper Saddle River, NJ},
+  year      = {2014},
+  isbn      = {978-0-13-608530-0},
+}
+
+@book{kurose2017,
+  author     = {Kurose, James F. and Ross, Keith W.},
+  title      = {Redes de computadoras. Un enfoque descendente},
+  edition    = {7},
+  publisher  = {Pearson Educación},
+  address    = {Madrid},
+  year       = {2017},
+  isbn       = {978-84-9035-528-2},
+}
+
+@book{stallings2004,
+  author    = {Stallings, William},
+  title     = {Comunicaciones y redes de computadores},
+  edition   = {7},
+  publisher = {Pearson Educación},
+  address   = {Madrid},
+  year      = {2004},
+  isbn      = {978-84-205-4110-5},
+}
+
+@techreport{rfc9110,
+  editor      = {Fielding, Roy T. and Nottingham, Mark and Reschke, Julian},
+  title       = {{HTTP} Semantics},
+  type        = {{RFC}},
+  number      = {9110},
+  institution = {{IETF}},
+  year        = {2022},
+  doi         = {10.17487/RFC9110},
+}
+
+@techreport{rfc6202,
+  author      = {Loreto, Salvatore and Saint-Andre, Peter and Salsano, Stefano and Wilkins, Greg},
+  title       = {Known Issues and Best Practices for the Use of Long Polling and Streaming in Bidirectional {HTTP}},
+  type        = {{RFC}},
+  number      = {6202},
+  institution = {{IETF}},
+  year        = {2011},
+  doi         = {10.17487/RFC6202},
+}
+
+@techreport{rfc7252,
+  author      = {Shelby, Zach and Hartke, Klaus and Bormann, Carsten},
+  title       = {The Constrained Application Protocol ({CoAP})},
+  type        = {{RFC}},
+  number      = {7252},
+  institution = {{IETF}},
+  year        = {2014},
+  doi         = {10.17487/RFC7252},
+}
+
+@techreport{rfc7641,
+  author      = {Hartke, Klaus},
+  title       = {Observing Resources in the Constrained Application Protocol ({CoAP})},
+  type        = {{RFC}},
+  number      = {7641},
+  institution = {{IETF}},
+  year        = {2015},
+  doi         = {10.17487/RFC7641},
+}
+
+@inproceedings{naik2017,
+  author    = {Naik, Nitin},
+  title     = {Choice of effective messaging protocols for {IoT} systems: {MQTT}, {CoAP}, {AMQP} and {HTTP}},
+  booktitle = {2017 {IEEE} International Systems Engineering Symposium ({ISSE})},
+  publisher = {IEEE},
+  address   = {Vienna, Austria},
+  year      = {2017},
+  doi       = {10.1109/SysEng.2017.8088251},
+}
+
+@inproceedings{thangavel2014,
+  author    = {Thangavel, Dinesh and Ma, Xiaoping and Valera, Alvin and Tan, Hwee-Xian and Tan, Colin Keng-Yan},
+  title     = {Performance evaluation of {MQTT} and {CoAP} via a common middleware},
+  booktitle = {2014 {IEEE} Ninth International Conference on Intelligent Sensors, Sensor Networks and Information Processing ({ISSNIP})},
+  publisher = {IEEE},
+  address   = {Singapore},
+  year      = {2014},
+  doi       = {10.1109/ISSNIP.2014.6827678},
+}
+
+@inproceedings{proos2020,
+  author    = {Proos, Daniel Persson and Carlsson, Niklas},
+  title     = {Performance comparison of messaging protocols and serialization formats for digital twins in {IoV}},
+  booktitle = {2020 {IFIP} Networking Conference (Networking)},
+  publisher = {IFIP},
+  address   = {Paris, France},
+  year      = {2020},
+  isbn      = {978-3-903176-28-7},
+}
+
+@techreport{rfc8323,
+  author      = {Bormann, Carsten and Lemay, Simon and Tschofenig, Hannes and Hartke, Klaus and Silverajan, Bill and Raymor, Brian},
+  title       = {{CoAP} ({Constrained Application Protocol}) over {TCP}, {TLS}, and {WebSockets}},
+  type        = {{RFC}},
+  number      = {8323},
+  institution = {{IETF}},
+  year        = {2018},
+  doi         = {10.17487/RFC8323},
+}
+
+@techreport{mqttsn2013,
+  author      = {Stanford-Clark, Andy and Truong, Hong Linh},
+  title       = {{MQTT} For Sensor Networks ({MQTT-SN}) Protocol Specification, Version 1.2},
+  type        = {Especificación técnica de {IBM}},
+  institution = {IBM},
+  year        = {2013},
+}
+
+@techreport{rfc8259,
+  editor      = {Bray, Tim},
+  title       = {The {JavaScript} Object Notation ({JSON}) Data Interchange Format},
+  type        = {{RFC}},
+  number      = {8259},
+  institution = {{IETF}},
+  year        = {2017},
+  doi         = {10.17487/RFC8259},
+}
+
+@article{friesel2021,
+  author  = {Friesel, Daniel and Spinczyk, Olaf},
+  title   = {Data Serialization Formats for the {Internet of Things}},
+  journal = {Electronic Communications of the {EASST}},
+  volume  = {80},
+  year    = {2021},
+  doi     = {10.14279/tuj.eceasst.80.1134},
+}
+
+@article{viotti2022,
+  author  = {Viotti, Juan Cruz and Kinderkhedia, Mital},
+  title   = {A Benchmark of {JSON}-compatible Binary Serialization Specifications},
+  journal = {{arXiv} preprint arXiv:2201.03051},
+  year    = {2022},
+  doi     = {10.48550/arXiv.2201.03051},
+}
+
+// Casos de uso
+
+@online{fein2014messenger,
+  author    = {Fein, Jeremy},
+  title     = {Building Mobile-First Infrastructure for {Messenger}},
+  publisher = {Engineering at Meta},
+  date      = {2014-10-09},
+  url       = {https://engineering.fb.com/2014/10/09/production-engineering/building-mobile-first-infrastructure-for-messenger/},
+  urldate   = {2026-10-31},
+}
+
+@inproceedings{barber2021bladerunner,
+  author    = {Barber, Jeff and Yu, Ximing and Kuenzel Zamore, Laney and Lin, Jerry and Jazayeri, Vahid and Erlich, Shie and Savor, Tony and Stumm, Michael},
+  title     = {Bladerunner: Stream Processing at Scale for a Live View of Backend Data Mutations at the Edge},
+  booktitle = {Proceedings of the {ACM} {SIGOPS} 28th Symposium on Operating Systems Principles ({SOSP} '21)},
+  publisher = {ACM},
+  year      = {2021},
+  pages     = {708--723},
+  doi       = {10.1145/3477132.3483572},
+}
+
+@online{thrift,
+  author  = {{Apache Software Foundation}},
+  title   = {About {Apache} {Thrift}},
+  url     = {https://thrift.apache.org/about},
+  urldate = {2026-10-31},
+}
+
+@online{inorbit-robot-connectors,
+  author  = {{InOrbit}},
+  title   = {inorbit-robot-connectors: {InOrbit} Robot Connectors},
+  url     = {https://github.com/inorbit-ai/inorbit-robot-connectors},
+  urldate = {2026-11-01},
+}
+
+@online{inorbit-interop,
+  author  = {{InOrbit}},
+  title   = {Interoperability Standards ({InOrbit} Docs)},
+  url     = {https://github.com/inorbit-ai/docs/blob/main/ground-control/robot-integration/interoperability.mdx},
+  urldate = {2026-11-01},
+}
+
+@online{inorbit-automate2026,
+  author  = {{InOrbit}},
+  title   = {{InOrbit.AI} Demonstrates the Future of Multi-Vendor Robot Orchestration and Physical {AI} at Automate 2026},
+  date    = {2026-06-22},
+  url     = {https://www.inorbit.ai/press-release-inorbit.ai-automate-2026},
+  urldate = {2026-11-01},
+}
+
+@online{vda5050,
+  author  = {{VDA} and {VDMA}},
+  title   = {{VDA} 5050: Interface for the Communication between Mobile Robots and a Fleet Control},
+  version = {3.0.0},
+  date    = {2026-03},
+  url     = {https://github.com/VDA5050/VDA5050/blob/3.0.0/VDA5050_EN.md},
+  urldate = {2026-10-31},
+}
+
+@techreport{iso21423,
+  author      = {{ISO}},
+  title       = {Robotics -- Industrial mobile robots -- Communications and interoperability},
+  type        = {International Standard},
+  number      = {ISO 21423:2026},
+  institution = {International Organization for Standardization},
+  date        = {2026-10},
+  url         = {https://www.iso.org/standard/86749.html},
+  urldate     = {2026-10-31},
+}
+
+@online{a3-iso21423,
+  author  = {{Association for Advancing Automation}},
+  title   = {{ISO} 21423: Building Global Consensus for Mobile Robot Interoperability},
+  url     = {https://www.automate.org/robotics/editorials/iso-21423-building-global-consensus-for-mobile-robot-interoperability},
+  urldate = {2026-10-31},
+}
+
+@techreport{sparkplug3,
+  author      = {{Eclipse Sparkplug Contributors}},
+  title       = {Sparkplug 3.0.0: Sparkplug Specification},
+  type        = {Specification},
+  institution = {Eclipse Foundation},
+  year        = {2022},
+  url         = {https://sparkplug.eclipse.org/specification/version/3.0/documents/sparkplug-specification-3.0.0.pdf},
+  urldate     = {2026-10-31},
+}
+
+@online{sparkplug-iso,
+  author  = {{Eclipse Foundation}},
+  title   = {The {Eclipse} {Foundation} Announces {Sparkplug} as an International Standard for a ``Plug and Play'' Industrial {IoT}},
+  date    = {2023-11-07},
+  url     = {https://newsroom.eclipse.org/node/39754},
+  urldate = {2026-10-31},
+}
+
+@online{meshtastic-mqtt,
+  author  = {{Meshtastic}},
+  title   = {{MQTT}: Integrations Overview},
+  url     = {https://meshtastic.org/docs/software/integrations/mqtt/},
+  urldate = {2026-10-31},
+}
+
+@online{meshtastic-mesh-algo,
+  author  = {{Meshtastic}},
+  title   = {Mesh Broadcast Algorithm},
+  url     = {https://meshtastic.org/docs/overview/mesh-algo/},
+  urldate = {2026-11-01},
+}
+
+@online{meshtastic-mqtt-config,
+  author  = {{Meshtastic}},
+  title   = {{MQTT} Module Configuration},
+  url     = {https://meshtastic.org/docs/configuration/module/mqtt/},
+  urldate = {2026-10-31},
+}
+
+@online{meshtastic-protobufs,
+  author  = {{Meshtastic}},
+  title   = {{Meshtastic} Protobuf Definitions},
+  url     = {https://github.com/meshtastic/protobufs},
+  urldate = {2026-10-31},
+}
+
+@online{semtech-pf,
+  author  = {{Semtech}},
+  title   = {Basic communication protocol between Lora gateway and server},
+  url     = {https://github.com/Lora-net/packet_forwarder/blob/master/PROTOCOL.TXT},
+  urldate = {2026-10-31},
+}
+
+@online{chirpstack-gwbridge-events,
+  author  = {{ChirpStack}},
+  title   = {{ChirpStack} Gateway Bridge: Events},
+  url     = {https://www.chirpstack.io/docs/chirpstack-gateway-bridge/payloads/events.html},
+  urldate = {2026-10-31},
+}
+
+@online{chirpstack-semtech-udp,
+  author  = {{ChirpStack}},
+  title   = {{ChirpStack} Gateway Bridge: Semtech {UDP} packet-forwarder},
+  url     = {https://www.chirpstack.io/docs/chirpstack-gateway-bridge/backends/semtech-udp.html},
+  urldate = {2026-10-31},
+}
+
+@online{chirpstack-gwbridge,
+  author  = {{ChirpStack}},
+  title   = {chirpstack-gateway-bridge: {ChirpStack} Gateway Bridge},
+  url     = {https://github.com/chirpstack/chirpstack-gateway-bridge},
+  urldate = {2026-10-31},
+}
+
+@online{chirpstack-repo,
+  author  = {{ChirpStack}},
+  title   = {chirpstack: {ChirpStack} open-source {LoRaWAN} Network Server},
+  url     = {https://github.com/chirpstack/chirpstack},
+  urldate = {2026-10-31},
+}
+
+@online{chirpstack-gwproto,
+  author  = {{ChirpStack}},
+  title   = {gw.proto},
+  note    = {Definiciones Protobuf de los mensajes entre gateway y servidor},
+  url     = {https://github.com/chirpstack/chirpstack/blob/master/api/proto/gw/gw.proto},
+  urldate = {2026-10-31},
+}
+
+@online{chirpstack-integrationproto,
+  author  = {{ChirpStack}},
+  title   = {integration.proto},
+  note    = {Definiciones Protobuf de los eventos de integración},
+  url     = {https://github.com/chirpstack/chirpstack/blob/master/api/proto/integration/integration.proto},
+  urldate = {2026-10-31},
+}
+
+@online{zigbee2mqtt,
+  author  = {{Zigbee2MQTT}},
+  title   = {{MQTT} Topics and Messages},
+  url     = {https://www.zigbee2mqtt.io/guide/usage/mqtt_topics_and_messages.html},
+  urldate = {2026-10-31},
+}
+
+@online{signal-websocket,
+  author  = {{Signal}},
+  title   = {WebSocketProtocol.proto ({Signal-Server})},
+  url     = {https://github.com/signalapp/Signal-Server/blob/main/websocket-resources/src/main/proto/WebSocketProtocol.proto},
+  urldate = {2026-10-31},
+}
+
+
+@online{lorawan,
+  author  = {{LoRa Alliance}},
+  title   = {What is {LoRaWAN}},
+  url     = {https://lora-alliance.org/about-lorawan/},
+  urldate = {2026-10-31},
+}
+
+// Experimento 1 (MQTT contra HTTPS): especificaciones de TCP, TLS y MQTT 3.1.1.
+@techreport{mqtt311,
+  editor      = {Banks, Andrew and Gupta, Rahul},
+  title       = {{MQTT} Version 3.1.1},
+  type        = {{OASIS} Standard},
+  institution = {{OASIS}},
+  publisher   = {{OASIS}},
+  year        = {2014},
+  url         = {https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html},
+}
+
+@techreport{rfc896,
+  author      = {Nagle, John},
+  title       = {Congestion Control in {IP}/{TCP} Internetworks},
+  type        = {{RFC}},
+  number      = {896},
+  institution = {{IETF}},
+  year        = {1984},
+  doi         = {10.17487/RFC0896},
+}
+
+@techreport{rfc1122,
+  editor      = {Braden, Robert},
+  title       = {Requirements for {Internet} Hosts -- Communication Layers},
+  type        = {{RFC}},
+  number      = {1122},
+  institution = {{IETF}},
+  year        = {1989},
+  doi         = {10.17487/RFC1122},
+}
+
+@techreport{rfc6298,
+  author      = {Paxson, Vern and Allman, Mark and Chu, Jerry and Sargent, Matt},
+  title       = {Computing {TCP}'s Retransmission Timer},
+  type        = {{RFC}},
+  number      = {6298},
+  institution = {{IETF}},
+  year        = {2011},
+  doi         = {10.17487/RFC6298},
+}
+
+@techreport{rfc9293,
+  editor      = {Eddy, Wesley M.},
+  title       = {Transmission Control Protocol ({TCP})},
+  type        = {{RFC}},
+  number      = {9293},
+  institution = {{IETF}},
+  year        = {2022},
+  doi         = {10.17487/RFC9293},
+}
+
+@techreport{rfc5246,
+  author      = {Dierks, Tim and Rescorla, Eric},
+  title       = {The Transport Layer Security ({TLS}) Protocol Version 1.2},
+  type        = {{RFC}},
+  number      = {5246},
+  institution = {{IETF}},
+  year        = {2008},
+  doi         = {10.17487/RFC5246},
+}
+
+@techreport{rfc8446,
+  author      = {Rescorla, Eric},
+  title       = {The Transport Layer Security ({TLS}) Protocol Version 1.3},
+  type        = {{RFC}},
+  number      = {8446},
+  institution = {{IETF}},
+  year        = {2018},
+  doi         = {10.17487/RFC8446},
+}
+
+@techreport{rfc5905,
+  author      = {Mills, David and Martin, Jim and Burbank, Jack and Kasch, William},
+  title       = {Network Time Protocol Version 4: Protocol and Algorithms Specification},
+  type        = {{RFC}},
+  number      = {5905},
+  institution = {{IETF}},
+  year        = {2010},
+  doi         = {10.17487/RFC5905}
+  }
+@techreport{rfc5382,
+  author      = {Guha, Saikat and Biswas, Kaushik and Ford, Bryan and Sivakumar, Senthil and Srisuresh, Pyda},
+  title       = {{NAT} Behavioral Requirements for {TCP}},
+  type        = {{RFC}},
+  number      = {5382},
+  institution = {{IETF}},
+  year        = {2008},
+  doi         = {10.17487/RFC5382},
+}
+
+@techreport{rfc6888,
+  author      = {Perreault, Simon and Yamagata, Ikuhei and Miyakawa, Shin and Nakagawa, Akira and Ashida, Hiroyuki},
+  title       = {Common Requirements for Carrier-Grade {NATs} ({CGNs})},
+  type        = {{RFC}},
+  number      = {6888},
+  institution = {{IETF}},
+  year        = {2013},
+  doi         = {10.17487/RFC6888},
+}
+
+@techreport{rfc2328,
+  author      = {Moy, John},
+  title       = {{OSPF} Version 2},
+  type        = {{RFC}},
+  number      = {2328},
+  institution = {{IETF}},
+  year        = {1998},
+  doi         = {10.17487/RFC2328},
+}
+
+@techreport{rfc2453,
+  author      = {Malkin, Gary},
+  title       = {{RIP} Version 2},
+  type        = {{RFC}},
+  number      = {2453},
+  institution = {{IETF}},
+  year        = {1998},
+  doi         = {10.17487/RFC2453},
+}
+
+@techreport{rfc7868,
+  author      = {Savage, Donnie and Ng, James and Moore, Steven and Slice, Donald and Paluch, Peter and White, Russ},
+  title       = {{Cisco's} {Enhanced Interior Gateway Routing Protocol} ({EIGRP})},
+  type        = {{RFC}},
+  number      = {7868},
+  institution = {{IETF}},
+  year        = {2016},
+  doi         = {10.17487/RFC7868},
+}
+
+@techreport{rfc5880,
+  author      = {Katz, Dave and Ward, Dave},
+  title       = {Bidirectional Forwarding Detection ({BFD})},
+  type        = {{RFC}},
+  number      = {5880},
+  institution = {{IETF}},
+  year        = {2010},
+  doi         = {10.17487/RFC5880},
+}
+
+@techreport{rfc4271,
+  editor      = {Rekhter, Yakov and Li, Tony and Hares, Susan},
+  title       = {A Border Gateway Protocol 4 ({BGP-4})},
+  type        = {{RFC}},
+  number      = {4271},
+  institution = {{IETF}},
+  year        = {2006},
+  doi         = {10.17487/RFC4271},
+}
+
+@inproceedings{labovitz2000,
+  author    = {Labovitz, Craig and Ahuja, Abha and Bose, Abhijit and Jahanian, Farnam},
+  title     = {Delayed {Internet} Routing Convergence},
+  booktitle = {Proceedings of the Conference on Applications, Technologies, Architectures, and Protocols for Computer Communication ({SIGCOMM} '00)},
+  publisher = {ACM},
+  address   = {Stockholm, Sweden},
+  year      = {2000},
+}
+
+@techreport{rfc5715,
+  author      = {Shand, Mike and Bryant, Stewart},
+  title       = {A Framework for Loop-Free Convergence},
+  type        = {{RFC}},
+  number      = {5715},
+  institution = {{IETF}},
+  year        = {2010},
+  doi         = {10.17487/RFC5715},
+}
+
+@online{linux-ip-sysctl,
+  author    = {{The Linux Kernel Developers}},
+  title     = {{IP} Sysctl},
+  publisher = {The Linux Kernel Documentation},
+  url       = {https://docs.kernel.org/networking/ip-sysctl.html},
+  urldate   = {2026-11-06},
+}
+
+@online{espressif-devkitc,
+  author  = {{Espressif Systems}},
+  title   = {{ESP32-DevKitC-32E}},
+  url     = {https://www.mouser.com/ProductDetail/Espressif-Systems/ESP32-DevKitC-32E},
+  urldate = {2026-11-07},
+}
+
+@online{lilygo-a7670sa,
+  author  = {{LilyGO}},
+  title   = {{T-A7670SA}},
+  url     = {https://wiki.lilygo.cc/products/t-sim-series/t-a7670/t-a7670sa/},
+  urldate = {2026-11-07},
+}
+
+@online{hologram-precios,
+  author  = {{Hologram}},
+  title   = {Pricing},
+  url     = {https://www.hologram.io/pricing/},
+  urldate = {2026-11-07},
+}
+
+@online{thingsmobile-precios,
+  author  = {{Things Mobile}},
+  title   = {Pay per use plan without subscription fee},
+  url     = {https://www.thingsmobile.com/business/plans/pay-per-use-plan-without-subscription-fee},
+  urldate = {2026-11-07},
+}
+
+@online{1nce-precios,
+  author  = {{1NCE}},
+  title   = {{1NCE Connect} Pricing},
+  url     = {https://www.1nce.com/en-us/1nce-connect/pricing},
+  urldate = {2026-11-07},
+}
+
+@online{aws-lightsail-precios,
+  author  = {{Amazon Web Services}},
+  title   = {{Amazon Lightsail} Pricing},
+  url     = {https://aws.amazon.com/lightsail/pricing/},
+  urldate = {2026-11-07},
+}
+
+@online{aws-iot-core-precios,
+  author  = {{Amazon Web Services}},
+  title   = {{AWS IoT Core} Pricing},
+  url     = {https://aws.amazon.com/iot-core/pricing/},
+  urldate = {2026-11-07},
 }
 
 @inproceedings{kuramoto1975,
