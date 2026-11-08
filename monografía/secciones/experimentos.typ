@@ -26,9 +26,9 @@
 
 Los dos experimentos corren sobre el mismo entorno, montado en una sola computadora, donde cada nodo es un ESP32 emulado con QEMU.
 
-El ESP32 emulado no tiene WiFi. En su lugar, QEMU le provee una placa Ethernet emulada, que el firmware maneja como cualquier otra interfaz. Cada instancia usa la red de usuario de QEMU, que no requiere permisos de administrador: desde el nodo, la computadora anfitriona se ve en la dirección `10.0.2.2`. Ahí corre el broker Mosquitto, al que se conectan todos los nodos. Para varios nodos se lanzan varias instancias de QEMU en paralelo, cada una con su propia copia de la imagen de flash.
+El ESP32 emulado no tiene WiFi, por lo que QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz virtual propia de la computadora anfitriona, y todas se unen en un puente que las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
 
-La emulación impone algunas restricciones. Los tiempos de ejecución no son los de una placa real, porque dependen de la carga de la computadora anfitriona. Además, la red de usuario no crea una interfaz en la computadora anfitriona, así que no se puede degradar el enlace de un nodo por separado. Para introducir latencia o pérdida en cada nodo hace falta conectar cada instancia a una interfaz virtual propia unida a un puente, y aplicar `netem` sobre esa interfaz.
+La emulación impone algunas restricciones. Los tiempos de ejecución no son los de una placa real, porque dependen de la carga de la computadora anfitriona: cuando llega una difusión, todas las instancias compiten por la CPU, y el retardo de entrega crece alrededor de 0,3 ms por cada nodo agregado. Además, cada instancia ocupa unos 170 MB de memoria, lo que limita la cantidad de nodos que se pueden emular.
 
 === Experimento 1: MQTT contra HTTPS para telemetría <sec-exp-mqtt-https>
 
