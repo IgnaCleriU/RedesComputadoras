@@ -21,6 +21,18 @@
 
 === Experimento 2: sincronización de osciladores acoplados
 
+La sincronización colectiva aparece cuando un conjunto de osciladores, cada uno con su propio ritmo, termina funcionando a una frecuencia común sin que nadie la imponga. Las diferencias entre las frecuencias naturales no desaparecen, pero la interacción alcanza para compensarlas. En biología se observa en las células marcapasos del corazón, en las células del núcleo supraquiasmático que regulan los ritmos circadianos, en suspensiones de levaduras, en las luciérnagas que destellan al unísono y en los grillos que cantan a la vez. En física e ingeniería aparece en arreglos de láseres, en osciladores de microondas y en uniones de Josephson @strogatz2000.
+
+La idea del experimento es reproducir ese fenómeno con una red de nodos que se comportan como luciérnagas. Cada ESP32 ejecuta un único oscilador, con una frecuencia natural distinta a la de los demás: su fase avanza a su propio ritmo y cada vuelta completa equivale a un destello. Si los nodos no se comunican, cada uno destella a su frecuencia. Si cada uno conoce la fase de los otros y corrige la propia, a partir de cierto acoplamiento el grupo se engancha en un ritmo común, sin ningún nodo que actúe de coordinador.
+
+Esa sincronía existe solo a través de los mensajes que intercambian los nodos, y por eso sirve para evaluar el stack. El modelo matemático predice cómo debería comportarse el grupo si la comunicación fuera ideal, de modo que la sincronización funciona como una carga de referencia con un comportamiento teórico conocido. Comparar esa predicción con lo que se mide en los nodos permite observar qué tan bien cumple el transporte con lo que la aplicación necesita.
+
+La prueba se implementa sobre la plataforma común, con un oscilador por cada ESP32 emulada. Cada nodo integra periódicamente su fase, la serializa con Protocol Buffers junto con su identificador y una marca de tiempo, y la publica por MQTT en un tópico propio, por ejemplo `kuramoto/phase/7`. Además, se suscribe con un comodín a `kuramoto/phase/+`, de modo que recibe las fases de todos los demás a través del broker. Con esas fases calcula la corrección que aplica a su propia evolución, y el ciclo se repite.
+
+Este esquema aprovecha las características del stack presentadas en el marco teórico. Es un intercambio de muchos a muchos: ningún nodo necesita conocer la dirección de los otros, y sumar uno nuevo no requiere modificar a los que ya están, porque el modelo publicador/suscriptor desacopla a quienes envían de quienes reciben. También exige mucho del broker, que entrega cada publicación a los otros $N - 1$ nodos, lo que da $N(N - 1)$ entregas por cada ronda de publicaciones. Como los mensajes son cortos y muy frecuentes, el tamaño reducido de la codificación binaria de Protocol Buffers y el encabezado pequeño de MQTT tienen un efecto directo sobre el tráfico total.
+
+// TODO(rebase sobre master) Reemplazar las menciones al marco teórico por referencias: @sec-pubsub, @sec-mqtt, @sec-protobuf y @sec-ruteo-topicos (comodines).
+
 ==== Planteo
 
 *El modelo.* Cada oscilador tiene una frecuencia natural $omega_i$, que es fija, y una fase $theta_i$, que evoluciona según
