@@ -1,0 +1,7 @@
+{
+  "defecto": {"ts_ms": 10, "semillas": [1], "extrapolar": 0},
+  "entradas": [
+    {"nombre": "dos-nodos-tap", "n": 2, "config": "distintas", "f_hz": 0.2, "ancho": 0.2,
+     "k": [3], "h_ms": 1000, "duracion_s": 60, "perfil": ["", "wifi-perdida-1"]}
+  ]
+}

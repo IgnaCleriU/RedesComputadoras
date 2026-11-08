@@ -1,0 +1,7 @@
+{
+  "defecto": {"ts_ms": 10, "semillas": [1], "perfil": [""], "extrapolar": 0},
+  "entradas": [
+    {"nombre": "carga", "n": 40, "config": "distintas", "f_hz": 0.1, "ancho": 0.2,
+     "k": [2], "h_ms": 1000, "duracion_s": 120}
+  ]
+}
