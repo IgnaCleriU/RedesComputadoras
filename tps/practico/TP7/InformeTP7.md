@@ -89,6 +89,19 @@
 
 > ¿Pudieron confirmar que su corrección es correcta? ¿Cómo?
 
+Sí. Lo confirmamos en dos pasos:
+
+- Primero, que la matriz corregida fuera consistente con los bits de control.
+- Después, que el mensaje decodificado funcionara. La prueba definitiva fue que el enlace del mensaje llevaba al video del premio.
+
+**Detección y corrección con un script.** Para la detección y la corrección usamos un script de Python que recalcula la paridad de cada fila y de cada columna y la compara con los bits de control recibidos. Las filas y columnas que no coinciden forman el síndrome, y el bit erróneo está en el cruce de la fila y la columna que fallan, así que el script lo invierte. Así se evitan los errores de contar unos y ceros a mano en una matriz con tantos bits, y el resultado es reproducible.
+
+Después de corregir, que todas las paridades coincidan es una condición necesaria, pero no suficiente. Como vimos en la reflexión 1, si el receptor elige mal ante dos errores, invierte bits que estaban bien y aun así todas las paridades cierran. El código, por sí solo, no puede distinguir ese caso de una corrección correcta.
+
+Por eso no nos quedamos con la salida del script de Python como mensaje final: verificamos que la instrucción funcionara. El mensaje decodificado tenía un enlace y, al abrirlo, llegamos al video del premio. Es una prueba mucho más fuerte de lo que parece, por lo que vimos en la reflexión 2. Si un solo bit del enlace hubiera quedado mal, apuntaría a otro video, a otro dominio o a ningún lado. En un enlace de YouTube, como los del mensaje, el identificador del video tiene 11 caracteres de 64 posibles cada uno, es decir 64¹¹ ≈ 7,4 × 10¹⁹ combinaciones. Que una corrección equivocada diera por casualidad justo el identificador del video del premio es, en la práctica, imposible.
+
+Las dos comprobaciones son independientes, ya que una mira los bits y la otra el significado del mensaje, y las dos dieron bien. Si el enlace no hubiera funcionado, el paso siguiente habría sido comparar varias copias del mensaje, que el transmisor reenvía cada 30 segundos.
+
 ### 4)
 
 > Investigar y describir con el mayor detalle posible cómo funciona la técnica de corrección Hamming (7,4) y por qué es superior a la demostración didáctica que hicimos en este Laboratorio. Luego, aplicar la técnica sobre la carga útil obtenida en el desafío y elaborar un paquete de datos que podrían transmitir para que, en caso de corrupción, pueda ser recuperado.
