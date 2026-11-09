@@ -199,7 +199,7 @@
 #include "secciones/conclusion.typ"
 
 // ---------------------------------------------------------------------------
-// Bibliografía (estilo IEEE; muestra todas las entradas de bibliografia.bib)
+// Bibliografía (estilo IEEE; muestra solo las entradas citadas en el texto)
 // ---------------------------------------------------------------------------
 = Bibliografía
-#bibliography("bibliografia.bib", title: none, style: "ieee", full: true)
+#bibliography("bibliografia.bib", title: none, style: "ieee")

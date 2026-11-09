@@ -53,7 +53,7 @@ Cada persona edita **su** archivo de `secciones/`, así se evitan conflictos al 
   En el texto se cita con `@fig-nombre`.
 - **Tablas:** `#figure(table(...), caption: [...]) <tab-nombre>`; se cita con `@tab-nombre`.
 - **Ecuaciones:** `$ E = m c^2 $ <ec-nombre>`; se cita con `@ec-nombre`.
-- **Citas:** agregar la entrada a `bibliografia.bib` (modelo en `tps/tp-teorico/tarea5/bibliografia.bib`) y citar con `@clave`; en el texto sale como "[1]" (estilo IEEE). La bibliografía lista todas las entradas del `.bib`.
+- **Citas:** agregar la entrada a `bibliografia.bib` (modelo en `tps/tp-teorico/tarea5/bibliografia.bib`) y citar con `@clave`; en el texto sale como "[1]" (estilo IEEE). La bibliografía lista solo las entradas citadas en el texto; las demás pueden quedar en el `.bib` sin aparecer.
 - **Sección nueva:** crear el archivo en `secciones/` y agregarlo con `#include` en `monografia.typ`, en el lugar que corresponda.
 
 ## Requisito de la cátedra
