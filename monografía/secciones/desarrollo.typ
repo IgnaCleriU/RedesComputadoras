@@ -9,7 +9,11 @@
 // El marco teórico explica qué es cada tecnología de la capa 7, mientras que el desarrollo analiza cómo se comporta el stack
 // en las capas de transporte y de red. Luego en diseño experimental se mide.
 
+Este capítulo sigue el recorrido de un mensaje desde el dispositivo hasta el broker. Analiza la conexión TCP y TLS sobre la que viaja MQTT, la capa de red que esa conexión atraviesa y el ruteo por tópicos que realiza el broker en la capa de aplicación (@sec-ruteo-topicos). Examina después cómo emplean el stack sistemas reales (@sec-casos-de-uso), contrasta lo analizado con dos experimentos propios (@sec-exp-mqtt-https y @sec-exp-sincronizacion) y releva el hardware con el que se implementaría una solución (@sec-mapeo-tecnologico).
+
 == MQTT sobre TCP y TLS
+
+MQTT delega en TCP la entrega fiable y ordenada de los mensajes (@sec-mqtt). Esta sección analiza qué implica esa dependencia, en particular cómo se mantiene viva la conexión, cuánto cuesta cifrarla con TLS y qué agregan los niveles de QoS a la confiabilidad que ya ofrece TCP.
 
 === Conexión persistente y keep-alive <sec-keepalive>
 
@@ -131,6 +135,8 @@ receptor que tolere duplicados, y QoS 2 queda para los casos en que el duplicado
 cubrió, quedan para el ensayo de la @sec-exp-sincronizacion.
 
 == Capa de red
+
+La conexión TCP que abre el dispositivo atraviesa redes que ni el dispositivo ni el operador del broker controlan. Esta sección analiza los dos aspectos de la capa de red que más la afectan, los NAT y firewalls que se interponen en el camino y los protocolos de ruteo que lo determinan y lo restablecen cuando una falla lo interrumpe.
 
 === NAT y firewalls <sec-nat-firewalls>
 

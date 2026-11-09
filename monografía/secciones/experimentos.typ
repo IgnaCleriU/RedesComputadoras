@@ -18,6 +18,8 @@
 
 // Presentación de los dos experimentos y de la estructura común (planteo, implementación, resultados y análisis).
 
+Las secciones anteriores analizaron el stack de forma cualitativa. Esta sección lo contrasta con mediciones propias, en dos experimentos que comparten la misma plataforma. En un escenario de telemetría, el experimento de la @sec-exp-mqtt-https compara MQTT con HTTP y mide el costo en bytes y en latencia de cada camino. El de la @sec-exp-sincronizacion, en cambio, usa solo MQTT con Protocol Buffers en una aplicación en la que cada nodo necesita el dato de todos los demás, y ensaya los mecanismos del stack ante pérdidas, cortes de conexión y caídas del broker. Cada experimento se presenta con la misma estructura, que recorre su planteo, su implementación, sus resultados y el análisis de esos resultados.
+
 === Plataforma común <sec-plataforma-comun>
 
 // Placas ESP32 emuladas con QEMU, broker Mosquitto y backend; restricciones de la emulación.

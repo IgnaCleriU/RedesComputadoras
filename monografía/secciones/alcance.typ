@@ -35,7 +35,7 @@ Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, un emulador q
 
 El primero, en un escenario de telemetría, compara MQTT (QoS 0 y QoS 1) con HTTP (con y sin reutilización de la conexión), con carga útil en JSON y en Protocol Buffers y con y sin TLS, y mide por separado el costo en bytes y en latencia. Se le aplican pérdidas y latencia de forma artificial, pero no cortes de conexión.
 
-El segundo no compara protocolos. Usa únicamente MQTT 5.0 con Protocol Buffers, sin TLS, y emplea la sincronización de osciladores acoplados como aplicación en la que cada nodo necesita el dato de todos los demás. Allí se ensayan los mecanismos del stack (QoS, keep-alive, última voluntad, alias de tópico y compatibilidad del esquema) y su comportamiento ante pérdidas y cortes de conexión, que se introducen de forma artificial.
+El segundo no compara protocolos. Usa únicamente MQTT 5.0 con Protocol Buffers, sin TLS, y emplea la sincronización de osciladores acoplados como aplicación en la que cada nodo necesita el dato de todos los demás. Allí se ensayan los mecanismos del stack (QoS, keep-alive, última voluntad, alias de tópico y compatibilidad del esquema), su comportamiento ante pérdidas, cortes de conexión y caídas del broker, que se introducen de forma artificial, y la carga del broker con 5, 10 y 20 nodos.
 
 La emulación impone limitaciones que acotan el alcance de los resultados. No reproduce el comportamiento de una radio real, por lo que no se mide el
 consumo de energía de los dispositivos y no se incluyen enlaces inalámbricos restringidos como LoRa, NB-IoT o satelitales. Tampoco reproduce los tiempos
