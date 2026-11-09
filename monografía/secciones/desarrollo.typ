@@ -157,7 +157,7 @@ El siguiente segmento del broker hacia el dispositivo se descarta en el NAT, y e
 público, que el broker no reconoce como parte de ninguna conexión. El resultado es una conexión que figura como abierta en ambos extremos pero que ya
 no transporta datos, situación especialmente grave para un suscriptor que espera comandos y no transmite por iniciativa propia.
 
-El keep-alive de MQTT (@sec-keepalive) resuelve también este problema, porque obliga al cliente a enviar algún paquete de control dentro de cada intervalo y así refresca la entrada en cada NAT y firewall del trayecto, siempre que el intervalo sea menor que su tiempo de expiración. El keep-alive de TCP no sirve para esto, porque su intervalo no debe ser menor que dos horas, un valor demasiado largo frente a los plazos de muchos equipos intermedios.
+El keep-alive de MQTT (@sec-keepalive) resuelve también este problema, porque obliga al cliente a enviar algún paquete de control dentro de cada intervalo y así refresca la entrada en cada NAT y firewall del trayecto, siempre que el intervalo sea menor que su tiempo de expiración. El keep-alive de TCP no sirve para esto, porque su intervalo no debe ser menor que dos horas @rfc1122, un valor demasiado largo frente a los plazos de muchos equipos intermedios. Elegir el intervalo de MQTT implica, además del compromiso de la @sec-keepalive, un costo de energía, porque en los dispositivos móviles cada PINGREQ obliga a activar la radio.
 
 === Ruteo interno <sec-ruteo-interno>
 
@@ -179,7 +179,7 @@ con los valores habituales de 10 segundos entre Hellos es de 40 segundos @rfc232
 @rfc5880.
 
 RIP, en cambio, es un protocolo de vector distancia basado en el algoritmo de Bellman-Ford. Cada router conoce solo las distancias, medidas en saltos,
-que le anuncian sus vecinos, y les envía su tabla completa cada 30 segundos @rfc2453. Su convergencia es lenta, porque una ruta se da por perdida recién después de 180 segundos sin anuncios que la confirmen, y la noticia de la falla avanza de a un router por intercambio, con el riesgo de que la métrica crezca de a poco sin límite, el problema conocido como conteo hasta el infinito @kurose2017.
+que le anuncian sus vecinos, y les envía su tabla completa cada 30 segundos @rfc2453. Su convergencia es lenta, porque una ruta se da por perdida recién después de 180 segundos sin anuncios que la confirmen, y la noticia de la falla avanza de a un router por intercambio, con el riesgo de que la métrica crezca de a poco hasta el valor que representa un destino inalcanzable, el problema conocido como conteo hasta el infinito @kurose2017.
 
 EIGRP, desarrollado por Cisco, es un protocolo de vector distancia avanzado que envía actualizaciones solo cuando hay cambios y que, para cada destino, registra además de la mejor ruta otras de respaldo que no forman bucles, llamadas sucesores factibles. Si la ruta principal falla y existe un sucesor factible, el router conmuta a él de forma local e inmediata, y solo si no lo hay consulta a sus vecinos, lo que demora la convergencia @rfc7868. Para detectar vecinos caídos, en los enlaces de alta velocidad envía Hellos cada 5
 segundos con un tiempo de espera de 15 segundos @rfc7868. La @tab-convergencia-igp resume las diferencias entre los tres protocolos.
@@ -300,7 +300,7 @@ conmuta a otro equipo de NAT de gran escala, o cuando el dispositivo cambia de r
 no existe en el nuevo NAT (@sec-nat-firewalls), por lo que la conexión se pierde aunque la red converja de inmediato, con las mismas consecuencias que
 en el tercer régimen.
 
-El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos regímenes no se midieron allí (@sec-exp-mqtt-https). Se ensayan en el experimento de la @sec-exp-sincronizacion, sobre la misma plataforma, aplicando con `tc netem` una pérdida del 100 % sobre la interfaz de un nodo durante un intervalo fijo, con duraciones por debajo y por encima del umbral del keep-alive.
+El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos regímenes no se midieron allí (@sec-exp-mqtt-https). Se ensayan en el experimento de la @sec-exp-sincronizacion, sobre la misma plataforma, aplicando con `tc netem` una pérdida del 100 % sobre la interfaz de un nodo durante un intervalo fijo, con duraciones por debajo y por encima del umbral del keep-alive. Esas mediciones muestran que un corte breve puede cerrar la conexión del lado del cliente antes de ese umbral, un matiz que la @tab-regimenes-corte no contempla.
 
 == Ruteo por tópicos y ruteo IP <sec-ruteo-topicos>
 
