@@ -171,6 +171,7 @@ y los percentiles medidos en la sección de ruido. Requiere Python 3 con `numpy`
 | `simulacion/simulador.py` | Modelo de los nodos y modelo de entrega de los mensajes |
 | `simulacion/verificar.py` | Compara teoría y simulador con los resultados conocidos |
 | `simulacion/barrido.py` | Barre K y escribe un CSV (`simulacion/datos/`, no se versiona) |
+| `simulacion/estudio_retardo.py` | Estado enganchado y umbral con retardo, y esquema cruzado; escribe `docs/resultados/figs/estudio_retardo.md` |
 
 ```bash
 cd simulacion
@@ -219,8 +220,8 @@ Si el receptor adelanta cada fase con la velocidad publicada y su antigüedad, e
 
 ## Matriz final
 
-`matrices/final.json` ensaya qué aporta y qué cuesta cada mecanismo de MQTT y Protocol Buffers. Son 16 corridas
-con N = 20, h = 500 ms y f̄ = 0,2 Hz, unos 50 min en total. Respecto de 0,1 Hz y h = 1 s, la dinámica es la misma con
+`matrices/final.json` ensaya qué aporta y qué cuesta cada mecanismo de MQTT y Protocol Buffers. Son 28 corridas
+con N = 20, h = 500 ms (salvo las de `periodo_250`) y f̄ = 0,2 Hz, una hora y media en total. Respecto de 0,1 Hz y h = 1 s, la dinámica es la misma con
 el tiempo a la mitad. Las herramientas de Python corren con `uv` (`uv sync`, y después `uv run --no-sync python ...`).
 
 | Entrada | Qué varía | Qué muestra |
@@ -235,6 +236,11 @@ el tiempo a la mitad. Las herramientas de Python corren con `uv` (`uv sync`, y d
 | `qos*_perdida` | QoS 0 y 1 con 5 % de pérdida | Costo y beneficio de QoS 1 |
 | `alias` | Alias de tópico del broker hacia los nodos | Bytes ahorrados |
 | `escala_n*` | N = 5 y 10 | Carga del broker contra N |
+| `umbral` | K = 1,05, 1,1, 1,15 y 1,25·K_c, desde el estado enganchado | Umbral real con el retardo del período de publicación |
+| `periodo_250` | h = 250 ms, K = 1,1 y 1,5·K_c | Efecto aislado del período de publicación |
+| `qos1_sin_perdida` | QoS 1 sin netem | Separa QoS 1 de la pérdida |
+| `qos0_rep`, `qos1_rep` | QoS 0 y 1 con 5 % de pérdida, semillas 2 y 3 | Repetición de la comparación de QoS |
+| `keepalive_captura` | Corte de 2 s con captura | Por qué un corte breve cierra la conexión del lado del cliente |
 
 ```bash
 sudo host/red.sh up 20
@@ -246,6 +252,6 @@ uv run --no-sync python host/trafico.py resultados/final
 ```
 
 Además de lo que deja cada corrida (ver `host/README.md`), `eventos.csv` registra cada acción programada,
-`eventos_analisis.csv` su efecto, y `trafico.csv` los bytes por sentido y la anatomía del PUBLISH. La fase de cada nodo
+`eventos_analisis.csv` su efecto, y `trafico.csv` los bytes por sentido y la anatomía del PUBLISH. `host/capturas.py` da, a partir de una captura, la antigüedad por tramos de tiempo y las entregas sin confirmar, o la secuencia de paquetes de un nodo alrededor de un corte, y `host/figuras.py` genera las figuras y `tablas.md`. La fase de cada nodo
 sale de su UART (`uart<i>.log`, líneas `F`), porque el logger no ve nada mientras el broker está caído; `fases.log`
 queda para contar mensajes y medir el retardo de subida.

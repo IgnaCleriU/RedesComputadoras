@@ -49,6 +49,7 @@ class Red:
     perfil: str = ""  # clave de PERFILES_MEDIDOS; se suma a tau
     desfase: bool = True  # cada nodo publica con un desfase propio dentro de h
     extrapolar: bool = False  # el receptor adelanta la fase con la velocidad publicada y su antigüedad
+    cruzado: bool = False  # esquema cruzado: entre nodos de distinta paridad se lee la velocidad como fase
 
 
 @dataclass
@@ -58,6 +59,7 @@ class Resultado:
     psi: np.ndarray  # fase media en cada instante
     fases_finales: np.ndarray  # theta_i sin reducir módulo 2 pi
     omega_efectiva: np.ndarray  # velocidad media de cada fase en la ventana final
+    r_grupos: tuple = ()  # con esquema cruzado, r de los nodos de id par y de id impar en cada instante
 
 
 def parametro_de_orden(theta):
@@ -100,7 +102,9 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
     ultima_seq = -np.ones((n, n), dtype=int)
     pendientes = deque()  # (seq, fases publicadas, paso de llegada por copia)
 
-    tiempos, valores_r, valores_psi = [], [], []
+    tiempos, valores_r, valores_psi, valores_grupos = [], [], [], []
+    impares = np.arange(1, n + 1) % 2 == 1  # los id van de 1 a N
+    distinta_paridad = impares[:, None] != impares[None, :]
     theta_ventana = None
     seq = 0
 
@@ -110,6 +114,8 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
             tiempos.append(paso * t_s)
             valores_r.append(r)
             valores_psi.append(psi)
+            if red.cruzado:
+                valores_grupos.append((parametro_de_orden(theta[~impares])[0], parametro_de_orden(theta[impares])[0]))
         if paso == paso_ventana:
             theta_ventana = theta.copy()
 
@@ -153,6 +159,8 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
             pendientes = deque(p for p in pendientes if p[0] < NUNCA)
 
         estimada = hat + hat_velocidad * (paso - hat_paso) * t_s if red.extrapolar else hat
+        if red.cruzado:
+            estimada = np.where(distinta_paridad, hat_velocidad, estimada)
         acople = np.sin(estimada - theta[:, None]) * conocida
         velocidad = omega + k / n * acople.sum(axis=1)
         theta = theta + t_s * velocidad
@@ -172,6 +180,7 @@ def simular(omega, k, red=None, duracion=120.0, t_s=0.001, semilla=0,
         psi=np.array(valores_psi),
         fases_finales=theta,
         omega_efectiva=omega_efectiva,
+        r_grupos=tuple(np.array(valores_grupos).T) if valores_grupos else (),
     )
 
 

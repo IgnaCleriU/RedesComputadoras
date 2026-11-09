@@ -5,16 +5,17 @@ desintonías Delta = omega - media(omega), acoplamiento K, parámetro de orden r
 y u = K * r.
 
 Fuentes de cada resultado:
-  - kc_finito, r_enganchado y desfasajes: Verwoerd y Mason (2008), Corolario 5
-    y Teorema 3.
+  - kc_finito: Verwoerd y Mason (2008), Corolario 5 y Teorema 3.
+  - r_enganchado y desfasajes: Verwoerd y Mason (2008), Teorema 2.
   - kc_infinito: Strogatz (2000), sección 4.
   - frecuencia_con_retardo: Yeung y Strogatz (1999), con el factor (N - 1) / N
     que aparece al quitar el término propio. Ese factor es una cuenta nuestra.
-  - kc_dos_nodos_con_retardo: cuenta nuestra sobre el modelo de los nodos.
+  - kc_dos_nodos_con_retardo y estado_con_retardo: cuentas nuestras sobre el
+    modelo de los nodos.
 """
 
 import numpy as np
-from scipy.optimize import brentq
+from scipy.optimize import brentq, fsolve
 
 
 def frecuencias_equiespaciadas(n, media, semiancho):
@@ -78,8 +79,8 @@ def kc_infinito(g0):
 def u_enganchado(omega, k):
     """Devuelve u = K * r del estado enganchado, o None si K < K_c.
 
-    K * f(u) = u tiene dos raíces cuando K > K_c. La mayor corresponde al
-    estado con mayor r, que es el que se observa en las simulaciones.
+    K * f(u) = u tiene a lo sumo dos raíces (ver raices_u). Se toma la mayor,
+    que es la de mayor r y la localmente estable (ver autovalores_estado).
     """
     delta = desintonias(omega)
     if np.abs(delta).max() == 0.0:
@@ -90,6 +91,33 @@ def u_enganchado(omega, k):
     if np.isclose(k, critico / f(critico, delta)):
         return critico
     return brentq(lambda u: k * f(u, delta) - u, critico, k, xtol=1e-12)
+
+
+def raices_u(omega, k):
+    """Soluciones de K * f(u) = u, de mayor a menor. Lista vacía si K < K_c."""
+    delta = desintonias(omega)
+    maximo = np.abs(delta).max()
+    mayor = u_enganchado(omega, k)
+    if mayor is None or maximo == 0.0:
+        return [] if mayor is None else [mayor]
+    borde = maximo * (1.0 + 1e-13)
+    critico = u_critico(omega)
+    if mayor <= critico or k * f(borde, delta) - borde >= 0.0:
+        return [mayor]
+    return [mayor, brentq(lambda u: k * f(u, delta) - u, borde, critico, xtol=1e-12)]
+
+
+def autovalores_estado(theta, k):
+    """Autovalores, de menor a mayor, del modelo linealizado alrededor de las fases theta.
+
+    J_ij = K / N * cos(theta_j - theta_i) para j != i, y cada diagonal es menos la
+    suma del resto de su fila. Siempre hay un autovalor nulo (girar todas las fases).
+    """
+    theta = np.asarray(theta, dtype=float)
+    jacobiano = k / len(theta) * np.cos(theta[None, :] - theta[:, None])
+    np.fill_diagonal(jacobiano, 0.0)
+    jacobiano[np.diag_indices(len(theta))] = -jacobiano.sum(axis=1)
+    return np.sort(np.linalg.eigvalsh(jacobiano))
 
 
 def r_enganchado(omega, k):
@@ -139,3 +167,45 @@ def kc_dos_nodos_con_retardo(omega_media, delta_omega, tau):
     En el umbral sin(phi) = 1, por lo que cos(phi) = 0 y Omega = omega_media.
     """
     return abs(delta_omega) / abs(np.cos(omega_media * tau))
+
+
+def estado_con_retardo(omega, k, tau):
+    """Devuelve (Omega, r, beta) del estado enganchado con retardo uniforme tau, o None.
+
+    Modelo de los nodos, sin término propio. Con beta_i = a_i - psi + Omega * tau:
+        omega_i + K / N * sin(Omega * tau) - Omega = K * r * sin(beta_i)
+        media de exp(i * beta_i) = r * exp(i * Omega * tau)
+    De ahí sale Omega = media(omega) - K * (r^2 - 1 / N) * sin(Omega * tau).
+    El desfasaje del nodo i respecto de la fase media es beta_i - Omega * tau.
+    """
+    omega = np.asarray(omega, dtype=float)
+    n = len(omega)
+
+    def senos(w, r):
+        return (omega + k / n * np.sin(w * tau) - w) / (k * r)
+
+    def residuo(x):
+        w, r = x
+        s = senos(w, r)
+        exceso = np.abs(s).max() - 1.0
+        if exceso >= 0.0:  # fuera del dominio de arcsin: empuja al solver hacia adentro
+            return [1e3 * (exceso + 1e-3)] * 2
+        z = np.exp(1j * np.arcsin(s)).mean() * np.exp(-1j * w * tau)
+        return [z.imag, z.real - r]
+
+    media = omega.mean()
+    for r0 in (0.87, 0.93, 0.97, 0.75, 0.8, 0.6):
+        inicio = (media - k * (r0**2 - 1.0 / n) * np.sin(media * tau), r0)
+        (w, r), info, codigo, _ = fsolve(residuo, inicio, full_output=True, xtol=1e-11)
+        if codigo == 1 and np.max(np.abs(info["fvec"])) < 1e-8 and 0.0 < r <= 1.0:
+            return float(w), float(r), np.arcsin(senos(w, r))
+    return None
+
+
+def umbral_con_retardo(omega, tau, paso=0.002, maximo=1.6):
+    """Menor K / K_c, en una grilla, para el que existe el estado con retardo tau."""
+    kc = kc_finito(omega)
+    for factor in np.arange(1.0, maximo, paso):
+        if estado_con_retardo(omega, factor * kc, tau) is not None:
+            return float(factor)
+    return None

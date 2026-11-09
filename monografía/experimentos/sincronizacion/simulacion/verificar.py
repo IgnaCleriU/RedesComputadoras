@@ -80,5 +80,26 @@ for desfase in (False, True):
     resultado = simular(omega_iguales, k, Red(h=h, desfase=desfase), duracion=60.0, theta0=inicio)
     print(f"info  desfase={desfase}: Omega medida {resultado.omega_efectiva.mean():.5f}, predicción con tau = h / 2: {esperada:.5f}")
 
+print("\nEstado enganchado con retardo uniforme")
+r_0 = te.estado_con_retardo(omega_40, 1.5 * k_l, 1e-9)
+comprobar("tau -> 0: r coincide con la autoconsistencia", r_0[1], te.r_enganchado(omega_40, 1.5 * k_l), 1e-4)
+comprobar("tau -> 0: Omega es la media", r_0[0], omega_40.mean(), 1e-4)
+omega_20 = te.frecuencias_equiespaciadas(20, 2 * np.pi * 0.2, 0.2 * 2 * np.pi * 0.2)
+k_20 = te.kc_finito(omega_20)
+tau = 0.255
+w_r, r_r, _ = te.estado_con_retardo(omega_20, 1.5 * k_20, tau)
+comprobar("cumple Omega = media - K (r^2 - 1/N) sin(Omega tau)",
+          w_r, omega_20.mean() - 1.5 * k_20 * (r_r**2 - 1 / 20) * np.sin(w_r * tau), 1e-8)
+resultado = simular(omega_20, 1.5 * k_20, Red(h=0.01, tau=tau, desfase=False), duracion=300.0, t_s=0.01,
+                    theta0=te.desfasajes(omega_20, 1.5 * k_20), ventana_omega=60.0)
+comprobar("Omega simulada con retardo constante", resultado.omega_efectiva.mean(), w_r, 0.01)
+comprobar("r simulado con retardo constante", r_medio(resultado, 60.0), r_r, 0.01)
+raices = te.raices_u(omega_20, 1.0001 * k_20)
+comprobar_condicion("dos raíces de K f(u) = u justo sobre K_c", len(raices) == 2)
+comprobar_condicion("una sola raíz a 1,05 K_c", len(te.raices_u(omega_20, 1.05 * k_20)) == 1)
+fase = np.arcsin(te.desintonias(omega_20)[None, :] / np.array(raices)[:, None])
+comprobar_condicion("raíz mayor estable, menor inestable",
+                    te.autovalores_estado(fase[0], 1.0001 * k_20)[-2] < 0 < te.autovalores_estado(fase[1], 1.0001 * k_20)[-1])
+
 print(f"\n{'Todas las comprobaciones pasaron' if fallas == 0 else str(fallas) + ' comprobaciones fallaron'}")
 sys.exit(1 if fallas else 0)
