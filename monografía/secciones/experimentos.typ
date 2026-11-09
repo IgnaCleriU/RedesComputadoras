@@ -604,11 +604,11 @@ Para un sistema de telemetría como el estudiado, los resultados sugieren cuatro
 
 La sincronización colectiva aparece cuando un conjunto de osciladores, cada uno con su propio ritmo, termina funcionando a una frecuencia común sin que nadie la imponga. Las diferencias entre las frecuencias naturales no desaparecen, pero la interacción alcanza para compensarlas. En biología se observa en las células marcapasos del corazón, en las células del núcleo supraquiasmático que regulan los ritmos circadianos, en suspensiones de levaduras, en las luciérnagas que destellan al unísono y en los grillos que cantan a la vez. En física e ingeniería aparece en arreglos de láseres, en osciladores de microondas y en uniones de Josephson @strogatz2000.
 
-La idea del experimento es reproducir ese fenómeno con una red de nodos que se comportan como luciérnagas. Cada ESP32 ejecuta un único oscilador, con una frecuencia natural distinta a la de los demás: su fase avanza a su propio ritmo y cada vuelta completa equivale a un destello. Si los nodos no se comunican, cada uno destella a su frecuencia. Si cada uno conoce la fase de los otros y corrige la propia, los osciladores quedan acoplados. Cuando esa corrección es suficientemente intensa, el grupo se engancha: todos pasan a girar a una misma frecuencia, sin ningún nodo que actúe de coordinador.
+La idea del experimento es reproducir ese fenómeno con una red de nodos que se comportan como luciérnagas. Cada ESP32 ejecuta un único oscilador, con una frecuencia natural distinta a la de los demás: su fase avanza a su propio ritmo y cada vuelta completa equivale a un destello. La comparación es solo una imagen: las luciérnagas se influyen mediante pulsos breves, y en el modelo que se usa aquí la influencia es continua y depende de la diferencia de fases. Si los nodos no se comunican, cada uno destella a su frecuencia. Si cada uno conoce la fase de los otros y corrige la propia, los osciladores quedan acoplados. Cuando esa corrección es suficientemente intensa, el grupo se engancha: todos pasan a girar a una misma frecuencia, sin ningún nodo que actúe de coordinador.
 
 Esa sincronía existe solo a través de los mensajes que intercambian los nodos, y por eso sirve para evaluar el stack. El modelo matemático predice cómo debería comportarse el grupo si la comunicación fuera ideal, de modo que la sincronización funciona como una carga de referencia con un comportamiento teórico conocido. Comparar esa predicción con lo que se mide en los nodos permite observar qué tan bien cumple el transporte con lo que la aplicación necesita. El experimento de la @sec-exp-mqtt-https mide el costo de enviar lecturas desde muchos nodos hacia un único servidor. En este, en cambio, cada nodo produce un dato que les interesa a todos los demás y consume los de todos ellos, que es la forma de circulación de la información para la que se propone el modelo publicador/suscriptor (@sec-pubsub).
 
-La prueba se implementa sobre la plataforma común, con un oscilador por cada ESP32 emulada. Cada nodo es un cliente MQTT que abre una única conexión TCP hacia el broker, y por ella publica su fase y recibe las de los demás (@sec-mqtt). Periódicamente integra su fase, la serializa con Protocol Buffers junto con su identificador y una marca de tiempo, y la envía como carga útil de un paquete PUBLISH (@sec-stack) en un tópico propio, por ejemplo `kuramoto/phase/7`. Además, se suscribe al filtro `kuramoto/phase/+`, cuyo comodín coincide con el nivel del identificador (@sec-mqtt), y activa la opción _No Local_ de MQTT 5.0, que evita que el broker le devuelva sus propios mensajes @mqtt50. De este modo, recibe únicamente las fases de los otros nodos. Con ellas calcula la corrección que aplica a su propia evolución, y el ciclo se repite. Todos los tópicos de esa jerarquía transportan el mismo tipo de mensaje, por lo que el tópico identifica también el esquema con el que se interpreta cada carga útil, y un único archivo `.proto` funciona como contrato entre todos los participantes (@sec-stack).
+La prueba se implementa sobre la plataforma común, con un oscilador por cada ESP32 emulada. Cada nodo es un cliente MQTT que abre una única conexión TCP hacia el broker, y por ella publica su fase y recibe las de los demás (@sec-mqtt). Integra su fase con un paso corto y, con un período mayor, la serializa con Protocol Buffers junto con su identificador y una marca de tiempo, y la envía como carga útil de un paquete PUBLISH (@sec-stack) en un tópico propio, por ejemplo `kuramoto/phase/7`. Además, se suscribe al filtro `kuramoto/phase/+`, cuyo comodín coincide con el nivel del identificador (@sec-mqtt), y activa la opción _No Local_ de MQTT 5.0, que evita que el broker le devuelva sus propios mensajes @mqtt50. De este modo, recibe únicamente las fases de los otros nodos. Con ellas calcula la corrección que aplica a su propia evolución, y el ciclo se repite. Todos los tópicos de esa jerarquía transportan el mismo tipo de mensaje, por lo que el tópico identifica también el esquema con el que se interpreta cada carga útil, y un único archivo `.proto` funciona como contrato entre todos los participantes (@sec-stack).
 
 Este esquema aprovecha dos de las tres dimensiones de desacoplamiento presentadas en la @sec-pubsub. Con el desacoplamiento en el espacio, ningún nodo necesita conocer la dirección de los otros ni cuántos son: solo el broker tiene una dirección conocida, y sumar un nodo no requiere modificar a los que ya están. Con el desacoplamiento de sincronización, publicar no detiene la integración de la fase, y las fases de los demás llegan mientras el nodo sigue ejecutando su ciclo. El desacoplamiento en el tiempo, en cambio, no se utiliza. Las fases se publican con QoS 0 porque cada una queda reemplazada por la siguiente, igual que en los datos de alta frecuencia de los casos de uso (@sec-casos-sintesis), y un nodo que se desconecta no recibe lo publicado mientras estuvo ausente (@sec-mqtt), algo que tampoco necesita, ya que una fase vieja no le sirve.
 
@@ -626,7 +626,7 @@ Este experimento corresponde al último de los objetivos específicos (@sec-obje
 
 $ dot(theta)_i = omega_i + K/N sum_(j=1)^N sin(theta_j - theta_i), quad i = 1, dots, N $ <ec-kuramoto>
 
-donde el punto indica la derivada respecto del tiempo. El acoplamiento es la influencia que los osciladores ejercen entre sí, representada por el término de la sumatoria, que depende de las diferencias de fase. Su intensidad es $K$, en rad/s: con $K = 0$, cada oscilador avanza a su frecuencia natural sin afectar a los demás. El acoplamiento cambia la velocidad instantánea $dot(theta)_i$: si el oscilador $j$ va adelantado, $sin(theta_j - theta_i) > 0$ y el oscilador $i$ se acelera; si va atrasado, se frena.
+donde el punto indica la derivada respecto del tiempo. El acoplamiento es la influencia que los osciladores ejercen entre sí, representada por el término de la sumatoria, que depende de las diferencias de fase. Su intensidad es $K$, en rad/s: con $K = 0$, cada oscilador avanza a su frecuencia natural sin afectar a los demás. El acoplamiento cambia la velocidad instantánea $dot(theta)_i$: si el oscilador $j$ va adelantado menos de media vuelta, $sin(theta_j - theta_i) > 0$ y el oscilador $i$ se acelera; si va atrasado menos de media vuelta, se frena.
 
 *Parámetro de orden y campo medio.* El grado de sincronía se mide con el centroide de las fases sobre el círculo unitario:
 
@@ -696,7 +696,7 @@ $ Omega = overline(omega) = 1/N sum_(i=1)^N omega_i $ <ec-frecuencia-comun>
 
 Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. A partir de aquí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$, que indican cuánto se aparta cada frecuencia natural de la media.
 
-*Límite de infinitos osciladores.* Se denomina acoplamiento crítico $K_c$ al valor de $K$ a partir del cual aparece la sincronización. El primer resultado sobre este umbral es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se distribuyen según una densidad de probabilidad $g(Delta)$ simétrica y con un único máximo en $Delta = 0$, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a la velocidad uniforme $Omega$. En lo que sigue, $theta_i$ denota la fase medida desde $psi$, con lo que la @ec-campo-medio se reduce a
+*Límite de infinitos osciladores.* Se denomina acoplamiento crítico $K_c$ al valor de $K$ a partir del cual aparece la sincronización. El primer resultado sobre este umbral es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se distribuyen según una densidad de probabilidad $g(Delta)$ simétrica y que no crece al alejarse de $Delta = 0$, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a la velocidad uniforme $Omega$. En este apartado, y solo en él, $theta_i$ denota la fase medida desde $psi$, es decir, en un marco que gira a la velocidad $Omega$ y tiene su origen en la fase media, con lo que la @ec-campo-medio se reduce a
 
 $ dot(theta)_i = Delta_i - K r sin theta_i $
 
@@ -714,7 +714,7 @@ El acoplamiento crítico es el valor en el que esa rama nace desde $r = 0$. Al t
 
 $ K_c = 2/(pi g(0)) $ <ec-kc-infinito>
 
-Para una distribución de Lorentz de ancho $gamma$, $g(Delta) = gamma\/(pi (gamma^2 + Delta^2))$ y $g(0) = 1\/(pi gamma)$, por lo que $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$ @strogatz2000. Estas expresiones valen en el límite de infinitos osciladores. Con $N$ finito, $r$ fluctúa con una amplitud del orden de $N^(-1\/2)$ @strogatz2000. Por eso, en este trabajo la @ec-kc-infinito queda solo como contexto, y $K_c$ se calcula como se muestra a continuación.
+Para una distribución de Lorentz de ancho $gamma$, $g(Delta) = gamma\/(pi (gamma^2 + Delta^2))$ y $g(0) = 1\/(pi gamma)$, por lo que $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$ @strogatz2000. Estas expresiones valen en el límite de infinitos osciladores. Con $N$ finito, $r$ fluctúa con una amplitud del orden de $N^(-1\/2)$, que puede amplificarse cerca del umbral; Strogatz presenta este comportamiento como evidencia numérica y no como un resultado demostrado @strogatz2000. Las frecuencias del experimento se reparten a intervalos iguales en un rango de semiancho $b$, lo que se aproxima a una densidad uniforme con $g(0) = 1\/(2 b)$. Para ellas la @ec-kc-infinito daría $4 b \/ pi = #"0,320"$ rad/s. En este trabajo la @ec-kc-infinito queda solo como contexto: con $N$ finito, $K_c$ se calcula como se muestra a continuación, y salvo aviso ese es el umbral al que se refiere el símbolo $K_c$ en el resto del experimento.
 
 *Umbral exacto con $N$ finito.* Verwoerd y Mason estudian el mismo modelo para una cantidad finita de osciladores @verwoerd2008, y definen el acoplamiento crítico como el menor $K$ para el que existe un estado enganchado. No es el mismo umbral que el de la @ec-kc-infinito: aquel marca el comienzo de la sincronización parcial, y este, el enganche de todos los osciladores.
 
@@ -734,9 +734,13 @@ Al derivar $u\/f(u)$ e igualar a cero se obtiene $f(u) = u f'(u)$, y al desarrol
 
 $ 2 dot 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u^*)^2) = 1/N sum_(i=1)^N 1/sqrt(1 - (Delta_i/u^*)^2) $
 
-Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad. Ese punto se comprueba mediante la simulación numérica del modelo.
+Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad @verwoerd2008. Ese punto se analiza más abajo para las frecuencias del experimento y se comprueba mediante la simulación numérica del modelo.
 
 Con esto se calculan, para un conjunto dado de frecuencias naturales, el umbral de enganche total, el valor de $r$ y el desfasaje de cada oscilador respecto de la fase media, que es $theta_i - psi = arcsin(Delta_i\/u)$. Verwoerd y Mason prueban además que $max_i |Delta_i| <= K_c <= 2 max_i |Delta_i|$ @verwoerd2008. El caso $N = 2$, que sirve de ejemplo, alcanza la cota superior: con $Delta omega = omega_2 - omega_1$, las desintonías valen $plus.minus Delta omega\/2$ y resulta $K_c = |Delta omega|$.
+
+Para un $K$ dado, la @ec-autoconsistencia, escrita como $K f(u) = u$, tiene a lo sumo dos soluciones en $u$ @verwoerd2008. Cuando hay dos, se toma la mayor, que es la de mayor $r$. La razón de esa elección es la estabilidad. Si se linealiza la @ec-kuramoto alrededor de un estado enganchado, una perturbación $delta theta$ evoluciona según $dot(delta theta) = J delta theta$, donde $J_(i j) = K\/N cos(theta_j - theta_i)$ para $j != i$ y cada elemento de la diagonal es menos la suma de los demás de su fila. $J$ siempre tiene un autovalor nulo, que corresponde a girar todas las fases por igual. El estado es localmente estable si los demás autovalores son negativos.
+
+*Aplicación a las frecuencias del experimento.* Para los 20 osciladores que se usan, con frecuencias naturales a intervalos iguales entre 1,005 y 1,508 rad/s, la mayor desintonía vale #"0,2513" rad/s. El mínimo de la @ec-kc-finito se alcanza en $u^* = #"0,2591"$ rad/s, solo un 3,1 % por encima de esa desintonía, y da $K_c = #"0,3350"$ rad/s, entre las cotas de #"0,2513" y #"0,5027" rad/s. En el umbral, $r = f(u^*) = #"0,773"$, por lo que el enganche aparece con el grupo ya muy ordenado. Con estas frecuencias, las dos soluciones de $K f(u) = u$ coexisten solo entre $K_c$ y $#"1,018" K_c$; por encima queda una sola. El cálculo de los autovalores da estable la solución mayor e inestable la menor, y estable el estado enganchado en todos los valores de $K$ usados en el experimento. Es una estabilidad local: no asegura que el sistema llegue a ese estado desde cualquier condición inicial, y eso se comprueba por simulación.
 
 La @fig-teoria-r-k muestra la curva de $r$ en función de $K$ para las 20 frecuencias que se usan en el experimento. El estado enganchado aparece recién en $K_c$, con un valor de $r$ que ya es elevado, y $r$ crece con $K$ acercándose a 1. Es la curva contra la que se comparan las mediciones (@fig-modelo-r-k).
 
@@ -745,7 +749,7 @@ La @fig-teoria-r-k muestra la curva de $r$ en función de $K$ para las 20 frecue
   caption: [Parámetro de orden del estado enganchado en función del acoplamiento, según la @ec-autoconsistencia, sin retardo. Por debajo de $K_c$ no existe estado enganchado.],
 ) <fig-teoria-r-k>
 
-*Enganche parcial y normalización.* Con $N >= 3$ y frecuencias asimétricas, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador, es decir, la velocidad media a la que avanza su fase. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
+*Enganche parcial y normalización.* Con $N >= 3$, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador, es decir, la velocidad media a la que avanza su fase. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
 
 *El modelo en los nodos.* El modelo anterior supone que cada oscilador conoce en todo instante la fase exacta de los demás. En la implementación esto no se cumple, porque la fase de cada nodo llega a los otros como un mensaje MQTT, con demora y solo cada cierto tiempo. Si $tau_(i j)(t)$ es la antigüedad, en el instante $t$, de la última fase del nodo $j$ que conoce el nodo $i$, la evolución de cada nodo está dada por
 
@@ -753,7 +757,7 @@ $ dot(theta)_i (t) = omega_i + K/N sum_(j != i) sin(theta_j (t - tau_(i j)(t)) -
 
 La suma excluye $j = i$ porque cada nodo conoce su propia fase sin demora, y ese término es nulo. El divisor $N$ es la cantidad total de nodos y permanece fijo aunque falte alguna fase, de modo que un mensaje ausente no altera el peso de los demás. Con todos los retardos nulos, la @ec-nodo coincide con la @ec-kuramoto.
 
-La antigüedad $tau_(i j)$ reúne varias demoras. Una fase recorre dos conexiones TCP, del publicador al broker y del broker al suscriptor (@sec-pubsub), y pasa por la cola del broker. Además, entre dos publicaciones sucesivas la fase conocida envejece: si cada nodo publica con período $h$, esa espera agrega en promedio alrededor de $h\/2$. Por último, MQTT delega la entrega en TCP (@sec-mqtt), de modo que un paquete descartado en la red no se pierde, sino que se retransmite y llega más tarde. Mientras la conexión se mantiene, la pérdida de paquetes se manifiesta entonces como un aumento y una variación de $tau_(i j)$. Si un mensaje no llega, el nodo sigue usando la última fase recibida, cuya antigüedad continúa creciendo. Con la política alternativa, usar solo las fases recibidas en cada paso y mantener $N$ fijo, una fracción $p$ de mensajes ausentes reduciría el acoplamiento a aproximadamente $K(1 - p)$.
+La antigüedad $tau_(i j)$ reúne varias demoras. Una fase recorre dos conexiones TCP, del publicador al broker y del broker al suscriptor (@sec-pubsub), y pasa por la cola del broker. Además, entre dos publicaciones sucesivas la fase conocida envejece: si cada nodo publica con período $h$, la fase guardada envejece desde casi cero hasta casi $h$, en forma de diente de sierra, y esa espera agrega en promedio alrededor de $h\/2$. Por último, MQTT delega la entrega en TCP (@sec-mqtt), de modo que un paquete descartado en la red no se pierde, sino que se retransmite y llega más tarde. Mientras la conexión se mantiene, la pérdida de paquetes se manifiesta entonces como un aumento y una variación de $tau_(i j)$. Si un mensaje no llega, el nodo sigue usando la última fase recibida, cuya antigüedad continúa creciendo. Con la política alternativa, usar solo las fases recibidas en cada paso y mantener $N$ fijo, una fracción $p$ de mensajes ausentes reduciría el acoplamiento a aproximadamente $K(1 - p)$.
 
 Si se corta la conexión o cae el broker, que es el punto de falla del sistema (@sec-casos-sintesis), dejan de llegar fases de todos los nodos. Cuando el cliente detecta la desconexión, descarta las fases guardadas, que ya no representan a los demás, y el acoplamiento se anula. Este caso se analiza más adelante.
 
@@ -761,19 +765,19 @@ Cada nodo integra la @ec-nodo con un paso fijo $T_s$, que no tiene por qué coin
 
 $ theta_i [k + 1] = theta_i [k] + T_s (omega_i + K/N sum_(j != i) sin(hat(theta)_j [k] - theta_i [k])) $ <ec-nodo-discreta>
 
-donde $hat(theta)_j [k]$ es la última fase recibida del nodo $j$ al llegar el paso $k$. Sin retardo y cerca de la sincronía, una perturbación de las fases se multiplica por $1 - K T_s$ en cada paso, por lo que la integración exige $0 < K T_s < 2$.
+donde $hat(theta)_j [k]$ es la última fase recibida del nodo $j$ al llegar el paso $k$. Sin retardo y cerca de la sincronía, una perturbación de las fases se multiplica por $1 - K T_s$ en cada paso, por lo que la integración exige $0 < K T_s < 2$. En el firmware, $T_s$ es el tiempo que realmente transcurrió entre dos pasos, que vale 10 ms salvo demoras de planificación.
 
 *Efecto del retardo.* Yeung y Strogatz analizan el modelo de Kuramoto con un retardo $tau$ constante e igual para todos los pares, incluido el término de cada oscilador consigo mismo @yeung1999. Para osciladores idénticos, con $omega_i = omega_0$, existe una solución en la que todos giran en fase a una frecuencia $Omega$ que cumple
 
 $ Omega = omega_0 - K sin(Omega tau) $ <ec-retardo-omega>
 
-y esa solución es estable si $cos(Omega tau) > 0$ @yeung1999. El retardo, por lo tanto, corre la frecuencia común respecto de la natural, y lo que determina la estabilidad no es $tau$ por sí solo, sino el producto $Omega tau$. Con acoplamiento débil, $Omega approx omega_0$ y la condición se cumple mientras el retardo sea menor que un cuarto del período de oscilación. El retardo se compara, entonces, con el período de oscilación y no con la desintonía: la frecuencia de oscilación define cuánta latencia tolera el sistema. A 1 Hz, ese cuarto de período equivale a 250 ms, y a 0,5 Hz, a 500 ms. Para determinadas combinaciones de $K$ y $tau$, la sincronía estable directamente no existe @yeung1999.
+y esa solución es estable si $cos(Omega tau) > 0$ @yeung1999. El retardo, por lo tanto, corre la frecuencia común respecto de la natural, y lo que determina la estabilidad no es $tau$ por sí solo, sino el producto $Omega tau$. Con acoplamiento débil, $Omega approx omega_0$ y la condición se cumple mientras el retardo sea menor que un cuarto del período de oscilación. El retardo se compara, entonces, con el período de oscilación y no con la desintonía: la frecuencia de oscilación define cuánta latencia tolera el sistema. A 1 Hz, ese cuarto de período equivale a 250 ms; a 0,5 Hz, a 500 ms; y a los 0,2 Hz de este experimento, a 1,25 s. La condición es periódica en $tau$: un retardo constante de varias vueltas también puede cumplirla, de modo que superar $Omega tau = pi\/2$ no implica por sí solo perder la estabilidad. Además, con $K$ suficientemente grande la @ec-retardo-omega tiene varias soluciones estables, y para determinadas combinaciones de $K$ y $tau$ la sincronía estable directamente no existe @yeung1999.
 
 El mismo trabajo trata frecuencias distribuidas según una Lorentziana de ancho $gamma$ centrada en $omega_0$, para $N -> infinity$. Sin ruido, el acoplamiento crítico es
 
 $ K_c = (2 gamma)/cos(Omega_c tau), quad Omega_c = omega_0 - gamma tan(Omega_c tau) $ <ec-kc-retardo-lorentz>
 
-que con $tau = 0$ se reduce al valor $2 gamma$ del caso sin retardo @yeung1999. El retardo aumenta así el acoplamiento necesario para sincronizar. Yeung y Strogatz incluyen además un ruido blanco en las frecuencias, de intensidad $D$, que en esta expresión se suma a $gamma$ y también eleva el umbral.
+que con $tau = 0$ se reduce al valor $2 gamma$ del caso sin retardo @yeung1999. El retardo corre así el valor en el que el estado incoherente deja de ser estable; cerca de él pueden coexistir estados sincronizados e incoherentes @yeung1999. Yeung y Strogatz incluyen además un ruido blanco en las frecuencias, de intensidad $D$, que en esta expresión se suma a $gamma$ y también eleva el umbral.
 
 Estos resultados no se aplican de forma directa a la @ec-nodo, y se utilizan como referencia. La diferencia del término propio es menor: al repetir el planteo para osciladores idénticos sin ese término, quedan $N - 1$ sumandos con retardo, y la condición pasa a ser $Omega = omega_0 - K (N - 1)\/N sin(Omega tau)$, que tiende a la @ec-retardo-omega cuando $N$ crece. No se dispone, en cambio, de un resultado cerrado para frecuencias arbitrarias, $N$ finito y retardos que varían en el tiempo. Se espera que la variación del retardo, o _jitter_, actúe como un ruido sobre las fases recibidas, baje $r$ en régimen y suba el $K_c$ medido, aunque no equivale al ruido blanco del modelo de Yeung y Strogatz. Ese caso se estudia comparando la simulación del modelo con las mediciones.
 
@@ -783,13 +787,29 @@ $ Delta omega = K sin phi cos(Omega tau), quad Omega = overline(omega) - K/2 cos
 
 Hay solución solo si $K |cos(Omega tau)| >= |Delta omega|$. El umbral crece entonces como $1\/|cos(Omega tau)|$, de forma análoga a la @ec-kc-retardo-lorentz.
 
-*Acoplamiento efectivo.* $K$ es una ganancia del software de cada nodo, que se fija al comienzo de cada corrida y no cambia durante ella. Tampoco modifica el tráfico, que depende de $h$ y del tamaño de los mensajes. La red no altera $K$, pero sí el efecto que tiene sobre la dinámica, de modo que hace falta un acoplamiento mayor que el teórico para lograr el enganche. Por eso, comparar lo que predice el modelo con lo que se mide indica qué efecto tiene cada mecanismo del stack sobre la aplicación, y el experimento se organiza por mecanismos y no en torno a un único valor de $K_c$.
+*Retardo uniforme con frecuencias distintas.* Los resultados anteriores no alcanzan para las frecuencias del experimento, pero el mismo razonamiento se puede extender. Esta cuenta no proviene de las fuentes citadas: se deduce aquí. Se supone en la @ec-nodo un retardo $tau$ constante e igual para todos los pares y un estado enganchado, $theta_i (t) = Omega t + a_i$, y se llaman $r$ y $psi$ al módulo y al ángulo del centroide de los $a_j$. Agregando y restando el término con $j = i$,
+
+$ sum_(j != i) sin(a_j - a_i - Omega tau) = N r sin(psi - a_i - Omega tau) + sin(Omega tau) $
+
+Con $beta_i = a_i - psi + Omega tau$, cada oscilador debe cumplir
+
+$ omega_i + K/N sin(Omega tau) - Omega = K r sin beta_i $ <ec-nodo-retardo>
+
+De la definición del centroide resulta $1\/N sum_i e^(upright(i) beta_i) = r e^(upright(i) Omega tau)$. Promediando la @ec-nodo-retardo sobre todos los osciladores y usando la parte imaginaria de esa relación se obtiene
+
+$ Omega = overline(omega) - K (r^2 - 1/N) sin(Omega tau) $ <ec-omega-retardo-distintas>
+
+Con todos los osciladores iguales, $r = 1$ y se recupera la versión con $N - 1$ sumandos de la @ec-retardo-omega; con $tau = 0$ se recupera $Omega = overline(omega)$. La frecuencia común deja de ser la media porque el retardo rompe la antisimetría que anulaba la suma doble en la @ec-suma-fases.
+
+La @ec-nodo-retardo tiene solución solo si $|omega_i + K\/N sin(Omega tau) - Omega| <= K r$ para todo $i$. Como $Omega$ queda por debajo de la media, los osciladores más rápidos quedan más lejos de la frecuencia común que los más lentos, y son los primeros en no poder seguirla. Resolviendo numéricamente las ecuaciones para las 20 frecuencias, con $tau = 255$ ms ($h\/2$ más unos 5 ms de transporte), la primera solución aparece en $K = #"1,17" K_c$, mientras que el factor $1\/cos(Omega tau)$ solo sugeriría un aumento cercano al 5 %. La diferencia es justamente el corrimiento de $Omega$, y en ese umbral el oscilador más rápido es el que satura la condición. Se trata de una aproximación, porque la antigüedad real no es constante sino un diente de sierra alrededor de $h\/2$, y se contrasta con la simulación y las mediciones.
+
+*Acoplamiento fijo y efecto de la red.* $K$ es una ganancia del software de cada nodo, que se fija al comienzo de cada corrida y no cambia durante ella. Tampoco modifica el tráfico, que depende de $h$ y del tamaño de los mensajes. La red no altera $K$, pero sí el efecto que tiene sobre la dinámica, de modo que hace falta un acoplamiento mayor que el teórico para lograr el enganche. Por eso, comparar lo que predice el modelo con lo que se mide indica qué efecto tiene cada mecanismo del stack sobre la aplicación, y el experimento se organiza por mecanismos y no en torno a un único valor de $K_c$.
 
 *Interrupción de la comunicación.* Los resultados anteriores suponen que las fases siguen llegando. Cuando dejan de hacerlo, lo que ocurra depende de qué haga cada nodo con las que ya tiene. Si detecta la desconexión y las descarta, la sumatoria se anula y cada oscilador avanza a su frecuencia natural, $dot(theta)_i = omega_i$. Si parte de un estado enganchado, con desfasajes $phi_i = arcsin(Delta_i \/ u)$ respecto de la fase media, el parámetro de orden evoluciona como
 
 $ r(t) = lr(|1/N sum_(i=1)^N e^(upright(i) (phi_i + omega_i t))|) $ <ec-libre>
 
-Las frecuencias distintas hacen que las fases se dispersen, y $r$ cae en un tiempo del orden de $pi \/ gamma$, donde $gamma$ es la mitad del rango de las frecuencias naturales. Si solo un nodo pierde la comunicación, se separa de los demás a una velocidad $omega_i - Omega$.
+Las frecuencias distintas hacen que las fases se dispersen, y $r$ cae en un tiempo del orden de $pi \/ b$, donde $b$ es la mitad del rango de las frecuencias naturales. Si solo un nodo pierde la comunicación, se separa de los demás a una velocidad $omega_i - Omega$.
 
 Si, en cambio, el nodo no advierte la interrupción, sigue sumando las últimas fases recibidas, que ya no cambian. El acoplamiento deja de apuntar a la fase actual del grupo y atrae al nodo hacia un valor fijo, mientras el grupo sigue girando, de modo que el nodo se atrasa respecto de él hasta que se detecta el corte.
 
@@ -826,6 +846,8 @@ El experimento corre sobre la plataforma común. Cada uno de los 20 nodos es un 
 Cada nodo se conecta a una interfaz TAP propia, una interfaz de red virtual de Linux que, en lugar de enviar las tramas Ethernet por un medio físico, las intercambia con un programa @linux-tuntap, que en este caso es QEMU. Todas las interfaces se unen en un puente de Linux, que funciona como un conmutador por _software_: reenvía cada trama según su dirección MAC de destino @linux-bridge. El puente tiene la dirección `10.10.0.1`, y los nodos usan las direcciones `10.10.0.11` en adelante.
 
 En la computadora anfitriona corren el broker Mosquitto, un servidor SNTP con el que los nodos sincronizan su reloj (@sec-conceptos-exp1) y un registrador, `mosquitto_sub`, un cliente MQTT de línea de comandos que imprime los mensajes que recibe @mosquitto-sub. El registrador está suscripto a todas las fases y se conecta por la interfaz local, de modo que no pasa por el puente, no aparece en las capturas ni sufre las condiciones de red que se aplican a los nodos (@fig-arq-sincronizacion). Las capturas se hacen sobre el puente con `tcpdump`, un programa que registra los paquetes de una interfaz en un archivo @tcpdump.
+
+En lo que afecta a la entrega de los mensajes, Mosquitto mantiene sus valores por defecto salvo en cuatro ajustes. Desactiva el algoritmo de Nagle (`set_tcp_nodelay`), para que cada mensaje salga apenas se publica. Amplía la cola de mensajes por cliente (`max_queued_messages` a 100.000 y `max_queued_bytes` sin límite), para que las ráfagas no produzcan descartes. Y admite hasta 128 alias de tópico hacia los nodos (`max_topic_alias_broker`). Se conserva, en cambio, el límite por defecto de 20 mensajes en tránsito por cliente (`max_inflight_messages`), que solo afecta a QoS 1: mientras un cliente tenga 20 mensajes sin confirmar, el broker no le envía el siguiente y lo deja en la cola.
 
 #figure(
   diagram(
@@ -901,7 +923,7 @@ Se publica con QoS 0 y sin mensajes retenidos, es decir, sin pedirle al broker q
 
 #subtitulo[Conexión y desconexión]
 
-El cliente vuelve a suscribirse cada vez que se conecta, porque el broker no conserva su sesión, es decir, sus suscripciones, entre una conexión y la siguiente (@sec-mqtt), y vuelve a intentar la conexión cada 10 s, el valor por defecto de esp-mqtt, si la pierde. Cuando recibe el aviso de desconexión, invalida toda la tabla de fases. A partir de ahí la sumatoria no tiene términos y el nodo avanza a su frecuencia natural, que es el comportamiento previsto en el planteo para un corte detectado.
+El cliente vuelve a suscribirse cada vez que se conecta, porque el broker no conserva su sesión, es decir, sus suscripciones, entre una conexión y la siguiente (@sec-mqtt). Si la conexión se pierde, vuelve a intentarla. El tiempo de reconexión por defecto de esp-mqtt es de 10 s, pero la tarea del cliente lo comprueba cada 5 s y exige superarlo, de modo que en la práctica el intento siguiente ocurre 15 s después de la desconexión, como confirman las mediciones. Cuando recibe el aviso de desconexión, invalida toda la tabla de fases. A partir de ahí la sumatoria no tiene términos y el nodo avanza a su frecuencia natural, que es el comportamiento previsto en el planteo para un corte detectado.
 
 Ese aviso no llega apenas se interrumpe la red. Si el broker cierra la conexión, el nodo se entera enseguida. Si el camino simplemente deja de transportar paquetes, el nodo sigue usando las últimas fases recibidas hasta que el keep-alive o TCP detecten el problema, por lo que durante un tiempo se acopla a valores congelados. El keep-alive es el tiempo máximo que puede pasar entre dos paquetes enviados por el cliente (@sec-mqtt). Si el broker no recibe nada durante una vez y media ese intervalo, cierra la conexión (@sec-convergencia). En los ensayos de corte se configura en 5 s, en lugar de los 120 s por defecto de esp-mqtt, para que los regímenes de la @tab-regimenes-corte se puedan recorrer en pocos minutos.
 
@@ -929,9 +951,9 @@ Cada mecanismo del stack se activa desde la configuración del nodo, sin recompi
 
 #subtitulo[Punto de operación]
 
-Se usan 20 nodos, con frecuencias naturales repartidas a intervalos iguales, y no sorteadas, dentro de un 20 % hacia cada lado de $overline(f) = #"0,2"$ Hz, y $h = 500$ ms. Las frecuencias van de 1,005 a 1,508 rad/s, y para ellas el acoplamiento crítico exacto de la @ec-kc-finito vale $K_c = #"0,335"$ rad/s. Al ser un conjunto fijo, $K_c$ se calcula de forma exacta y cada corrida usa las mismas frecuencias. Los valores de $K$ se expresan como múltiplos de $K_c$. Con el mayor de los usados, $K = #"0,67"$ rad/s, resulta $K T_s = #"0,0067"$, muy por debajo del límite $K T_s < 2$ que exige la integración de Euler.
+Se usan 20 nodos, con frecuencias naturales repartidas a intervalos iguales, y no sorteadas, dentro de un 20 % hacia cada lado de $overline(f) = #"0,2"$ Hz, y $h = 500$ ms. Las frecuencias van de 1,005 a 1,508 rad/s, y para ellas el acoplamiento crítico exacto de la @ec-kc-finito vale $K_c = #"0,335"$ rad/s. Al ser un conjunto fijo, $K_c$ se calcula de forma exacta y cada corrida usa las mismas frecuencias. Los valores de $K$ se expresan como múltiplos de ese $K_c$, el umbral sin retardo, también en las corridas en las que el umbral real es otro. Con el mayor de los usados, $K = #"0,67"$ rad/s, resulta $K T_s = #"0,0067"$, muy por debajo del límite $K T_s < 2$ que exige la integración de Euler.
 
-La elección responde a la capacidad de la computadora anfitriona y al modelo. Las 760 entregas por segundo son la mitad de las 1560 que la plataforma sostuvo de forma estable con 40 nodos publicando cada 1 s. Del lado del modelo, lo que importa es el producto de la frecuencia por la antigüedad. Con una antigüedad media cercana a $h\/2 = 250$ ms, resulta $Omega tau approx #"0,31"$ rad, lejos de $Omega tau = pi\/2$, el valor en el que deja de cumplirse la condición de estabilidad $cos(Omega tau) > 0$ asociada a la @ec-retardo-omega. Es el mismo valor que con 0,1 Hz y 1 s, pero con todos los transitorios, es decir, el tiempo que tarda el grupo en llegar al régimen, reducidos a la mitad.
+La elección responde a la capacidad de la computadora anfitriona y al modelo. Las 760 entregas por segundo son la mitad de las 1560 que la plataforma sostuvo de forma estable con 40 nodos publicando cada 1 s. Del lado del modelo, lo que importa es el producto de la frecuencia por la antigüedad. Con una antigüedad media cercana a $h\/2 = 250$ ms y la frecuencia media de las frecuencias naturales, resulta $Omega tau approx #"0,31"$ rad (#"0,29" rad con la frecuencia común que se mide después), lejos de $Omega tau = pi\/2$, el valor en el que deja de cumplirse la condición de estabilidad $cos(Omega tau) > 0$ asociada a la @ec-retardo-omega. Es el mismo valor que con 0,1 Hz y 1 s, pero con todos los transitorios, es decir, el tiempo que tarda el grupo en llegar al régimen, reducidos a la mitad.
 
 Salvo en el barrido de $K$, donde interesa observar cómo se sincroniza el grupo, cada corrida arranca con las fases del estado enganchado que predice la teoría, $theta_i - psi = arcsin(Delta_i \/ u)$, donde $Delta_i$ es la desintonía del nodo y $u = K r$ es la fuerza con la que el grupo lo atrae, con lo cual no hace falta esperar el transitorio para aplicar cada perturbación.
 
@@ -964,9 +986,17 @@ La fase de cada nodo se escribe por su puerto serie (UART), una salida de texto 
   caption: [Métricas del experimento.],
 ) <tab-metricas-sincronizacion>
 
+Como `netem` actúa sobre la salida de la interfaz hacia el nodo y sobre la interfaz auxiliar que recibe lo que envía el nodo, la captura en el puente ve la bajada antes de que se apliquen las pérdidas y la subida después. Por eso, un segmento que se pierde en la subida no aparece en la captura, y las retransmisiones que se reportan corresponden a la bajada.
+
+#subtitulo[Simulación del modelo]
+
+Además de la emulación se usó una simulación en Python, sin red real, que integra la @ec-nodo-discreta con un paso de 10 ms. Muestra qué hace el modelo de los nodos cuando la única imperfección de la comunicación es la que se le programa. Cada nodo publica su fase cada $h$, con un desfase propio sorteado dentro de $h$, y cada copia llega a cada receptor con un retardo. El receptor conserva la última fase recibida de cada nodo, y mientras no reciba ninguna, ese término no aporta a la sumatoria. El criterio de enganche es el de la @tab-metricas-sincronizacion.
+
+La simulación de referencia usa las frecuencias del experimento, $h = 500$ ms y 150 s de duración. Repite cada valor de $K$ con 5 conjuntos de fases iniciales al azar y calcula $r$ y las frecuencias efectivas en los últimos 30 s. El retardo de cada copia se sortea entre 13 y 17 ms, a partir de lo medido en la plataforma común con 39 nodos, y se redondea hacia arriba al paso siguiente de la simulación, por lo que resulta de 20 ms. Los análisis puntuales del umbral usan, en cambio, un retardo fijo de un paso (10 ms) y arrancan del estado enganchado teórico.
+
 #subtitulo[Diseño de las corridas]
 
-Cada variante se comparó contra la teoría o contra una corrida de referencia, y cada condición se corrió una vez (@tab-corridas-sincronizacion). Las emulaciones aportan una realización por condición, y la dispersión entre condiciones iniciales se estima con la simulación del modelo.
+Cada variante se comparó contra la teoría o contra una corrida de referencia (@tab-corridas-sincronizacion). Cada condición se corrió una vez, salvo QoS con pérdida, que se corrió con tres semillas. Las corridas de umbral, de período, de QoS sin pérdida, las repeticiones de QoS y el corte con captura se agregaron después de analizar la primera tanda, para aislar efectos que esta no permitía separar. Las emulaciones aportan una realización por condición, y la dispersión entre condiciones iniciales se estima con la simulación del modelo: con 5 fases iniciales distintas, $r$ varía entre #"0,863" y #"0,871" a #"1,2" $K_c$, y menos de #"0,0001" a #"1,5" y $2 K_c$.
 
 #figure(
   table(
@@ -981,7 +1011,12 @@ Cada variante se comparó contra la teoría o contra una corrida de referencia, 
     [Keep-alive], [Cortes de 2 s y 15 s de un nodo, con y sin última voluntad (dos corridas)], [150 s],
     [QoS], [QoS 0 y QoS 1, con 5 % de pérdida por sentido (dos corridas)], [90 s],
     [Alias], [Alias de tópico activos, con captura], [30 s],
-    [Escala], [$N = 5$ y $N = 10$, con captura], [45 s],
+    [Escala], [$N = 5$ y $N = 10$, con captura. Como cada $N$ tiene su propio $K_c$, $K$ vale #"0,572" y #"0,525" rad/s], [45 s],
+    [Umbral], [$K = #"1,05"$; $#"1,1"$; $#"1,15"$ y $#"1,25" K_c$, desde el estado enganchado], [200 s],
+    [Período], [$h = 250$ ms, con $K = #"1,1"$ y $#"1,5" K_c$, desde el estado enganchado], [200 s],
+    [QoS sin pérdida], [QoS 1 sin pérdida, con captura], [90 s],
+    [Repetición de QoS], [QoS 0 y QoS 1 con 5 % de pérdida, con otras dos semillas (cuatro corridas)], [90 s],
+    [Corte con captura], [Corte de 2 s de un nodo, keep-alive de 5 s y captura], [60 s],
   ),
   caption: [Corridas del experimento. Salvo que se indique otra cosa, $N = 20$ y $K = #"1,5" K_c$.],
 ) <tab-corridas-sincronizacion>
@@ -1003,15 +1038,15 @@ La @tab-entorno-sincronizacion resume el entorno en el que se corrió el experim
   caption: [Entorno del experimento.],
 ) <tab-entorno-sincronizacion>
 
-Los tiempos internos de un ESP32 emulado no son los de una placa real, y la computadora anfitriona ejecuta todos los nodos a la vez. Por eso cada corrida registra si la tarea de integración se atrasó y a qué intervalo se producen las muestras de fase, y se controla la carga de la computadora. Como en el experimento anterior, el cliente SNTP de lwIP no descuenta el tiempo de viaje, de modo que la hora de cada nodo queda atrasada en el tiempo que tarda en llegar la respuesta. Ese error no afecta a la dinámica, que usa solo las fases y las diferencias de tiempo del propio nodo, y su efecto en las curvas de $r(t)$ es despreciable frente a los períodos de oscilación.
+Los tiempos internos de un ESP32 emulado no son los de una placa real, y la computadora anfitriona ejecuta todos los nodos a la vez. Por eso cada corrida registra si la tarea de integración se atrasó y a qué intervalo se producen las muestras de fase, y se controla la carga de la computadora. Cada nodo resincroniza su reloj por SNTP cada 15 s. Como en el experimento anterior, el cliente SNTP de lwIP no descuenta el tiempo de viaje, de modo que la hora de cada nodo queda atrasada en el tiempo que tarda en llegar la respuesta. Ese error no afecta a la dinámica, que usa solo las fases y las diferencias de tiempo del propio nodo, y su efecto en las curvas de $r(t)$ es despreciable frente a los períodos de oscilación.
 
 ==== Resultados
 
-Las 16 corridas terminaron sin fallos. Las 15 que siguieron a la calibración llevaron unos 40 minutos de máquina. La tarea de integración solo se atrasó en 4 de sus pasos, todos en una misma corrida, sobre millones en total. Las muestras de fase de cada nodo llegaron cada 500 ms, con un máximo de 510 ms entre dos consecutivas, y durante la tanda la CPU estuvo en promedio un 88 % ociosa, con un mínimo del 66 %, sin usar memoria de intercambio. La corrida con alias de tópico se repitió una vez, porque en la primera el broker quedó limitado a sus 10 alias por defecto.
+Las 16 corridas de la primera tanda y las 12 que se agregaron después terminaron sin fallos. En estas últimas, la tarea de integración no se atrasó en ningún paso. Las 15 de la primera tanda que siguieron a la calibración llevaron unos 40 minutos de máquina. La tarea de integración solo se atrasó en 4 de sus pasos, todos en una misma corrida, sobre millones en total. Las muestras de fase de cada nodo llegaron cada 500 ms, con un máximo de 510 ms entre dos consecutivas, y durante la tanda la CPU estuvo en promedio un 88 % ociosa, con un mínimo del 66 %, sin usar memoria de intercambio. La corrida con alias de tópico se repitió una vez, porque en la primera el broker quedó limitado a sus 10 alias por defecto.
 
 #subtitulo[Sincronización con la red limpia]
 
-Partiendo de fases al azar y con la red sin perturbaciones, el grupo se comporta como predice el modelo (@fig-modelo-r-t). Con $K$ por debajo del umbral, $r$ fluctúa sin estabilizarse, y por encima crece hasta un valor que depende de $K$. La @fig-modelo-r-k y la @tab-modelo-sincronizacion comparan el régimen medido con la autoconsistencia de la @ec-autoconsistencia, que no contempla retardo, y con la simulación del modelo de los nodos.
+Partiendo de fases al azar y con la red sin perturbaciones, el grupo se comporta como predice el modelo de los nodos (@fig-modelo-r-t). Con $K$ por debajo del umbral, $r$ fluctúa sin estabilizarse, y por encima crece hasta un valor que depende de $K$. Las corridas que arrancan del estado enganchado muestran que ese umbral no es el $K_c$ sin retardo: a 1,05, 1,1 y 1,15 $K_c$ el grupo pierde el enganche, y a 1,25 $K_c$ lo conserva. La @fig-modelo-r-k y la @tab-modelo-sincronizacion comparan el régimen medido con la autoconsistencia de la @ec-autoconsistencia, que no contempla retardo, con la condición con retardo de la @ec-nodo-retardo y con la simulación del modelo de los nodos.
 
 #figure(
   fig-exp2("01_modelo_r_t.png", width: 100%),
@@ -1020,7 +1055,7 @@ Partiendo de fases al azar y con la red sin perturbaciones, el grupo se comporta
 
 #figure(
   fig-exp2("02_modelo_r_k.png", width: 100%),
-  caption: [Parámetro de orden en régimen: teoría sin retardo, simulación del modelo y emulación.],
+  caption: [Parámetro de orden en régimen: teoría sin retardo y con retardo, simulación del modelo y emulación. Los círculos rellenos arrancan de fases al azar, y los vacíos, del estado enganchado teórico.],
 ) <fig-modelo-r-k>
 
 #figure(
@@ -1029,14 +1064,22 @@ Partiendo de fases al azar y con la red sin perturbaciones, el grupo se comporta
     align: (left, right, right, right, right, center),
     table.header[$K \/ K_c$][$r$ emulación][$r$ simulación][$r$ teoría][$Omega$ (rad/s)][Engancha],
     [0,8], [0,161], [0,128], [--], [--], [No],
-    [1,2], [0,872], [0,866], [0,903], [1,176], [Sí],
+    [1,05], [0,742], [0,715], [0,845], [--], [No],
+    [1,1], [0,796], [--], [0,872], [--], [No],
+    [1,15], [0,843], [--], [0,889], [--], [No],
+    [1,2], [0,872], [0,865], [0,903], [1,176], [Sí],
+    [1,25], [0,892], [--], [0,914], [1,169], [Sí],
     [1,5], [0,937], [0,936], [0,946], [1,142], [Sí],
     [2], [0,968], [0,968], [0,972], [1,098], [Sí],
   ),
-  caption: [Régimen de cada corrida con la red limpia. La media de las frecuencias naturales es 1,257 rad/s; la simulación promedia 5 condiciones iniciales.],
+  caption: [Régimen de cada corrida con la red limpia. La media de las frecuencias naturales es 1,257 rad/s; la simulación promedia 5 condiciones iniciales. Las corridas de 1,05, 1,1, 1,15 y 1,25 $K_c$ arrancan del estado enganchado y duran 200 s; las demás arrancan al azar y duran 150 s. La columna "Engancha" corresponde a la emulación.],
 ) <tab-modelo-sincronizacion>
 
 La corrida con frecuencias iguales, $K = #"0,4"$ rad/s y la mitad de los nodos publicando un campo adicional alcanzó $r = #"1,000"$, con una frecuencia común de 1,1510 rad/s. Para esa corrida, la frecuencia común que predice la condición con retardo, usando la antigüedad media estimada, es 1,1468 rad/s.
+
+#subtitulo[Período de publicación]
+
+Con $h = 250$ ms y la misma red, el grupo engancha a $#"1,1" K_c$, con $r = #"0,860"$ y $Omega = #"1,219"$ rad/s, un valor de $K$ en el que con $h = 500$ ms no engancha. A $#"1,5" K_c$ resulta $r = #"0,944"$ y $Omega = #"1,195"$ rad/s, frente a #"0,937" y #"1,142" rad/s con $h = 500$ ms.
 
 #subtitulo[Anatomía de una fase]
 
@@ -1069,7 +1112,7 @@ En la corrida con los campos 2 y 3 cruzados, cada nodo recibió las 4560 fases e
 
 #subtitulo[Caída del broker]
 
-La @fig-broker y la @tab-broker-sincronizacion muestran el efecto de detener el broker. En ambas caídas, los nodos se enteraron enseguida y, cuando el broker volvió, tardaron unos 10 s más en reconectarse. El tiempo de recuperación se mide desde que vuelve el broker hasta que $r$ se mantiene por encima del 95 % de su valor previo.
+La @fig-broker y la @tab-broker-sincronizacion muestran el efecto de detener el broker. En ambas caídas, los nodos se enteraron enseguida y, cuando el broker volvió, tardaron unos 10 s más en reconectarse (10,9 y 9,8 s desde la vuelta real del broker). La primera caída estaba programada en 5 s, pero duró #"4,2" s, porque la orden de detener el broker se ejecutó 1,05 s tarde; la segunda duró #"20,2" s. La tabla y la figura usan los instantes programados. El tiempo de recuperación se mide desde que vuelve el broker hasta que $r$ se mantiene por encima del 95 % de su valor previo.
 
 #figure(
   fig-exp2("04_broker.png", width: 100%),
@@ -1111,7 +1154,7 @@ Con un keep-alive de 5 s, se cortó el enlace de un nodo durante 2 s y después 
 
 #subtitulo[Un nodo que se suma]
 
-El nodo 20 arrancó junto con los demás, pero se conectó al broker a los 45 s. Hasta entonces avanzó a su frecuencia natural y, 7,5 s después de conectarse, su fase ya estaba estabilizada en el valor que le corresponde dentro del grupo, sin que ningún otro nodo cambiara su configuración (@fig-union).
+El nodo 20 arrancó junto con los demás, pero se conectó al broker a los 45 s. Hasta entonces avanzó a su frecuencia natural y, 7,5 s después de conectarse, su fase ya estaba estabilizada en el valor que le corresponde dentro del grupo, es decir, a menos de 0,15 rad de su desfase final, sin que ningún otro nodo cambiara su configuración (@fig-union).
 
 #figure(
   fig-exp2("06_union.png", width: 100%),
@@ -1120,27 +1163,28 @@ El nodo 20 arrancó junto con los demás, pero se conectó al broker a los 45 s.
 
 #subtitulo[QoS con pérdida de paquetes]
 
-Con un 5 % de pérdida en cada sentido, los dos niveles de QoS se comportaron de forma muy distinta (@fig-qos-sincronizacion y @tab-qos-sincronizacion). No hubo desconexiones en ninguna de las dos corridas. La antigüedad de una entrega es la diferencia entre el instante en que el broker la envía a la red y el instante en que se calculó la fase.
+Con un 5 % de pérdida en cada sentido, los dos niveles de QoS se comportaron de forma muy distinta (@fig-qos-sincronizacion y @tab-qos-sincronizacion). No hubo desconexiones en ninguna de las dos corridas. La antigüedad de una entrega es la diferencia entre el instante en que el broker la envía a la red y el instante en que se calculó la fase. Con otras dos semillas, QoS 0 alcanzó $r = #"0,913"$ y $#"0,878"$, y enganchó en la primera de ellas; QoS 1 quedó en $r = #"0,094"$ y $#"0,064"$, con antigüedades medianas de #"13,1" y #"12,5" s.
 
 #figure(
   fig-exp2("07_qos.png", width: 100%),
-  caption: [Parámetro de orden con 5 % de pérdida por sentido, para QoS 0 y QoS 1.],
+  caption: [Parámetro de orden con 5 % de pérdida por sentido, para QoS 0 y QoS 1, y con QoS 1 sin pérdida.],
 ) <fig-qos-sincronizacion>
 
 #figure(
   table(
-    columns: 3,
-    align: (left, right, right),
-    table.header[][QoS 0][QoS 1],
-    [$r$ en régimen], [0,800], [0,148],
-    [Engancha], [No], [No],
-    [Fases recibidas por nodo (de 3420)], [3409 a 3416], [1759 a 2611],
-    [Antigüedad de la entrega, mediana], [8,6 ms], [13,4 s],
-    [Antigüedad de la entrega, percentil 95], [1,2 s], [29,2 s],
-    [Segmentos retransmitidos], [3041], [3422],
-    [Tráfico total], [101,5 kB/s], [88,0 kB/s],
+    columns: 4,
+    align: (left, right, right, right),
+    table.header[][QoS 0, 5 %][QoS 1, 5 %][QoS 1, sin pérdida],
+    [$r$ en régimen], [0,800], [0,148], [0,936],
+    [Engancha], [No], [No], [Sí],
+    [Fases recibidas por nodo (de 3420)], [3409 a 3416], [1759 a 2611], [3418 y 3419],
+    [Antigüedad de la entrega, mediana], [8,6 ms], [13,4 s], [21,7 ms],
+    [Antigüedad de la entrega, percentil 95], [1,2 s], [29,2 s], [46,9 ms],
+    [Segmentos retransmitidos en la bajada], [3041], [3421], [0],
+    [Tráfico total], [101,5 kB/s], [88,0 kB/s], [164,2 kB/s],
+    [Bytes por entrega en la captura], [134 B], [149 B], [216 B],
   ),
-  caption: [QoS 0 y QoS 1 con 5 % de pérdida por sentido.],
+  caption: [QoS 0 y QoS 1 con 5 % de pérdida por sentido (semilla 1), y QoS 1 sin pérdida. Sin pérdida y con QoS 0, cada entrega cuesta 133 B.],
 ) <tab-qos-sincronizacion>
 
 #subtitulo[Alias de tópico]
@@ -1167,11 +1211,11 @@ Sin perturbaciones, la cantidad de entregas crece con $N (N - 1)$, y la mayor pa
 
 #subtitulo[Cuándo sincroniza y qué agrega el stack]
 
-Con la red limpia, la emulación coincide con la simulación del modelo de los nodos, con diferencias de hasta 0,007 en $r$ para $K$ por encima del umbral. Las dos quedan por debajo de la teoría sin retardo, y la diferencia de la emulación respecto de ella crece al acercarse a $K_c$: es de 0,031 a 1,2 $K_c$ y de 0,0035 a 2 $K_c$. Con una antigüedad media de unos 250 ms, la información vieja desplaza el umbral hacia arriba, como anticipa la @ec-kc-retardo-lorentz. La emulación solo permite acotar el umbral entre 0,8 y 1,2 $K_c$, porque no se probaron valores intermedios.
+Con la red limpia, la emulación coincide con la simulación del modelo de los nodos, con diferencias de hasta 0,007 en $r$ a 1,2, 1,5 y 2 $K_c$. Las dos quedan por debajo de la teoría sin retardo, y la diferencia de la emulación respecto de ella crece al acercarse a $K_c$: es de 0,031 a 1,2 $K_c$ y de 0,0035 a 2 $K_c$. Con una antigüedad media de unos 250 ms, la información vieja desplaza el umbral hacia arriba, y ese corrimiento se midió. El grupo no engancha a 1,05, 1,1 ni 1,15 $K_c$, aunque sin retardo allí existe un estado enganchado estable, y sí engancha a 1,2 y 1,25 $K_c$. La corrida de 1,15 $K_c$ queda muy cerca del criterio de enganche, con una dispersión de 0,012 rad/s contra el límite de 0,01. El umbral medido queda así entre 1,15 y 1,2 $K_c$, en acuerdo con el $#"1,17" K_c$ que predice la @ec-nodo-retardo y con la simulación del modelo de los nodos con retardo fijo de 10 ms, que deja de derivar entre 1,18 y 1,19 $K_c$. El corrimiento, cercano al 18 %, es más de tres veces el 5 % que sugeriría la @ec-kc-retardo-lorentz, porque la mayor parte se debe a la baja de la frecuencia común. Una consecuencia es que la corrida de 1,2 $K_c$ está apenas por encima del umbral real, y eso explica que su diferencia con la teoría sin retardo sea la mayor.
 
-La frecuencia común también refleja el retardo. Baja de 1,176 a 1,098 rad/s al pasar de 1,2 a 2 $K_c$, por debajo de la media de 1,257 rad/s, tal como indica la @ec-retardo-omega: el término $K sin(Omega tau)$ frena al grupo más cuanto mayor es $K$. La frecuencia común de la corrida con frecuencias iguales difiere un 0,4 % de la que predice la condición para osciladores idénticos sin término propio, la versión con $N - 1$ sumandos de la @ec-retardo-omega, usando como antigüedad $h\/2$ más el retardo medido. Es coherente con esa aproximación, aunque se apoya en una sola corrida.
+La frecuencia común también refleja el retardo. Baja de 1,176 a 1,098 rad/s al pasar de 1,2 a 2 $K_c$, por debajo de la media de 1,257 rad/s, y el freno aumenta con $K$, como indica la @ec-omega-retardo-distintas. Resuelta con $tau = 255$ ms, esa relación da 1,171, 1,137 y 1,093 rad/s para $K$ de 1,2, 1,5 y $2 K_c$, frente a los 1,176, 1,142 y 1,098 rad/s medidos, y $r$ de #"0,879", #"0,939" y #"0,969", frente a #"0,872", #"0,937" y #"0,968". La versión para osciladores idénticos daría, en cambio, 1,147, 1,122 y 1,083 rad/s. La frecuencia común de la corrida con frecuencias iguales difiere un 0,4 % de la que predice la condición para osciladores idénticos sin término propio, la versión con $N - 1$ sumandos de la @ec-retardo-omega, usando como antigüedad $h\/2$ más el retardo medido. Es coherente con esa aproximación, aunque se apoya en una sola corrida.
 
-En este punto de operación, el retardo de la red, de unos 5 ms en la entrega, es muy chico frente a los 250 ms de envejecimiento entre publicaciones. De los dos componentes de la antigüedad, el que depende del período de publicación, una decisión de la aplicación, es por lejos el mayor. El experimento no varió $h$, así que esto surge de comparar ambos valores y no de una medición que aísle su efecto.
+En este punto de operación, la antigüedad con la que el broker emite cada entrega, de unos 5 ms, es muy chica frente a los 250 ms de envejecimiento entre publicaciones. Esa medida no incluye el último tramo hasta el nodo ni su procesamiento, pero eso no cambia el orden de magnitud. De los dos componentes de la antigüedad, el que depende del período de publicación, una decisión de la aplicación, es por lejos el mayor. Las corridas con $h = 250$ ms aíslan ese efecto. Para esa antigüedad, de unos 131 ms, la @ec-nodo-retardo predice el umbral en $#"1,06" K_c$, por lo que $#"1,1" K_c$ ya debería enganchar, y así ocurre, mientras que con $h = 500$ ms no engancha. También predice $r$ de #"0,861" y #"0,944" y $Omega$ de #"1,216" y #"1,191" rad/s a $#"1,1"$ y $#"1,5" K_c$, frente a los #"0,860", #"0,944", #"1,219" y #"1,195" rad/s medidos. Reducir el período de publicación a la mitad, sin tocar la red, es lo que permitió enganchar con menor acoplamiento, al costo de duplicar la cantidad de mensajes.
 
 #subtitulo[Dónde están los bytes]
 
@@ -1179,31 +1223,35 @@ De los 99 bytes de una entrega, 23 son la fase. Protocol Buffers cumple lo prome
 
 #subtitulo[El contrato de datos]
 
-El ensayo muestra las dos caras de un mensaje identificado por números de campo. Agregar un campo es inocuo: los lectores que no lo conocen lo ignoran, y el sistema sigue funcionando (@sec-protobuf-compat). Cruzar dos campos del mismo tipo, en cambio, no se detecta en ninguna capa. El broker no interpreta la carga útil, TCP la entrega intacta y el decodificador encuentra dos `float` válidos. La única señal es que la aplicación deja de funcionar. El modelo explica por qué: cada nodo solo se acopla de forma coherente con su mitad, con un acoplamiento efectivo $K\/2 = #"0,251"$ rad/s, por debajo de los 0,3315 rad/s del $K_c$ de cada subgrupo. Los mensajes de la otra mitad traen un valor cercano a la velocidad, casi constante, que actúa como una fuerza hacia una fase fija. Es la consecuencia práctica de que el mensaje no sea autodescriptivo (@sec-protobuf): la compatibilidad depende de una disciplina sobre el esquema, que el protocolo no puede verificar.
+El ensayo muestra las dos caras de un mensaje identificado por números de campo. Agregar un campo es inocuo: los lectores que no lo conocen lo ignoran, y el sistema sigue funcionando (@sec-protobuf-compat). Cruzar dos campos del mismo tipo, en cambio, no se detecta en ninguna capa. El broker no interpreta la carga útil, TCP la entrega intacta y el decodificador encuentra dos `float` válidos. La única señal es que la aplicación deja de funcionar. El modelo explica por qué no engancha cada mitad: cada nodo solo se acopla de forma coherente con la suya, con un acoplamiento efectivo $K\/2 = #"0,251"$ rad/s, por debajo de los 0,3315 rad/s del $K_c$ de cada subgrupo. Los mensajes de la otra mitad traen un valor cercano a la velocidad, casi constante, que tira hacia un ángulo fijo. Su amplitud, de $K\/2$, es menor que la frecuencia natural de cualquier nodo, por lo que no detiene la rotación, sino que modula su velocidad. El problema no se resuelve con un $K$ mayor: en simulación, con $K$ entre #"2,5" y $4 K_c$ cada mitad se sincroniza, con $r$ mayor que #"0,91", pero el grupo completo queda entre #"0,20" y #"0,30". La misma simulación con $#"1,5" K_c$ reproduce el $r$ del conjunto (#"0,117" contra #"0,159" medido) y el del grupo con el esquema cruzado (#"0,67" contra #"0,653"), pero no el del grupo con el esquema normal (entre #"0,62" y #"0,65" contra #"0,428"), una diferencia que una sola corrida no permite explicar. Es la consecuencia práctica de que el mensaje no sea autodescriptivo (@sec-protobuf): la compatibilidad depende de una disciplina sobre el esquema, que el protocolo no puede verificar.
 
 #subtitulo[El broker como punto único de falla]
 
-Con el broker detenido, ningún nodo puede saber nada de los demás, y el grupo pierde la sincronía en pocos segundos, como anticipa la @sec-pubsub. Una vez desconectados, cada nodo oscila libremente, y $r(t)$ sigue casi exactamente la @ec-libre: la diferencia cuadrática media con la curva predicha es de 0,014, y el primer mínimo aparece a los 9,6 s del corte, contra 9,8 s de la predicción (@fig-broker). Con $gamma = #"0,251"$ rad/s, el tiempo característico $pi \/ gamma$ es de 12,5 s. Tanto en la caída de 5 s como en la de 20 s, $r$ llegó cerca de 0, y la recuperación fue más larga en la segunda. En ambas, los nodos tardaron unos 10 s más en reconectarse después de que volvió el broker, lo que coincide con el período de reintento por defecto de esp-mqtt. Durante ese tiempo siguen desacoplados aunque el broker ya esté disponible, de modo que la caída del servicio dura, para la aplicación, más que la del broker. El experimento no probó otros valores de ese período. Una vez reconectados, el grupo vuelve a sincronizarse sin intervención, gracias a que cada nodo se vuelve a suscribir por su cuenta. Descontada la espera hasta reconectarse, tarda entre 17 y 27 s, del mismo orden que los 13 s que tardó en sincronizarse desde fases al azar (@fig-modelo-r-t), porque tras una caída larga las fases quedan prácticamente dispersas.
+Con el broker detenido, ningún nodo puede saber nada de los demás, y el grupo pierde la sincronía en pocos segundos, como anticipa la @sec-pubsub. Una vez desconectados, cada nodo oscila libremente, y $r(t)$ sigue casi exactamente la @ec-libre: la diferencia cuadrática media con la curva predicha es de 0,014, y el primer mínimo aparece a los 9,6 s del corte, contra 9,8 s de la predicción (@fig-broker). Con $b = #"0,251"$ rad/s, el tiempo característico $pi \/ b$ es de 12,5 s. Tanto en la caída de 5 s como en la de 20 s, $r$ llegó cerca de 0, y la recuperación fue más larga en la segunda. En ambas, la reconexión llegó en múltiplos de 15 s desde la desconexión: a los 15 s en la primera caída, y a los 30 s en la segunda, después de un intento fallido a los 15 s. Por eso los nodos tardaron unos 10 s en reconectarse después de que volvió el broker, una demora que no es el período de reintento, sino lo que restaba de él. Durante ese tiempo siguen desacoplados aunque el broker ya esté disponible, de modo que la caída del servicio dura, para la aplicación, más que la del broker. El experimento no probó otros valores de ese período. Una vez reconectados, el grupo vuelve a sincronizarse sin intervención, gracias a que cada nodo se vuelve a suscribir por su cuenta. Descontada la espera hasta reconectarse, tarda entre 17 y 27 s, del mismo orden que los 13 s que tardó en sincronizarse desde fases al azar (@fig-modelo-r-t), porque tras una caída larga las fases quedan prácticamente dispersas.
 
 #subtitulo[Cortes de un enlace y última voluntad]
 
-El corte de 15 s se comporta como anticipa la @tab-regimenes-corte. El nodo y el broker cierran la conexión, la última voluntad se publica a los 6,9 s, muy cerca de los 7,5 s que corresponden a una vez y media el keep-alive, y el nodo se reconecta poco después de que vuelve el enlace.
+El corte de 15 s se comporta como anticipa la @tab-regimenes-corte. El nodo y el broker cierran la conexión, la última voluntad se publica a los 6,9 s, muy cerca de los 7,5 s que corresponden a una vez y media el keep-alive, y el nodo se reconecta 4 a 5 s después de que vuelve el enlace, es decir, 15 s después de haber detectado la desconexión.
 
-El corte de 2 s muestra un matiz que esa tabla no contempla. Aunque dura menos que el umbral de 7,5 s del broker, el nodo igual cerró la conexión, a los 3 a 4,5 s de comenzado el corte. El umbral de una vez y media el keep-alive es el del broker, pero el cliente esp-mqtt envía un PINGREQ a la mitad del intervalo y da la conexión por perdida si la respuesta no llega antes de que se complete el intervalo. Con un keep-alive de 5 s, la respuesta tiene un margen de 2,5 s, y un corte breve alcanza para perder ese intercambio. La conexión del lado del cliente es, entonces, más frágil de lo que indica el umbral del broker, y la reconexión cuesta más que el propio corte: el nodo tardó entre 16 y 17,5 s en volver.
+El corte de 2 s muestra un matiz que esa tabla no contempla. Aunque dura menos que el umbral de 7,5 s del broker, el nodo igual cerró la conexión, a los 3 a 4,5 s de comenzado el corte. El umbral de una vez y media el keep-alive es el del broker, pero el cliente esp-mqtt envía un PINGREQ a la mitad del intervalo y da la conexión por perdida si la respuesta no llega antes de que se complete el intervalo. Con un keep-alive de 5 s, la respuesta tiene un margen de 2,5 s, y un corte breve alcanza para perder ese intercambio. Una corrida adicional con captura, con el mismo corte de 2 s, muestra por qué el fin del corte no alcanza para evitarlo. El último PINGRESP pasa 2,2 s antes del corte y el siguiente PINGREQ no llega al broker. Medido desde el comienzo programado del corte, el broker retransmite a los 0,3, 0,8 y 1,7 s, con esperas cada vez mayores, de modo que su intento siguiente recién sale a los 3,5 s. Así, aunque el enlace vuelve a los 2 s, durante más de un segundo no circula nada por la conexión, y a los 3,1 s el cliente agota su plazo y la cierra. Es el mismo efecto de los reintentos de TCP cada vez más espaciados de la @sec-convergencia. La conexión del lado del cliente es, entonces, más frágil de lo que indica el umbral del broker, y la reconexión cuesta más que el propio corte: como el cliente espera 15 s desde que detecta la desconexión, el nodo tardó entre 16 y 17,5 s en volver después de terminado el corte. Además, como el cliente cierra la conexión sin enviar DISCONNECT, el broker publica la última voluntad, a los 3,3 s del comienzo del corte, aunque el enlace ya esté restablecido.
 
 Con un solo nodo cortado sobre 20, el efecto en el grupo es chico, y $r$ baja como mucho a 0,854. El comportamiento del nodo cortado coincide con el planteo. Mientras no detecta la desconexión, sigue acoplado a fases congeladas y se atrasa hasta 0,5 rad respecto del grupo. Una vez desconectado, avanza a su frecuencia natural y se adelanta a 0,115 y 0,117 rad/s, cerca de los 0,128 rad/s de $omega_i - Omega$. La última voluntad cumplió su función de avisar la caída, pero en estas corridas no mejoró la sincronía: los valores con y sin ella son del mismo orden y, con una sola corrida por condición, sus diferencias no permiten sacar una conclusión.
 
 #subtitulo[QoS y frescura de los datos]
 
-El resultado más llamativo es que QoS 1 empeoró la sincronización de forma drástica respecto de QoS 0, que ya sufría con la pérdida. Con QoS 0, las retransmisiones de TCP hacen que algunas fases lleguen tarde: la mediana se mantiene en milisegundos, pero el percentil 95 llega a 1,2 s, y en esa corrida el grupo no llegó a engancharse. Aun así, $r$ se mantiene en 0,80, y casi todas las fases llegan.
+El resultado más llamativo es que, con pérdida, QoS 1 empeoró la sincronización de forma drástica respecto de QoS 0, que ya sufría. Con QoS 0, las retransmisiones de TCP hacen que algunas fases lleguen tarde: la mediana se mantiene en milisegundos, pero el percentil 95 llega a 1,2 s. Casi todas las fases llegan. En la corrida de la tabla, dos nodos, el 18 y el 20, entre los de mayor desintonía, se separan del grupo, y el valor de $r$ de 0,80 corresponde a una ventana final que coincide con el peor tramo: durante los primeros 60 s $r$ se mantuvo entre 0,87 y 0,93. El grupo enganchó en una sola de las tres corridas, de modo que, con esta pérdida, queda en el límite del enganche.
 
-Con QoS 1, el broker entregó las fases con una antigüedad mediana de 13,4 s, y cada nodo recibió entre la mitad y las tres cuartas partes de lo publicado, sin que se cortara ninguna conexión. Esa antigüedad equivale a 2,4 períodos de oscilación, de 5,5 s cada uno: $Omega tau$ está muy lejos del límite $pi\/2$ de la @ec-retardo-omega, y el retardo varía de una entrega a otra, por lo que no cabe esperar un estado enganchado. El comportamiento es compatible con una acumulación de mensajes en el broker, ya que QoS 1 exige conservar cada mensaje hasta su confirmación y Mosquitto limita por defecto a 20 los mensajes en tránsito por cliente, aunque el experimento no aísla ese mecanismo.
+Con QoS 1, el broker entregó las fases con una antigüedad mediana de 13,4 s, y cada nodo recibió entre la mitad y las tres cuartas partes de lo publicado, sin que se cortara ninguna conexión. La captura muestra una acumulación en el broker. En los 20 nodos, las entregas sin confirmar llegan a 20, el límite de Mosquitto, y permanecen en él entre el 87 % y el 96 % del tiempo: la ventana está saturada casi siempre. Con ese límite, cuando una pérdida frena la conexión TCP de un nodo, tampoco salen mensajes nuevos hacia él. El broker atiende unas 600 entregas por segundo contra las 760 que se publican, y el resto se acumula en la cola, que está ampliada a 100.000 mensajes. La antigüedad crece entonces de forma sostenida, desde una mediana de unos 2 s en los primeros 10 s hasta unos 26 s en los últimos 10 s, de modo que los 13,4 s de la tabla no describen un régimen estable. Las fases que faltan no se perdieron: quedaron en cola al terminar la corrida.
 
-La conclusión práctica coincide con la de la @sec-casos-sintesis y la amplía. La confirmación de entrega asegura que un mensaje llegue, y en esta aplicación esa garantía es contraproducente, porque una fase vieja no sirve y además retrasa a las más nuevas. Para datos que se reemplazan continuamente, importa la frescura y no la entrega de cada muestra.
+Las condiciones de estabilidad de la @ec-retardo-omega no aplican aquí, porque valen para un retardo constante y son periódicas en $tau$. En este caso $tau$ crece durante toda la corrida y varía entre una entrega y otra, y no existe un retardo alrededor del cual el grupo pueda engancharse.
+
+La corrida sin pérdida separa los efectos. QoS 1 sin pérdida engancha igual que QoS 0, con $r = #"0,936"$, sin acumulación, con a lo sumo 5 mensajes en tránsito y una antigüedad mediana de 21,7 ms. El problema no es QoS 1 en sí, sino su combinación con la pérdida. El límite de 20 mensajes no se varió, por lo que el experimento no lo aísla como causa única, aunque la saturación permanente lo señala.
+
+La conclusión práctica coincide con la de la @sec-casos-sintesis y la amplía. La confirmación de entrega asegura que un mensaje llegue, y en esta aplicación, cuando hay pérdida, esa garantía es contraproducente, porque una fase vieja no sirve y además retrasa a las más nuevas. Sin pérdida no perjudicó la sincronía, pero cada entrega costó unos 216 B, frente a unos 133 B de QoS 0 sin pérdida, cerca de un 63 % más. Para datos que se reemplazan continuamente, importa la frescura y no la entrega de cada muestra.
 
 #subtitulo[El nodo que se suma]
 
-El nodo 20 tiene la mayor desintonía, $Delta_i = #"0,251"$ rad/s. La autoconsistencia predice para él un desfasaje de $arcsin(Delta_i \/ u) = #"0,56"$ rad respecto de la fase media, y el medido al final de la corrida es de 0,65 rad. Esa cuenta no incluye el retardo, que también desplaza el régimen del grupo. Como ni el broker ni los demás nodos necesitan conocer al nodo nuevo, este se integra en cuanto sus publicaciones y suscripciones están activas.
+El nodo 20 tiene la mayor desintonía, $Delta_i = #"0,251"$ rad/s. La autoconsistencia sin retardo predice para él un desfasaje de $arcsin(Delta_i \/ u) = #"0,56"$ rad respecto de la fase media, y el medido al final de la corrida es de 0,65 rad. Si se incluye el retardo mediante la @ec-nodo-retardo, con $tau = 255$ ms, el desfasaje predicho sube a #"0,64" rad. Como ni el broker ni los demás nodos necesitan conocer al nodo nuevo, este se integra en cuanto sus publicaciones y suscripciones están activas.
 
 #subtitulo[Contraste de hipótesis]
 
@@ -1213,11 +1261,11 @@ La @tab-contraste-sincronizacion contrasta las hipótesis del planteo con los re
   table(
     columns: (1fr, 1fr),
     table.header[Hipótesis][Resultado],
-    [Por encima de $K_c$, los nodos se enganchan con un $r$ algo menor que el teórico.], [*Se confirma.* Engancharon a 1,2, 1,5 y 2 $K_c$, con $r$ 0,0035 a 0,031 menor que la teoría sin retardo y hasta 0,007 respecto de la simulación.],
+    [Por encima de $K_c$, los nodos se enganchan con un $r$ algo menor que el teórico.], [*Se confirma en parte.* Engancharon a 1,2, 1,25, 1,5 y 2 $K_c$, con $r$ 0,0035 a 0,031 menor que la teoría sin retardo y hasta 0,007 respecto de la simulación. Pero entre $K_c$ y 1,15 $K_c$ no engancharon: el umbral real está entre 1,15 y 1,2 $K_c$.],
     [Un campo desconocido no afecta la sincronía, y dos campos cruzados se decodifican sin error, pero impiden sincronizar.], [*Se confirma.* Con el campo adicional $r = #"1,000"$. Con los campos cruzados, $r = #"0,159"$, sin errores de decodificación.],
     [Al caer el broker, el grupo pierde la sincronía y la recupera sin intervención.], [*Se confirma.* $r$ cae hasta 0,013 y se recupera por sí solo; la caída sigue la oscilación libre prevista.],
     [Un corte menor que una vez y media el keep-alive no cierra la conexión, y uno mayor la cierra y publica la última voluntad.], [*Se confirma a medias.* El corte de 15 s cerró la conexión y publicó la voluntad a los 6,9 s. El de 2 s también cerró la conexión, del lado del cliente.],
-    [Con pérdida, QoS 1 no mejora la sincronización y genera más tráfico que QoS 0.], [*Se confirma en parte.* QoS 1 fue mucho peor ($r$ de 0,148 contra 0,800), pero generó menos tráfico (88,0 contra 101,5 kB/s), porque entregó menos fases.],
+    [Con pérdida, QoS 1 no mejora la sincronización y genera más tráfico que QoS 0.], [*Se confirma.* QoS 1 fue mucho peor ($r$ de 0,148 contra 0,800, en la primera semilla). El tráfico total fue menor (88,0 contra 101,5 kB/s) solo porque se entregaron menos fases: por entrega costó 149 B contra 134 B. Sin pérdida, QoS 1 no perjudica la sincronía.],
     [El alias de tópico reduce unos 13 bytes por entrega.], [*Se confirma.* El PUBLISH entregado pasa de 45 a 31 bytes, 14 menos, y el tráfico total baja un 9,7 %.],
   ),
   caption: [Contraste de las hipótesis con los resultados.],
@@ -1225,19 +1273,19 @@ La @tab-contraste-sincronizacion contrasta las hipótesis del planteo con los re
 
 #subtitulo[Limitaciones]
 
-- *Una realización por condición.* Cada ensayo se corrió una vez. Las diferencias grandes, como las de QoS, son claras, pero las pequeñas, como el efecto de la última voluntad, no se pueden distinguir de la variación entre corridas.
+- *Una realización por condición.* Salvo QoS con pérdida, cada ensayo se corrió una vez. Las diferencias grandes, como las de QoS, son claras, pero las pequeñas, como el efecto de la última voluntad, no se pueden distinguir de la variación entre corridas.
 - *Emulación.* El broker, los 20 nodos y la red comparten una computadora. Los retardos internos no son los de una placa física con WiFi.
 - *Perturbaciones sintéticas.* La pérdida de 5 % es aleatoria e independiente y no representa la de un enlace real, en el que suele darse en ráfagas.
-- *Un único punto de operación.* $N$, $h$ y $overline(f)$ se fijaron por la capacidad de la computadora y el tiempo disponible. Otros valores cambian el peso relativo del período de publicación y de la red.
+- *Un punto de operación acotado.* $overline(f)$ y el ancho de las frecuencias se fijaron, y $h$ solo se varió en dos corridas, por la capacidad de la computadora y el tiempo disponible. Otros valores cambian el peso relativo del período de publicación y de la red.
 - *Sin TLS.* Las corridas no usan cifrado, cuyo costo se analiza en el experimento de la @sec-exp-mqtt-https.
 
 #subtitulo[Implicaciones]
 
 Para una aplicación en la que todos los nodos necesitan el dato de todos, los resultados sugieren los siguientes criterios:
 
-- La frescura importa más que la entrega de cada mensaje. Conviene usar QoS 0 y descartar lo viejo con un número de secuencia.
-- El período de publicación pesó mucho más que el retardo de la red en este punto de operación. Se lo debe elegir en función de la dinámica de la aplicación, y no solo del ancho de banda.
-- Tras una interrupción, el tiempo de reconexión del cliente puede pesar más que la propia interrupción, y es un parámetro que debe ajustarse.
+- La frescura importa más que la entrega de cada mensaje. Conviene usar QoS 0 y descartar lo viejo con un número de secuencia. QoS 1 no perjudicó la sincronía sin pérdida, pero aumentó el costo por mensaje y, con pérdida, generó una cola que crece sin límite si el broker la permite.
+- El período de publicación pesó mucho más que el retardo de la red en este punto de operación, y corrió el umbral de enganche en cerca de un 18 %. Se lo debe elegir en función de la dinámica de la aplicación, y no solo del ancho de banda.
+- Tras una interrupción, el tiempo de reconexión del cliente puede pesar más que la propia interrupción, y es un parámetro que debe ajustarse. Hay que medirlo en el cliente real: en esp-mqtt, un valor configurado de 10 s dio un reintento efectivo de 15 s.
 - Un keep-alive muy corto detecta antes una caída, pero vuelve frágil la conexión ante cortes breves.
 - El esquema es parte del sistema: los cambios incompatibles no producen errores, por lo que necesitan control de versiones y pruebas propias.
 
@@ -1245,12 +1293,12 @@ Para una aplicación en la que todos los nodos necesitan el dato de todos, los r
 
 El experimento mostró que MQTT y Protocol Buffers pueden sostener una aplicación en la que cada nodo necesita el dato de todos los demás, y, gracias a un modelo que predice el comportamiento esperado, permitió ver qué aporta cada mecanismo del stack y en qué condiciones deja de alcanzar.
 
-Con la red limpia, los nodos se comportan como predice el modelo. Por encima de $K_c$ se enganchan, por debajo no, y el parámetro de orden coincide con la simulación del modelo de los nodos con una diferencia de hasta 0,007. Los desvíos respecto de la teoría sin retardo se explican por la antigüedad de las fases, en la que los 250 ms del período de publicación pesan mucho más que los 5 ms de la red. En ese régimen, el stack no impone una limitación apreciable.
+Con la red limpia, los nodos se comportan como predice el modelo, siempre que este incluya la antigüedad de las fases. El umbral de enganche no es el $K_c$ sin retardo: quedó entre 1,15 y 1,2 $K_c$, en acuerdo con el $#"1,17" K_c$ que da la condición con retardo, y por encima de él el parámetro de orden coincide con la simulación del modelo de los nodos con una diferencia de hasta 0,007. El período de publicación, una decisión de la aplicación, es el que corre ese umbral: al reducirlo a la mitad, el grupo enganchó donde antes no lo hacía. Los desvíos respecto de la teoría sin retardo se explican por la antigüedad de las fases, en la que los 250 ms del período de publicación pesan mucho más que los 5 ms de la red. En ese régimen, el stack no impone una limitación apreciable.
 
 Las virtudes atribuidas al stack se observaron en la práctica. Un nodo se integró al grupo en 7,5 s sin que el broker ni los demás cambiaran su configuración. Un campo desconocido no afectó a la sincronía, y los nodos se reconectaron y resincronizaron solos después de cada interrupción. El mensaje es compacto, aunque en uno tan corto el dato representa 23 de los 99 bytes de cada entrega, y el nombre del tópico pesa casi lo mismo que el dato. El alias de tópico recorta 14 bytes por entrega y un 9,7 % del tráfico total.
 
 Las limitaciones también quedaron a la vista. El broker es un punto único de falla: al detenerlo, las fases se dispersan siguiendo la oscilación libre que predice la @ec-libre, y la reconexión del cliente prolonga la interrupción unos 10 s más. El esquema es un acuerdo que el protocolo no verifica: dos campos cruzados produjeron mensajes que se decodifican sin error y un grupo que no se sincroniza, sin ninguna señal en la red. La carga del broker crece con la cantidad de pares de nodos, y un keep-alive muy corto vuelve frágil la conexión, como mostró el corte de 2 s que la cerró del lado del cliente.
 
-La observación más importante es que, para esta aplicación, la frescura de los datos vale más que su entrega. Con 5 % de pérdida, QoS 0 mantuvo la mediana de antigüedad en milisegundos, mientras que QoS 1 entregó las fases con una antigüedad mediana de 13,4 s y el grupo se desordenó. La confirmación de entrega, que resulta valiosa para datos que no se pueden perder, resulta perjudicial cuando cada dato queda reemplazado por el siguiente.
+La observación más importante es que, para esta aplicación, la frescura de los datos vale más que su entrega. Con 5 % de pérdida, QoS 0 mantuvo la mediana de antigüedad en milisegundos, mientras que QoS 1 entregó las fases con una antigüedad mediana de 13,4 s y el grupo se desordenó. La confirmación de entrega, que resulta valiosa para datos que no se pueden perder, resulta perjudicial cuando cada dato queda reemplazado por el siguiente y además hay pérdida; sin pérdida no afectó la sincronía, pero aumentó cerca de un 63 % los bytes por entrega.
 
-Estas conclusiones se apoyan en una realización por condición y en nodos emulados, de modo que describen con confianza los efectos grandes, y no permiten sostener las diferencias pequeñas, como la de la última voluntad sobre la sincronía.
+Estas conclusiones se apoyan, salvo en QoS con pérdida, en una realización por condición y en nodos emulados, de modo que describen con confianza los efectos grandes, y no permiten sostener las diferencias pequeñas, como la de la última voluntad sobre la sincronía.
