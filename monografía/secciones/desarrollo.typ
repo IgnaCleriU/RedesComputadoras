@@ -447,20 +447,11 @@ compara varios campos del encabezado a la vez y cada campo puede contener comodi
 de decisión vuelve a ser distinta, porque cuando un paquete coincide con varias entradas de la tabla de flujos se aplica solo la de mayor
 prioridad @kurose2017[sec.~4.4.1].
 
-La especificación agrega una excepción que no tiene análogo en IP. Los filtros que comienzan con un comodín no coinciden con los tópicos
-que comienzan con `$`, como los de `$SYS`, que muchos brokers usan para publicar sus propias estadísticas @mqtt50. Un cliente suscrito a `#`
-no recibe, por lo tanto, los mensajes internos del broker, salvo que se suscriba a ellos explícitamente.
-
 El costo de la búsqueda también se resuelve de manera diferente. Un router de alta velocidad debe encontrar el prefijo más largo en
 nanosegundos, por lo que la búsqueda se implementa en hardware y con algoritmos más eficientes que un recorrido lineal de la tabla
 @kurose2017[sec.~4.2.1]. Un broker hace la búsqueda en software. EMQX, por ejemplo, organiza los filtros en un árbol de tópicos, una estructura jerárquica
 en la que compara cada tópico publicado con los filtros suscritos, incluidos los que tienen comodines @emqx-cluster, y su documentación advierte que el uso de comodines en un gran número de clientes puede afectar el desempeño
-@emqx-wildcard. Cuando EMQX funciona como un conjunto de nodos, la analogía con el ruteo IP se vuelve literal. Además del árbol, cada nodo
-mantiene una tabla, que la propia documentación llama tabla de ruteo, que asocia cada filtro con los nodos que tienen suscriptores, y una
-tabla de suscripciones local, que asocia cada filtro con los clientes conectados a ese nodo. El nodo que recibe un PUBLISH consulta el
-árbol y la tabla de ruteo, reenvía el mensaje a los nodos correspondientes, y cada uno de ellos lo entrega a sus clientes según su tabla
-local @emqx-cluster. Es una estructura en dos niveles, como la del ruteo entre sistemas autónomos: un nodo no necesita saber qué cliente se
-suscribió en otro nodo, sino solo a qué nodo debe enviarle el mensaje.
+@emqx-wildcard.
 
 === Agregación y diseño del espacio de tópicos
 
@@ -583,7 +574,7 @@ La @tab-ruteo-topicos-ip resume la comparación.
 
 Las secciones anteriores analizaron la combinación de MQTT y Protocol Buffers a partir de las capas y protocolos que atraviesa un mensaje. Esta sección examina cómo la emplean sistemas reales de distintos dominios, con el fin de identificar qué propiedades de cada tecnología aprovechan y qué ventajas y limitaciones aparecen en la práctica. En cada caso se consideran, en la medida en que las fuentes lo permiten, el problema de comunicación que enfrenta, la combinación de protocolo y formato que adopta, los mecanismos de MQTT que utiliza, los aspectos de red involucrados y sus limitaciones. Los mecanismos analizados, como los niveles de QoS o el mensaje de última voluntad, existen tanto en la versión 3.1.1 de MQTT como en la 5.0, por lo que la versión solo se aclara cuando un caso depende de una función que agregó la 5.0.
 
-No todos los casos combinan MQTT y Protocol Buffers. Algunos emplean MQTT con otro formato, y su inclusión permite distinguir el aporte de cada pieza, ya que, como se planteó en la @sec-alternativas, el protocolo de aplicación y el mecanismo de serialización constituyen decisiones independientes. Esa independencia se observa también en sistemas que no se analizan aquí. Zigbee2MQTT, por ejemplo, un programa que conecta a MQTT lámparas, sensores y otros dispositivos domésticos inalámbricos, utiliza MQTT con JSON @zigbee2mqtt, mientras que la aplicación de mensajería Signal utiliza Protocol Buffers sobre WebSocket, sin MQTT @signal-websocket.
+No todos los casos combinan MQTT y Protocol Buffers. Algunos emplean MQTT con otro formato, y su inclusión permite distinguir el aporte de cada pieza, ya que, como se planteó en la @sec-alternativas, el protocolo de aplicación y el mecanismo de serialización constituyen decisiones independientes.
 
 === Mensajería instantánea <sec-caso-mensajeria>
 
