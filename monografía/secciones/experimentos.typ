@@ -18,7 +18,7 @@
 
 // Presentación de los dos experimentos y de la estructura común (planteo, implementación, resultados y análisis).
 
-=== Plataforma común
+=== Plataforma común <sec-plataforma-comun>
 
 // Placas ESP32 emuladas con QEMU, broker Mosquitto y backend; restricciones de la emulación.
 // TODO(mapeo tecnológico) El hardware real que reemplazaría a lo emulado se releva en @sec-mapeo-tecnologico; referenciarla acá.
@@ -29,7 +29,7 @@
 
 Los dos experimentos corren sobre el mismo entorno, montado en una sola computadora, donde cada nodo es un ESP32 emulado con QEMU.
 
-El ESP32 emulado no tiene WiFi, por lo que QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz virtual propia de la computadora anfitriona, y todas se unen en un puente que las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
+QEMU es un programa que permite ejecutar en una computadora el mismo código que correría en la placa, y se usa la versión que mantiene Espressif, el fabricante del ESP32, que emula su procesador, su memoria y varios periféricos @espressif-qemu. El programa de cada nodo, o _firmware_, está escrito en C con ESP-IDF, el entorno de desarrollo de Espressif @esp-idf. Como el ESP32 emulado no tiene WiFi, QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz TAP propia, una interfaz de red virtual de Linux que intercambia las tramas Ethernet con un programa, en este caso QEMU, en lugar de enviarlas por un medio físico @linux-tuntap. Todas se unen en un puente de Linux, que funciona como un conmutador por _software_ @linux-bridge y las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
 
 La emulación impone algunas restricciones. Los tiempos de ejecución no son los de una placa real, porque dependen de la carga de la computadora anfitriona: cuando llega una difusión, todas las instancias compiten por la CPU, y el retardo de entrega crece alrededor de 0,3 ms por cada nodo agregado. Además, cada instancia ocupa unos 170 MB de memoria, lo que limita la cantidad de nodos que se pueden emular.
 
@@ -746,11 +746,7 @@ El objetivo de la implementación no es sincronizar osciladores de la mejor mane
 
 #subtitulo[Arquitectura]
 
-El experimento corre sobre la plataforma común. Cada uno de los 20 nodos es un ESP32 emulado con QEMU, un programa que permite ejecutar en una computadora el mismo código que correría en la placa. Se usa la versión que mantiene Espressif, el fabricante del ESP32, que emula su procesador, su memoria y varios periféricos @espressif-qemu. El programa de cada nodo, o _firmware_, está escrito en C con ESP-IDF, el entorno de desarrollo de Espressif @esp-idf.
-
-Cada nodo se conecta a una interfaz TAP propia, una interfaz de red virtual de Linux que, en lugar de enviar las tramas Ethernet por un medio físico, las intercambia con un programa @linux-tuntap, que en este caso es QEMU. Todas las interfaces se unen en un puente de Linux, que funciona como un conmutador por _software_: reenvía cada trama según su dirección MAC de destino @linux-bridge. El puente tiene la dirección `10.10.0.1`, y los nodos usan las direcciones `10.10.0.11` en adelante.
-
-En la computadora anfitriona corren el broker Mosquitto, un servidor SNTP con el que los nodos sincronizan su reloj (@sec-conceptos-exp1) y un registrador, `mosquitto_sub`, un cliente MQTT de línea de comandos que imprime los mensajes que recibe @mosquitto-sub. El registrador está suscripto a todas las fases y se conecta por la interfaz local, de modo que no pasa por el puente, no aparece en las capturas ni sufre las condiciones de red que se aplican a los nodos (@fig-arq-sincronizacion). Las capturas se hacen sobre el puente con `tcpdump`, un programa que registra los paquetes de una interfaz en un archivo @tcpdump.
+El experimento corre sobre la plataforma común (@sec-plataforma-comun), con 20 nodos. En la computadora anfitriona corren además un servidor SNTP con el que los nodos sincronizan su reloj (@sec-conceptos-exp1) y un registrador, `mosquitto_sub`, un cliente MQTT de línea de comandos suscrito a todas las fases. El registrador se conecta por la interfaz local, de modo que no pasa por el puente, no aparece en las capturas ni sufre las condiciones de red que se aplican a los nodos (@fig-arq-sincronizacion). Las capturas se hacen sobre el puente con `tcpdump`.
 
 En lo que afecta a la entrega de los mensajes, Mosquitto mantiene sus valores por defecto salvo en cuatro ajustes. Desactiva el algoritmo de Nagle (`set_tcp_nodelay`), para que cada mensaje salga apenas se publica. Amplía la cola de mensajes por cliente (`max_queued_messages` a 100.000 y `max_queued_bytes` sin límite), para que las ráfagas no produzcan descartes. Y admite hasta 128 alias de tópico hacia los nodos (`max_topic_alias_broker`). Se conserva, en cambio, el límite por defecto de 20 mensajes en tránsito por cliente (`max_inflight_messages`), que solo afecta a QoS 1: mientras un cliente tenga 20 mensajes sin confirmar, el broker no le envía el siguiente y lo deja en la cola.
 
@@ -775,35 +771,15 @@ En lo que afecta a la entrega de los mensajes, Mosquitto mantiene sus valores po
 
 #subtitulo[Del modelo al firmware]
 
-Cada término de la @ec-nodo-discreta tiene un lugar concreto en el firmware (@tab-modelo-firmware). La frecuencia natural $omega_i$, el acoplamiento $K$, la fase inicial y el período de publicación $h$ no están fijados en el código. Se leen de una partición, es decir, una región reservada, de la memoria _flash_ del nodo, que es su memoria no volátil. Esa región se escribe para cada nodo antes de arrancarlo, de modo que el firmware se compila una sola vez para todas las corridas.
-
-#figure(
-  table(
-    columns: (auto, 1fr),
-    table.header[En el modelo][En el firmware],
-    [$theta_i$], [Variable de la tarea de integración, reducida al intervalo $[0, 2 pi)$],
-    [$omega_i$, $K$], [Valores de la configuración del nodo, constantes durante la corrida],
-    [$T_s$], [10 ms: período de la tarea de integración],
-    [$hat(theta)_j [k]$], [Última fase del nodo $j$ guardada en una tabla indexada por identificador],
-    [Sumatoria sobre $j != i$], [Suma de $sin(hat(theta)_j - theta_i)$ sobre las fases conocidas de los demás nodos],
-    [$N$ en el divisor], [Cantidad total de nodos, fija aunque falte alguna fase],
-    [$h$], [500 ms: período de la tarea de publicación],
-    [$tau_(i j)$], [No se programa: resulta del recorrido del mensaje y de la espera hasta la publicación siguiente],
-  ),
-  caption: [Correspondencia entre el modelo de los nodos y el firmware.],
-) <tab-modelo-firmware>
-
-Dos tareas reparten el trabajo. Una tarea es un hilo de ejecución con prioridad propia, y el planificador del sistema operativo decide en cada momento cuál corre. La de integración, de mayor prioridad, calcula el acoplamiento y avanza la fase cada 10 ms. Usa como paso el tiempo que realmente transcurrió desde la iteración anterior y no los 10 ms nominales, para que una demora en la planificación del emulador no cambie la velocidad de la fase. La de publicación toma la última fase cada 500 ms, la serializa y la entrega al cliente MQTT. Al estar separadas, un envío demorado no detiene la integración, que es el desacoplamiento de sincronización de la @sec-pubsub llevado al código.
-
-Los instantes de publicación de cada nodo se calculan desde el inicio de la corrida, de modo que un retraso en una publicación no se arrastra a las siguientes, y cada nodo tiene un desfase propio, elegido al azar dentro de $h$. Con ese desfase, los nodos no publican todos a la vez y la fase conocida de cada otro nodo envejece de manera repartida, como supone la estimación de una antigüedad media cercana a $h\/2$ que se hizo en el planteo. Si un envío se demora más de un período, el nodo no intenta publicar las fases atrasadas, porque una fase vieja ya no le sirve a nadie.
+La frecuencia natural $omega_i$, el acoplamiento $K$, la fase inicial y el período de publicación $h$ no están fijados en el código, sino que se leen de la memoria _flash_ del nodo, de modo que el firmware se compila una sola vez para todas las corridas. Dos tareas reparten el trabajo. La de integración avanza la fase según la @ec-nodo-discreta cada 10 ms, y la de publicación toma la última fase cada $h = 500$ ms, la serializa y la entrega al cliente MQTT. Al estar separadas, un envío demorado no detiene la integración, que es el desacoplamiento de sincronización de la @sec-pubsub llevado al código. Cada nodo publica con un desfase propio, elegido al azar dentro de $h$, de modo que los nodos no publican todos a la vez y la fase conocida de cada otro nodo envejece de manera repartida, como supone la antigüedad media cercana a $h\/2$ estimada en el planteo.
 
 #subtitulo[Recorrido de una fase]
 
 Una fase atraviesa el stack completo antes de influir en otro nodo, y cada paso aporta a la antigüedad $tau_(i j)$:
 
-+ La tarea de publicación copia la fase, su velocidad y el instante en que se calculó. La copia se hace en una sección crítica, un tramo que no puede interrumpirse por otra tarea, porque la de integración escribe esos valores y se podría leer un dato a medio actualizar.
++ La tarea de publicación copia la fase, su velocidad y el instante en que se calculó.
 + La fase se serializa con Protocol Buffers mediante nanopb, una biblioteca en C pensada para sistemas con muy poca memoria @nanopb.
-+ El cliente esp-mqtt, la biblioteca MQTT de ESP-IDF @esp-mqtt, arma un paquete PUBLISH de QoS 0, sin confirmación de entrega (@sec-mqtt), con esos bytes como carga útil, en el tópico `kuramoto/phase/<id>`, y lo escribe en la única conexión TCP del nodo, que administra lwIP, la pila TCP/IP liviana que incluye ESP-IDF @esp-idf-lwip.
++ El cliente esp-mqtt, la biblioteca MQTT de ESP-IDF @esp-mqtt, arma un paquete PUBLISH de QoS 0, sin confirmación de entrega (@sec-mqtt), con esos bytes como carga útil, en el tópico `kuramoto/phase/<id>`, y lo escribe en la única conexión TCP del nodo, que administra lwIP, la pila TCP/IP liviana que incluye ESP-IDF.
 + El broker recibe el paquete y compara el tópico con las suscripciones. Sin interpretar la carga útil, reenvía una copia a cada nodo suscripto al filtro `kuramoto/phase/+`, donde el comodín `+` coincide con cualquier identificador. El emisor no recibe su propia fase gracias a la opción _No Local_ de MQTT 5.0, que pide al broker no devolverle al cliente sus propias publicaciones.
 + Cada receptor decodifica la carga útil. Descarta el mensaje si no es más nuevo que el último de ese nodo, comparando el número de secuencia, y si lo es, reemplaza la entrada de la tabla.
 + En el siguiente paso de integración, a lo sumo 10 ms después, esa fase ya participa de la sumatoria, y sigue envejeciendo hasta que llegue la próxima.
@@ -832,29 +808,9 @@ Ese aviso no llega apenas se interrumpe la red. Si el broker cierra la conexión
 
 También se puede registrar un mensaje de última voluntad en el tópico `kuramoto/estado/<id>`. Es un mensaje que el cliente deja registrado al conectarse y que el broker publica si la conexión se cierra de forma anormal (@sec-mqtt). Cuando el broker lo publica, los demás nodos invalidan solo la fase de ese nodo, sin esperar a detectar nada por su cuenta. Es el mismo patrón que usa Sparkplug para marcar como desactualizados los datos de un nodo caído (@sec-caso-industria). La fase vuelve a usarse cuando llega un mensaje nuevo.
 
-#subtitulo[Variantes ensayadas]
-
-Cada mecanismo del stack se activa desde la configuración del nodo, sin recompilar (@tab-variantes-sincronizacion).
-
-#figure(
-  table(
-    columns: (auto, 1fr, auto),
-    table.header[Mecanismo][Cómo se ensaya][Sección],
-    [Esquema compatible], [Los nodos de identificador impar agregan al mensaje un campo 6, que los demás no conocen y deben ignorar], [@sec-protobuf-compat],
-    [Esquema incompatible], [Los nodos impares intercambian los campos 2 y 3 al escribir y al leer. En la red equivale a compilar con esos números de campo cruzados. Como ambos son `float`, tienen el mismo tipo de codificación (@sec-protobuf), así que el mensaje se decodifica sin error, con datos equivocados], [@sec-stack],
-    [Desacoplamiento en el espacio], [Un nodo arranca con los demás, pero recién se conecta al broker 45 s después. Nadie más se reconfigura], [@sec-pubsub],
-    [Punto único de falla], [Se detiene el broker durante un intervalo y se vuelve a iniciar], [@sec-casos-sintesis],
-    [Keep-alive y última voluntad], [Se corta el enlace de un nodo durante menos y durante más de una vez y media el keep-alive, con y sin última voluntad], [@sec-convergencia],
-    [QoS], [Publicación y suscripción con QoS 0 y con QoS 1, en el que cada mensaje se confirma con un PUBACK, con 5 % de pérdida], [@sec-mqtt],
-    [Alias de tópico], [El nodo declara que acepta alias, enteros cortos que reemplazan al nombre del tópico dentro de una conexión, y el broker los usa en sus entregas, que son la mayor parte de los mensajes], [@sec-stack],
-    [Carga del broker], [Se repite la corrida con 5 y 10 nodos], [@sec-pubsub],
-  ),
-  caption: [Mecanismos del stack ensayados y cómo se varía cada uno.],
-) <tab-variantes-sincronizacion>
-
 #subtitulo[Punto de operación]
 
-Se usan 20 nodos, con frecuencias naturales repartidas a intervalos iguales, y no sorteadas, dentro de un 20 % hacia cada lado de $overline(f) = #"0,2"$ Hz, y $h = 500$ ms. Las frecuencias van de 1,005 a 1,508 rad/s, y para ellas el acoplamiento crítico exacto de la @ec-kc-finito vale $K_c = #"0,335"$ rad/s. Al ser un conjunto fijo, $K_c$ se calcula de forma exacta y cada corrida usa las mismas frecuencias. Los valores de $K$ se expresan como múltiplos de ese $K_c$, el umbral sin retardo, también en las corridas en las que el umbral real es otro. Con el mayor de los usados, $K = #"0,67"$ rad/s, resulta $K T_s = #"0,0067"$, muy por debajo del límite $K T_s < 2$ que exige la integración de Euler.
+Se usan 20 nodos, con frecuencias naturales repartidas a intervalos iguales, y no sorteadas, dentro de un 20 % hacia cada lado de $overline(f) = #"0,2"$ Hz, y $h = 500$ ms. Las frecuencias van de 1,005 a 1,508 rad/s, y para ellas el acoplamiento crítico exacto de la @ec-kc-finito vale $K_c = #"0,335"$ rad/s. Al ser un conjunto fijo, $K_c$ se calcula de forma exacta y cada corrida usa las mismas frecuencias. Los valores de $K$ se expresan como múltiplos de ese $K_c$, el umbral sin retardo, también en las corridas en las que el umbral real es otro.
 
 La elección responde a la capacidad de la computadora anfitriona y al modelo. Las 760 entregas por segundo son la mitad de las 1560 que la plataforma sostuvo de forma estable con 40 nodos publicando cada 1 s. Del lado del modelo, lo que importa es el producto de la frecuencia por la antigüedad. Con una antigüedad media cercana a $h\/2 = 250$ ms y la frecuencia media de las frecuencias naturales, resulta $Omega tau approx #"0,31"$ rad (#"0,29" rad con la frecuencia común que se mide después), lejos de $Omega tau = pi\/2$, el valor en el que deja de cumplirse la condición de estabilidad $cos(Omega tau) > 0$ asociada a la @ec-retardo-omega. Es el mismo valor que con 0,1 Hz y 1 s, pero con todos los transitorios, es decir, el tiempo que tarda el grupo en llegar al régimen, reducidos a la mitad.
 
@@ -864,42 +820,23 @@ Salvo en el barrido de $K$, donde interesa observar cómo se sincroniza el grupo
 
 Un programa en Python lee una matriz de corridas en JSON. Para cada corrida calcula las frecuencias y el acoplamiento, escribe la configuración en una copia de la imagen _flash_ por nodo, levanta el broker, el servidor SNTP y el registrador, lanza las instancias de QEMU y espera a que todos los nodos terminen. El instante de inicio es una hora común, que cada nodo conoce por SNTP. Las acciones programadas, como detener el broker o cortar un enlace, se ejecutan a su instante y quedan registradas con su hora.
 
-El corte de un enlace se hace con `tc netem`, una función del kernel de Linux que emula condiciones de red como retardo y pérdida @tc-netem, configurada con una pérdida del 100 %. Como `netem` actúa sobre los paquetes que salen de una interfaz, para afectar también a los que envía el nodo se los redirige con la acción `mirred` a una interfaz auxiliar `ifb`, que tiene el mismo `netem` en su salida @tc-mirred. Las condiciones de red se aplican recién cuando todos los nodos terminaron de arrancar, para que la primera sincronización del reloj no se vea afectada.
+La pérdida y el corte de un enlace se aplican con `tc netem`, una función del kernel de Linux que emula condiciones de red como retardo y pérdida @tc-netem, en los dos sentidos de cada nodo. Un corte es una pérdida del 100 %. Las condiciones de red se aplican recién cuando todos los nodos terminaron de arrancar, para que la primera sincronización del reloj no se vea afectada.
 
 #subtitulo[Medición]
 
-La fase de cada nodo se escribe por su puerto serie (UART), una salida de texto que QEMU guarda en un archivo por nodo, cada 500 ms y desde la tarea de integración. El registrador no alcanza para esto, porque recibe las fases a través del broker y no ve nada cuando este se detiene o cuando un enlace está cortado, que son justamente los momentos de interés. Además, el puerto serie muestra la fase real aunque el nodo esté publicando con un esquema distinto. De esas muestras se reconstruye la fase continua de cada nodo, usando la velocidad para resolver las vueltas completas, y se interpola a una grilla común para calcular $r(t)$ y $psi(t)$. La @tab-metricas-sincronizacion resume las métricas.
+La fase de cada nodo se escribe por su puerto serie (UART), una salida de texto que QEMU guarda en un archivo por nodo, cada 500 ms y desde la tarea de integración. El registrador no alcanza para esto, porque recibe las fases a través del broker y no ve nada cuando este se detiene o cuando un enlace está cortado, que son justamente los momentos de interés. Además, el puerto serie muestra la fase real aunque el nodo esté publicando con un esquema distinto. De esas muestras se reconstruye la fase continua de cada nodo, usando la velocidad para resolver las vueltas completas, y se interpola a una grilla común para calcular $r(t)$ y $psi(t)$. El $r$ en régimen es la media de $r(t)$ en el último 20 % de la corrida, y la frecuencia efectiva de cada nodo es la pendiente de su fase en esa ventana. Se considera que el grupo engancha si la mayor y la menor frecuencia efectiva difieren en menos de 0,01 rad/s. Los bytes, la anatomía del PUBLISH, la antigüedad de cada entrega y las retransmisiones se obtienen de las capturas en el puente, y los tiempos de detección, reconexión y última voluntad, de los registros de los nodos y del registrador.
 
-#figure(
-  table(
-    columns: (auto, 1fr),
-    table.header[Métrica][Cómo se calcula],
-    [$r$ en régimen], [Media de $r(t)$ en el último 20 % de la corrida],
-    [Frecuencia efectiva y $Omega$], [Pendiente de la fase de cada nodo en esa ventana, que es su velocidad media, y la media de esas pendientes],
-    [Enganche], [Diferencia entre la mayor y la menor frecuencia efectiva menor que 0,01 rad/s],
-    [Efecto de un evento], [$r$ antes del evento, $r$ mínimo y tiempo hasta recuperar el 95 % del valor previo],
-    [Detección y reconexión], [Tiempo entre el corte y el aviso de desconexión del nodo, y entre el fin del corte y la nueva conexión],
-    [Última voluntad], [Tiempo entre el corte y la llegada del mensaje al registrador],
-    [Bytes por sentido], [Bytes de las tramas capturadas en el puente, hacia el broker y desde él],
-    [Anatomía del PUBLISH], [Encabezado, tópico y carga útil, a partir del paquete capturado],
-    [Fases recibidas por nodo], [Contador del propio nodo, sobre las publicaciones esperadas de los demás],
-    [Antigüedad de una entrega], [Instante en que el broker envía la fase a la red, en la captura, menos el instante en que se calculó],
-    [Retransmisiones], [Segmentos TCP retransmitidos en la captura],
-  ),
-  caption: [Métricas del experimento.],
-) <tab-metricas-sincronizacion>
-
-Como `netem` actúa sobre la salida de la interfaz hacia el nodo y sobre la interfaz auxiliar que recibe lo que envía el nodo, la captura en el puente ve la bajada antes de que se apliquen las pérdidas y la subida después. Por eso, un segmento que se pierde en la subida no aparece en la captura, y las retransmisiones que se reportan corresponden a la bajada.
+La captura en el puente ve la bajada antes de que se apliquen las pérdidas y la subida después. Por eso, un segmento que se pierde en la subida no aparece en la captura, y las retransmisiones que se reportan corresponden a la bajada.
 
 #subtitulo[Simulación del modelo]
 
-Además de la emulación se usó una simulación en Python, sin red real, que integra la @ec-nodo-discreta con un paso de 10 ms. Muestra qué hace el modelo de los nodos cuando la única imperfección de la comunicación es la que se le programa. Cada nodo publica su fase cada $h$, con un desfase propio sorteado dentro de $h$, y cada copia llega a cada receptor con un retardo. El receptor conserva la última fase recibida de cada nodo, y mientras no reciba ninguna, ese término no aporta a la sumatoria. El criterio de enganche es el de la @tab-metricas-sincronizacion.
+Además de la emulación se usó una simulación en Python, sin red real, que integra la @ec-nodo-discreta con un paso de 10 ms. Muestra qué hace el modelo de los nodos cuando la única imperfección de la comunicación es la que se le programa. Cada nodo publica su fase cada $h$, con un desfase propio sorteado dentro de $h$, y cada copia llega a cada receptor con un retardo. El receptor conserva la última fase recibida de cada nodo, y mientras no reciba ninguna, ese término no aporta a la sumatoria. El criterio de enganche es el mismo que en la emulación.
 
 La simulación de referencia usa las frecuencias del experimento, $h = 500$ ms y 150 s de duración. Repite cada valor de $K$ con 5 conjuntos de fases iniciales al azar y calcula $r$ y las frecuencias efectivas en los últimos 30 s. El retardo de cada copia se sortea entre 13 y 17 ms, a partir de lo medido en la plataforma común con 39 nodos, y se redondea hacia arriba al paso siguiente de la simulación, por lo que resulta de 20 ms. Los análisis puntuales del umbral usan, en cambio, un retardo fijo de un paso (10 ms) y arrancan del estado enganchado teórico.
 
 #subtitulo[Diseño de las corridas]
 
-Cada variante se comparó contra la teoría o contra una corrida de referencia (@tab-corridas-sincronizacion). Cada condición se corrió una vez, salvo QoS con pérdida, que se corrió con tres semillas. Las corridas de umbral, de período, de QoS sin pérdida, las repeticiones de QoS y el corte con captura se agregaron después de analizar la primera tanda, para aislar efectos que esta no permitía separar. Las emulaciones aportan una realización por condición, y la dispersión entre condiciones iniciales se estima con la simulación del modelo: con 5 fases iniciales distintas, $r$ varía entre #"0,863" y #"0,871" a #"1,2" $K_c$, y menos de #"0,0001" a #"1,5" y $2 K_c$.
+Cada mecanismo del stack se activa desde la configuración del nodo, sin recompilar, y cada variante se comparó contra la teoría o contra una corrida de referencia (@tab-corridas-sincronizacion). Cada condición se corrió una vez, salvo QoS con pérdida, que se corrió con tres semillas. Las corridas de umbral, de período, de QoS sin pérdida, las repeticiones de QoS y el corte con captura se agregaron después de analizar la primera tanda, para aislar efectos que esta no permitía separar. Las emulaciones aportan una realización por condición, y la dispersión entre condiciones iniciales se estima con la simulación del modelo: con 5 fases iniciales distintas, $r$ varía entre #"0,863" y #"0,871" a #"1,2" $K_c$, y menos de #"0,0001" a #"1,5" y $2 K_c$.
 
 #figure(
   table(
@@ -907,13 +844,13 @@ Cada variante se comparó contra la teoría o contra una corrida de referencia (
     table.header[Corrida][Condición][Duración],
     [Calibración], [$K = #"1,5" K_c$, sin eventos, con captura], [60 s],
     [Modelo], [$K = #"0,8"$; $#"1,2"$; $#"1,5"$ y $2 K_c$, con fases iniciales al azar], [150 s],
-    [Iguales], [Frecuencias iguales, $K = #"0,4"$ rad/s, mitad de los nodos con el campo adicional], [90 s],
-    [Esquema cruzado], [Mitad de los nodos con los campos intercambiados], [120 s],
-    [Broker], [Caídas de 5 s y de 20 s], [240 s],
-    [Unión], [Un nodo se conecta a los 45 s], [90 s],
-    [Keep-alive], [Cortes de 2 s y 15 s de un nodo, con y sin última voluntad (dos corridas)], [150 s],
+    [Iguales], [Frecuencias iguales, $K = #"0,4"$ rad/s. Los nodos impares agregan al mensaje un campo 6, que los demás no conocen y deben ignorar (@sec-protobuf-compat)], [90 s],
+    [Esquema cruzado], [Los nodos impares intercambian los campos 2 y 3 al escribir y al leer. Como ambos son `float`, el mensaje se decodifica sin error, con datos equivocados (@sec-stack)], [120 s],
+    [Broker], [Se detiene el broker durante 5 s y durante 20 s (@sec-casos-sintesis)], [240 s],
+    [Unión], [Un nodo arranca con los demás, pero se conecta al broker a los 45 s, sin que nadie más se reconfigure (@sec-pubsub)], [90 s],
+    [Keep-alive], [Cortes de 2 s y 15 s del enlace de un nodo, con y sin última voluntad (dos corridas) (@sec-convergencia)], [150 s],
     [QoS], [QoS 0 y QoS 1, con 5 % de pérdida por sentido (dos corridas)], [90 s],
-    [Alias], [Alias de tópico activos, con captura], [30 s],
+    [Alias], [El broker usa alias de tópico en sus entregas (@sec-stack), con captura], [30 s],
     [Escala], [$N = 5$ y $N = 10$, con captura. Como cada $N$ tiene su propio $K_c$, $K$ vale #"0,572" y #"0,525" rad/s], [45 s],
     [Umbral], [$K = #"1,05"$; $#"1,1"$; $#"1,15"$ y $#"1,25" K_c$, desde el estado enganchado], [200 s],
     [Período], [$h = 250$ ms, con $K = #"1,1"$ y $#"1,5" K_c$, desde el estado enganchado], [200 s],
@@ -926,22 +863,7 @@ Cada variante se comparó contra la teoría o contra una corrida de referencia (
 
 #subtitulo[Entorno y validez]
 
-La @tab-entorno-sincronizacion resume el entorno en el que se corrió el experimento.
-
-#figure(
-  table(
-    columns: (auto, 1fr),
-    table.header[Componente][Versión],
-    [Computadora anfitriona], [AMD Ryzen 5 5600G (6 núcleos, 12 hilos), 13 GB de RAM, Linux],
-    [Emulador], [QEMU de Espressif 9.2.2],
-    [Firmware], [ESP-IDF 5.5.6 (lwIP, esp-mqtt) y nanopb 0.4.9.1],
-    [Broker], [Mosquitto 2.1.2],
-    [Análisis], [Python, NumPy, SciPy y Matplotlib],
-  ),
-  caption: [Entorno del experimento.],
-) <tab-entorno-sincronizacion>
-
-Los tiempos internos de un ESP32 emulado no son los de una placa real, y la computadora anfitriona ejecuta todos los nodos a la vez. Por eso cada corrida registra si la tarea de integración se atrasó y a qué intervalo se producen las muestras de fase, y se controla la carga de la computadora. Cada nodo resincroniza su reloj por SNTP cada 15 s. Como en el experimento anterior, el cliente SNTP de lwIP no descuenta el tiempo de viaje, de modo que la hora de cada nodo queda atrasada en el tiempo que tarda en llegar la respuesta. Ese error no afecta a la dinámica, que usa solo las fases y las diferencias de tiempo del propio nodo, y su efecto en las curvas de $r(t)$ es despreciable frente a los períodos de oscilación.
+El experimento se corrió en una computadora con un AMD Ryzen 5 5600G y 13 GB de RAM, con QEMU de Espressif 9.2.2, ESP-IDF 5.5.6, nanopb 0.4.9.1 y Mosquitto 2.1.2. Los tiempos internos de un ESP32 emulado no son los de una placa real, y la computadora anfitriona ejecuta todos los nodos a la vez. Por eso cada corrida registra si la tarea de integración se atrasó y a qué intervalo se producen las muestras de fase, y se controla la carga de la computadora. Cada nodo resincroniza su reloj por SNTP cada 15 s. Como en el experimento anterior, el cliente SNTP de lwIP no descuenta el tiempo de viaje, de modo que la hora de cada nodo queda atrasada en el tiempo que tarda en llegar la respuesta. Ese error no afecta a la dinámica, que usa solo las fases y las diferencias de tiempo del propio nodo, y su efecto en las curvas de $r(t)$ es despreciable frente a los períodos de oscilación.
 
 ==== Resultados
 
