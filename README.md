@@ -13,9 +13,10 @@
 | [TP5 — Práctico](tps/practico/TP5/InformeTP5.md)        | [RC - TP N5.pdf](<tps/practico/TP5/RC - TP N5.pdf>)          |
 | [TP6 — Práctico](tps/practico/TP6/main.pdf)             | [RC - TP N6.pdf](<tps/practico/TP6/Consigna/RC - TP N6.pdf>) |
 | [TP7 — Práctico](tps/practico/TP7/InformeTP7.md)        | [RC - TP N7.pdf](<tps/practico/TP7/RC - TP N7.pdf>)          |
-| [Tarea 2 — Teórico](tps/tp-teorico/tarea2/tarea2.pdf)   | [Tarea02.pdf](tps/tp-teorico/tarea2/Tarea02.pdf)             |
-| [Tarea 3 — Teórico](tps/tp-teorico/tarea3/main.pdf)     | —                                                            |
-| [Tarea 4 — Teórico](tps/tp-teorico/tarea4/main.pdf)     | —                                                            |
+| [Tarea 2 — Teórico](tps/teorico/tarea2/tarea2.pdf)      | [Tarea02.pdf](tps/teorico/tarea2/Tarea02.pdf)                |
+| [Tarea 3 — Teórico](tps/teorico/tarea3/main.pdf)        | —                                                            |
+| [Tarea 4 — Teórico](tps/teorico/tarea4/main.pdf)        | —                                                            |
+| [Tarea 5 — Teórico](tps/teorico/tarea5/WireGuardians-T5.pdf) | [Consigna](<tps/teorico/tarea5/Redes2026-2doSem-Capa de Transporte-Actividades.docx.pdf>) |
 | [Monografía](<monografía/WireGuardians-MONOGRAFÍA.pdf>) | —                                                            |
 
 ### Esquema de archivos
@@ -23,7 +24,7 @@
 ```
 tps/
 ├── practico/TP{N}/       # un TP del práctico
-├── tp-teorico/tarea{N}/  # una tarea del teórico
+├── teorico/tarea{N}/     # una tarea del teórico
 └── template/             # plantilla Typst para informes
     ├── main.typ
     ├── bibliografia.bib
@@ -35,8 +36,8 @@ tps/
 Los informes se escriben en [Typst](https://typst.app/docs/) partiendo de `tps/template/`:
 
 ```
-cp -r tps/template tps/{practico|tp-teorico}/{tareaN|TPN}     # crea la carpeta del TP con la plantilla adentro
-cp -r tps/template/* tps/{practico|tp-teorico}/{tareaN|TPN}/  # si la carpeta ya existe
+cp -r tps/template tps/{practico|teorico}/{tareaN|TPN}     # crea la carpeta del TP con la plantilla adentro
+cp -r tps/template/* tps/{practico|teorico}/{tareaN|TPN}/  # si la carpeta ya existe
 ```
 
 y se completan `trabajo`, `titulo` y `resumen` al principio de `main.typ` (los pasos están comentados arriba de todo en el archivo).
@@ -83,7 +84,7 @@ Este repositorio guarda el material de estudio de la materia: trabajos práctico
 | Tipo de contenido               | Carpeta destino                                            |
 | ------------------------------- | ---------------------------------------------------------- |
 | TP del práctico                 | `tps/practico/TPN/`                                        |
-| TP del teórico                  | `tps/tp-teorico/tareaN/`                                   |
+| TP del teórico                  | `tps/teorico/tareaN/`                                      |
 | Apuntes de clase                | `Material/clases/teorico/claseN/` o `.../practico/claseN/` |
 | Bibliografía (libros, programa) | `Material/Bibliografia/`                                   |
 

@@ -2,7 +2,7 @@
 
 == Modelo de Comunicaciones
 
-#image("/assets/image.png")
+#image("../assets/image.png")
 
 Elementos de un modelo de comunicaciones: 
 
@@ -14,7 +14,7 @@ Elementos de un modelo de comunicaciones:
 
 == Comunicaciones de Datos
 
-#image("/assets/image-1.png")
+#image("../assets/image-1.png")
 
 El modelo de comunicaciones de datos consiste en: 
 + La fuente genera los datos a transmitir y los guarda temporalmente en memoria como una secuencia de bits.
