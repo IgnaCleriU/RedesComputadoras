@@ -73,7 +73,7 @@ se paga una vez y se reparte entre todas las lecturas. HTTPS puede lograr lo mis
 @kurose2017, y con una conexión reutilizada el costo es comparable. Pero un dispositivo que duerme entre envíos, o un servidor que cierra las
 conexiones inactivas, paga el handshake completo en cada lectura. En el Experimento 1 con una conexión por lectura, TLS
 multiplicó por 3,1 los bytes por lectura y sumó 3,4 s de latencia, mientras que en las conexiones persistentes sumó entre 46 y 97 B y menos de 0,6 ms
-(@tab-tls). Por eso la conexión persistente y el keep-alive de la @sec-keepalive son lo que hace barato el cifrado.
+(@sec-exp-mqtt-https). Por eso la conexión persistente y el keep-alive de la @sec-keepalive son lo que hace barato el cifrado.
 
 Por último, TLS protege el tramo entre el cliente y el broker, no el recorrido completo del mensaje. Como el broker termina la conexión TLS, ve el
 contenido en claro, y un mensaje que va de un publicador a un suscriptor atraviesa dos conexiones TLS independientes, una por tramo. Proteger el
