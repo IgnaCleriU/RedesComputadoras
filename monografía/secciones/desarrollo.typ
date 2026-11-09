@@ -15,7 +15,7 @@
 
 Como se planteó en el marco teórico (@sec-mqtt), el cliente MQTT abre una única conexión TCP hacia el broker y la mantiene abierta mientras dura la
 sesión. A diferencia de HTTP, en el que cada solicitud puede abrir una conexión nueva o reutilizar una abierta hasta que el servidor la cierra por
-inactividad @kurose2017, en MQTT la conexión forma parte del protocolo: su cierre anormal se interpreta como la caída del cliente y el broker publica
+inactividad @kurose2017, en MQTT el cierre anormal se interpreta como la caída del cliente y el broker publica
 su mensaje de última voluntad. Esto plantea el problema de saber si el otro extremo sigue ahí. Un dispositivo que se apaga o sale del alcance de la
 red no envía ningún segmento de cierre, y lo mismo ocurre cuando un NAT descarta la entrada de una conexión inactiva, situación que se analiza más
 adelante, en la @sec-nat-firewalls. Un extremo que solo recibe, como un suscriptor, no se entera nunca, porque TCP no verifica de forma continua que
@@ -25,20 +25,20 @@ dos horas @rfc1122.
 MQTT lo resuelve con un keep-alive propio. En el paquete CONNECT, el cliente declara un intervalo _K_ en segundos, y el valor 0 desactiva el mecanismo.
 Mientras no sea cero, el cliente debe enviar algún paquete de control dentro de cada intervalo y, si no tiene nada que publicar, envía un PINGREQ, que
 el broker contesta con un PINGRESP. Si el broker no recibe ningún paquete del cliente durante 1,5~_K_, debe cerrar la conexión como si la red hubiera
-fallado @mqtt50. El tiempo que tarda en detectar una caída depende de cuándo ocurre: si la falla sucede justo después de un paquete, el broker la
-detecta 1,5~_K_ más tarde, y si sucede justo antes del siguiente envío, 0,5~_K_ más tarde. Con el intervalo de 60 s del Experimento 1, que se describe
-en el diseño experimental (@sec-exp-mqtt-https), la detección demora entre 30 y 90 s. Hasta entonces el broker no publica la última voluntad y, en
-Sparkplug, la aplicación de supervisión sigue considerando vigentes los datos de un nodo caído, porque su certificado de muerte es justamente ese
+fallado @mqtt50. El tiempo que tarda en detectar una caída depende de cuándo ocurre, por ejemplo, si la falla sucede justo después de un paquete, el
+broker la detecta 1,5~_K_ más tarde, y si sucede justo antes del siguiente envío, 0,5~_K_ más tarde. Con el intervalo de 60 s del Experimento 1, que se
+describe en el diseño experimental (@sec-exp-mqtt-https), la detección demora entre 30 y 90 s. Hasta entonces el broker no publica la última voluntad
+y, en Sparkplug, la aplicación de supervisión sigue considerando vigentes los datos de un nodo caído, porque su certificado de muerte es justamente ese
 mensaje.
 
 Elegir _K_ implica un compromiso, que resume la @tab-keepalive. Un intervalo corto detecta antes la caída y mantiene viva la entrada del NAT, pero
-tiene dos costos. El primero es el tráfico: en una conexión inactiva con TLS, cada intercambio de PINGREQ y PINGRESP ocupa unos 182 B, y con
+tiene dos costos. El primero es el tráfico, ya que en una conexión inactiva con TLS, cada intercambio de PINGREQ y PINGRESP ocupa unos 182 B, y con
 10 s esto supera al volumen mensual de las lecturas que un nodo envía cada 10 s, de unos 36 MB, según el mapeo tecnológico (@sec-mapeo-tecnologico).
-El segundo son las desconexiones innecesarias: el umbral de 1,5~_K_ es el corte del camino que el stack soporta sin perder la conexión, y con _K_ de
-10 s es de 15 s, menor que los 40 s que OSPF tarda en detectar una falla por ausencia de Hellos @rfc2328. Ese corte cerraría la conexión y obligaría
-al dispositivo a repetir los handshakes de TCP y de TLS (@sec-tls). En la práctica se usan intervalos de decenas de segundos: 30 s en el Gateway
-Bridge de ChirpStack @chirpstack-gwbridge-config, menos de un minuto recomendado por Digitransit @digitransit-mqtt y 60 s en el Experimento 1. Un
-valor de entre 30 y 60 s detecta una caída en menos de un minuto y medio y absorbe los cortes breves del ruteo.
+El segundo son las desconexiones innecesarias, ya que el umbral de 1,5~_K_ es el corte del camino que el stack soporta sin perder la conexión, y con
+_K_ de 10 s es de 15 s, menor que los 40 s que OSPF tarda en detectar una falla por ausencia de Hellos @rfc2328. Ese corte cerraría la conexión y
+obligaría al dispositivo a repetir los handshakes de TCP y de TLS (@sec-tls). En la práctica se usan intervalos de decenas de segundos, por ejemplo, 30
+s en el  Gateway Bridge de ChirpStack @chirpstack-gwbridge-config, menos de un minuto recomendado por Digitransit @digitransit-mqtt y 60 s en el
+Experimento 1. Un valor de entre 30 y 60 s detecta una caída en menos de un minuto y medio y absorbe los cortes breves del ruteo.
 
 #figure(
   table(
@@ -55,26 +55,25 @@ valor de entre 30 y 60 s detecta una caída en menos de un minuto y medio y abso
 
 === Cifrado con TLS <sec-tls>
 
-MQTT no define un mecanismo de cifrado propio y delega la protección de los datos en el transporte: sobre TCP se utiliza TLS, en el puerto 8883
+MQTT no define un mecanismo de cifrado propio y delega la protección de los datos en el transporte. Sobre TCP se utiliza TLS, en el puerto 8883
 registrado para ese fin @mqtt50. TLS ofrece confidencialidad, integridad de cada mensaje y autenticación del servidor mediante un certificado
 @kurose2017 @stallings2004, y se apoya en TCP para obtener un servicio fiable extremo a extremo @stallings2004, la misma exigencia que MQTT plantea al
-transporte @mqtt50. Se ubica entre TCP y MQTT: primero se establece la conexión TCP, luego se realiza el handshake de TLS y recién después el cliente
-envía el CONNECT, que ya viaja cifrado, de modo que el usuario y la contraseña quedan protegidos.
+transporte @mqtt50. TLS se ubica entre TCP y MQTT, primero se establece la conexión TCP, luego se realiza el handshake de TLS y recién después el
+cliente envía el CONNECT, que ya viaja cifrado, de modo que el usuario y la contraseña quedan protegidos.
 
 El costo del cifrado tiene dos partes. La primera es el handshake, que se realiza una sola vez al conectar. En TLS 1.2, la versión empleada en el
 Experimento 1, requiere dos idas y vueltas @rfc5246 @stallings2004, de modo que, sumado al handshake de TCP, el cliente envía el CONNECT recién
 después de unos tres RTT. Con 200 ms de RTT agregados, el tiempo de conexión aumentó entre 340 y 570 ms (@sec-exp-mqtt-https). TLS 1.3 reduce el
-handshake completo a una sola ida y vuelta @rfc8446. La segunda parte es el recargo de cada mensaje: con TLS 1.2 y AES-GCM, cada registro agrega 29 B
+handshake completo a una sola ida y vuelta @rfc8446. La segunda parte es el recargo de cada mensaje, con TLS 1.2 y AES-GCM, cada registro agrega 29 B
 (5 de cabecera, 8 de _nonce_ explícito y 16 de etiqueta de autenticación), lo que explica casi todo el aumento de 46,5 B por lectura de MQTT QoS 0,
 cuya latencia crece menos de 0,6 ms.
 
 Lo que determina cuánto pesa el handshake es cuántos mensajes se envían por cada conexión. En MQTT la conexión es persistente, por lo que el handshake
-se paga una vez y se reparte entre todas las lecturas. HTTPS puede lograr lo mismo: HTTP/1.1 mantiene las conexiones abiertas por defecto @kurose2017,
-y con una conexión reutilizada el costo es comparable. Pero un dispositivo que duerme entre envíos, o un servidor que cierra las conexiones inactivas,
-paga el handshake completo en cada lectura. En el Experimento 1 esa fue la mayor diferencia: con una conexión por lectura, TLS multiplicó por 3,1 los
-bytes por lectura y sumó 3,4 s de latencia, mientras que en las conexiones persistentes sumó entre 46 y 97 B y menos de 0,6 ms (@tab-tls). Por eso la
-conexión persistente y el keep-alive de la @sec-keepalive son lo que hace barato el cifrado: cada reconexión, por ejemplo después de un corte mayor
-que 1,5~_K_, repite el handshake completo, con un costo de unos 3 KB por conexión.
+se paga una vez y se reparte entre todas las lecturas. HTTPS puede lograr lo mismo, por ejemplo: HTTP/1.1 mantiene las conexiones abiertas por defecto
+@kurose2017, y con una conexión reutilizada el costo es comparable. Pero un dispositivo que duerme entre envíos, o un servidor que cierra las
+conexiones inactivas, paga el handshake completo en cada lectura. En el Experimento 1 con una conexión por lectura, TLS
+multiplicó por 3,1 los bytes por lectura y sumó 3,4 s de latencia, mientras que en las conexiones persistentes sumó entre 46 y 97 B y menos de 0,6 ms
+(@tab-tls). Por eso la conexión persistente y el keep-alive de la @sec-keepalive son lo que hace barato el cifrado.
 
 Por último, TLS protege el tramo entre el cliente y el broker, no el recorrido completo del mensaje. Como el broker termina la conexión TLS, ve el
 contenido en claro, y un mensaje que va de un publicador a un suscriptor atraviesa dos conexiones TLS independientes, una por tramo. Proteger el
@@ -85,7 +84,7 @@ contenido frente al propio broker exige cifrar la carga útil en la aplicación,
 Los niveles de calidad de servicio de MQTT, presentados en el marco teórico (@sec-mqtt), plantean una pregunta, ya que el protocolo opera sobre TCP,
 que entrega los datos de forma fiable y ordenada. TCP construye sobre el servicio no confiable de IP un flujo de bytes sin errores, huecos ni
 duplicados que llega en el orden en que se envió @kurose2017, mediante números de secuencia, confirmaciones y retransmisiones. Por eso un mensaje de
-QoS 0 sobre TCP no equivale a un datagrama que puede perderse en el camino: el Experimento 1 entregó el 100 % de las lecturas con 5 % de pérdida,
+QoS 0 sobre TCP no equivale a un datagrama que puede perderse en el camino, en el Experimento 1 entregó el 100 % de las lecturas con 5 % de pérdida,
 también con QoS 0, y lo que se degradó fue la latencia, con un percentil 99 de unos 3 s por el temporizador de retransmisión y el bloqueo de cabeza de
 línea (@tab-perdida). La confiabilidad de TCP y la de MQTT se refieren, entonces, a cosas distintas, y los niveles de QoS cubren lo que TCP no
 garantiza, que son tres cosas.
@@ -94,12 +93,12 @@ garantiza, que son tres cosas.
 + *Que la aplicación lo recibió.* El ACK de TCP lo genera la pila del receptor cuando coloca los datos en el buffer de recepción, y el programa los lee después @kurose2017. Si el programa falla o la conexión se aborta entre ambos momentos, el emisor da por entregado un dato que no lo está.
 + *Que sobreviva a la conexión.* La confiabilidad de TCP existe mientras la conexión existe. Después de un corte mayor que 1,5~_K_, un reset del broker o un cambio de NAT, el emisor no sabe cuáles de los datos que envió llegaron.
 
-QoS 0 no agrega nada a TCP: el emisor envía el PUBLISH y no vuelve a ocuparse de él @mqtt50. QoS 1 agrega una confirmación de la aplicación: el emisor
+QoS 0 no agrega nada a TCP @mqtt50, sin embargo QoS 1 agrega una confirmación de la aplicación, esta es que el emisor
 conserva el mensaje hasta recibir el PUBACK, de modo que sabe que el broker lo aceptó y no solo que su pila TCP lo recibió, y si la conexión se rompe
 lo reenvía al retomar la sesión @mqtt50. Su garantía es de al menos una vez, porque si el corte ocurre después de que el receptor procesó el mensaje y
 antes del PUBACK, el receptor lo recibe dos veces. QoS 2 agrega un intercambio de cuatro paquetes con el que el receptor evita entregar el mensaje dos
-veces, a costa de dos idas y vueltas por mensaje. La @tab-garantias-qos resume qué cubre cada nivel. Ninguno resuelve la primera carencia: cada tramo
-se confirma por separado, y el publicador no sabe si el mensaje llegó a los suscriptores.
+veces, a costa de dos idas y vueltas por mensaje. La @tab-garantias-qos resume qué cubre cada nivel. Ninguno resuelve la primera carencia (cada tramo
+se confirma por separado, y el publicador no sabe si el mensaje llegó a los suscriptores).
 
 #figure(
   table(
@@ -118,7 +117,7 @@ se confirma por separado, y el publicador no sabe si el mensaje llegó a los sus
   caption: [Qué garantiza TCP y qué agrega cada nivel de QoS en cada tramo del recorrido de un mensaje @mqtt50.],
 ) <tab-garantias-qos>
 
-Los reenvíos de QoS 1 y 2 solo funcionan si el estado sobrevive a la conexión: ocurren cuando el cliente se reconecta con Clean Start en 0 y el broker
+Los reenvíos de QoS 1 y 2 solo funcionan si el estado sobrevive a la conexión, estos ocurren cuando el cliente se reconecta con Clean Start en 0 y el broker
 conservó la sesión, que vence según el Session Expiry Interval @mqtt50. Si la sesión es nueva o expiró, después de un corte QoS 1 y 2 no aportan nada
 frente a QoS 0. Además, dentro de una conexión viva los reintentos de la aplicación se superponen con los de TCP. En el Experimento 1, con pérdida de
 paquetes pero sin cortes, QoS 1 no mejoró la entrega y generó duplicados, 9 por corrida con 1 % de pérdida y 52 con 5 %, porque el cliente reenvía el
