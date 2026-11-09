@@ -23,7 +23,6 @@ Las secciones anteriores analizaron el stack de forma cualitativa. Esta sección
 === Plataforma común <sec-plataforma-comun>
 
 // Placas ESP32 emuladas con QEMU, broker Mosquitto y backend; restricciones de la emulación.
-// TODO(mapeo tecnológico) El hardware real que reemplazaría a lo emulado se releva en @sec-mapeo-tecnologico; referenciarla acá.
 // TODO(revisión PR #322) Explicar las herramientas que el Experimento 1 menciona sin definir:
 // QEMU de Espressif, ESP-IDF, lwIP, mbedTLS, esp-mqtt, esp_http_client, nanopb,
 // interfaces TAP, puente de Linux, tc netem, dumpcap y TShark. Citar la documentación
@@ -33,7 +32,7 @@ Los dos experimentos corren sobre el mismo entorno, montado en una sola computad
 
 QEMU es un programa que permite ejecutar en una computadora el mismo código que correría en la placa, y se usa la versión que mantiene Espressif, el fabricante del ESP32, que emula su procesador, su memoria y varios periféricos @espressif-qemu. El programa de cada nodo, o _firmware_, está escrito en C con ESP-IDF, el entorno de desarrollo de Espressif @esp-idf. Como el ESP32 emulado no tiene Wi-Fi, QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz TAP propia, una interfaz de red virtual de Linux que intercambia las tramas Ethernet con un programa, en este caso QEMU, en lugar de enviarlas por un medio físico @linux-tuntap. Todas se unen en un puente de Linux, que funciona como un conmutador por _software_ @linux-bridge y las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
 
-La emulación impone algunas restricciones. Los tiempos de ejecución no son los de una placa real, porque dependen de la carga de la computadora anfitriona. Cuando llega una difusión, todas las instancias compiten por la CPU, y el retardo de entrega crece alrededor de 0,3 ms por cada nodo agregado. Además, cada instancia ocupa unos 170 MB de memoria, lo que limita la cantidad de nodos que se pueden emular.
+La emulación impone algunas restricciones. Los tiempos de ejecución no son los de una placa real, porque dependen de la carga de la computadora anfitriona. Cuando llega una difusión, todas las instancias compiten por la CPU, y el retardo de entrega crece alrededor de 0,3 ms por cada nodo agregado. Además, cada instancia ocupa unos 170 MB de memoria, lo que limita la cantidad de nodos que se pueden emular. El hardware real que reemplazaría a lo emulado, y su costo, se releva en la @sec-mapeo-tecnologico.
 
 === Experimento 1: MQTT contra HTTPS para telemetría <sec-exp-mqtt-https>
 

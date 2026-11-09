@@ -179,10 +179,6 @@ Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En p
 == Stack MQTT y Protocol Buffers <sec-stack>
 
 // Cómo se combinan: Protobuf como payload de los mensajes MQTT, el esquema compartido entre clientes.
-// TODO(prometido en Marco teórico, @sec-mqtt) Retomar las propiedades Payload Format Indicator y Content Type de MQTT 5 como forma de declarar que el payload es un mensaje Protobuf (y de qué tipo).
-// TODO(casos de uso) Sparkplug B, InOrbit y OpenRobOps se desarrollan en @sec-casos-de-uso. Acá solo presentarlos y referenciar, sin duplicar.
-// TODO(casos de uso) Al tratar Content Type, se puede mencionar que InOrbit y OpenRobOps (MQTT 3.1.1) deducen el
-// tipo de mensaje del tópico, que es lo que esa propiedad evitaría.
 // TODO(casos de uso) Mencionar que los brokers soportan Protobuf como payload (decode() en reglas de AWS IoT Core, Schema Registry de EMQX,
 // Data Hub de HiveMQ). Fuente: https://docs.aws.amazon.com/iot/latest/developerguide/binary-payloads.html.
 

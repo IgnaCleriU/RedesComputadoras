@@ -20,9 +20,6 @@
 //
 // Justificar las elecciones con los tres factores que acotan un proyecto (calidad técnica, plazo y presupuesto). La idea es
 // proponer una solución viable, no necesariamente la de máxima calidad técnica.
-//
-// TODO(mapeo tecnológico) Definir la escala del escenario (cantidad de nodos y frecuencia de publicación, idealmente las del
-// experimento 1).
 
 Los experimentos se realizaron sobre placas emuladas, una red simulada y un broker corriendo en la misma computadora que el emulador. Llevar el sistema a un despliegue real requiere reemplazar cada una de esas piezas por un equipo o un servicio que se pueda comprar o contratar. A continuación se analizan los costos que este paso implica para el escenario del Experimento 1 (@sec-exp-mqtt-https), con ocho nodos que envían una lectura cada 10 s, la misma frecuencia que se usó para proyectar el tráfico en la @tab-proyeccion. El criterio no es buscar la alternativa de mayor prestación, sino una solución viable que equilibre la calidad técnica, el plazo de implementación y el presupuesto. Los precios, a fin de generalizar, se expresan en dólares estadounidenses, son aproximados y corresponden a noviembre de 2026, sin impuestos ni costos de importación.
 
