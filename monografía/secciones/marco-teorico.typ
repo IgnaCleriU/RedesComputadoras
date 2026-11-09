@@ -229,10 +229,7 @@ Además de esta convención, la versión 5.0 de MQTT incorpora propiedades opcio
 
 El archivo `.proto` constituye así un contrato entre los participantes, ya que el formato de los datos se fija una única vez en un esquema distribuido entre los clientes. A partir de ese archivo se genera el código de cada participante, ya sea el firmware de un microcontrolador o un servicio en la nube @protobuf-overview. En el experimento de la @sec-exp-mqtt-https, por ejemplo, un mismo esquema genera el código de las placas ESP32 y el del backend que recibe sus datos.
 
-Ese contrato introduce un acoplamiento en el formato de los datos que el modelo publicador/suscriptor no elimina. Como publicadores y suscriptores no se conocen ni se actualizan al mismo tiempo, un cambio en un mensaje puede llegar a unos participantes antes que a otros. El desacoplamiento en el tiempo acentúa el problema, ya que un mensaje retenido, o almacenado en la sesión de un suscriptor desconectado, puede leerse mucho después de su publicación con una versión más nueva del esquema. Las reglas de compatibilidad descritas en la @sec-protobuf vuelven manejable esta situación, siempre que no se modifiquen ni se reutilicen los números de campo existentes @protobuf-proto3:
-
-- Un publicador puede agregar campos sin afectar a los suscriptores que usan el esquema anterior, que simplemente los ignoran.
-- Un suscriptor con el esquema nuevo puede leer los mensajes de los publicadores que no se actualizaron, ya que los campos ausentes toman su valor por defecto.
+Ese contrato introduce un acoplamiento en el formato de los datos que el modelo publicador/suscriptor no elimina. Como publicadores y suscriptores no se conocen ni se actualizan al mismo tiempo, un cambio en un mensaje puede llegar a unos participantes antes que a otros. El desacoplamiento en el tiempo acentúa el problema, ya que un mensaje retenido, o almacenado en la sesión de un suscriptor desconectado, puede leerse mucho después de su publicación con una versión más nueva del esquema. Las reglas de compatibilidad de la @sec-protobuf-compat vuelven manejable esta situación: un publicador puede agregar campos sin afectar a los suscriptores que usan el esquema anterior, y un suscriptor actualizado puede leer los mensajes de los publicadores que no se actualizaron, siempre que no se modifiquen ni se reutilicen los números de campo existentes.
 
 La combinación tiene, a su vez, costos propios que se suman a las limitaciones de cada pieza:
 
@@ -270,8 +267,6 @@ Cada pieza del stack cubre una parte de los requisitos planteados al comienzo de
   ),
   caption: [Requisitos de los sistemas estudiados y pieza del stack que cubre cada uno.],
 ) <tab-stack-requisitos>
-
-Algunas empresas y proyectos que emplean este stack o le dan soporte, analizados en la @sec-casos-de-uso, son InOrbit y OpenRobOps, en robótica @inorbit-edge-sdk @openrobops-repo; Meshtastic, en redes LoRa @meshtastic-mqtt; y Amazon Web Services, en la nube, con su servicio AWS IoT Core @aws-iot-protobuf.
 
 == Comparación con alternativas <sec-alternativas>
 Para intercambiar datos entre un dispositivo (ya sea un sensor, un celular o un robot) y la nube deben tomarse dos decisiones:

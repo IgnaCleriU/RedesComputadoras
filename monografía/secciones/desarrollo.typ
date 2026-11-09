@@ -524,8 +524,8 @@ punto por el que pasan todos los mensajes, el ruteo por tópicos funciona como u
 es el broker.
 
 Además, el broker, como el router, decide únicamente a partir del encabezado. El router no examina el segmento que transporta el datagrama,
-y el broker no interpreta la carga útil (@sec-stack), lo que corresponde a la menor expresividad del esquema basado en tópicos frente al
-basado en contenido @eugster2003pubsub. Sparkplug muestra la consecuencia. Como las métricas viajan dentro de la carga útil de Protocol
+y el broker no interpreta la carga útil, una limitación del esquema basado en tópicos que ya se señaló en la @sec-stack. Sparkplug muestra
+la consecuencia. Como las métricas viajan dentro de la carga útil de Protocol
 Buffers, el tópico solo identifica el nodo o el dispositivo que las publica, y una aplicación interesada en una única métrica debe recibir
 y decodificar todos los mensajes de ese nodo (@sec-caso-industria) @sparkplug3. Es el equivalente a pedirle a un router que encamine
 según el contenido de un segmento, algo que su tabla no puede expresar.
