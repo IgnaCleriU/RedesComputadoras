@@ -199,6 +199,8 @@ Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En p
   - Falta en el .bib: Eclipse Sparkplug 3.0; Proos y Carlsson 2020 (IFIP Networking, compara MQTT/AMQP/CoAP con Protobuf/FlatBuffers).
 */
 
+Las secciones anteriores describieron MQTT y Protocol Buffers por separado. Esta sección analiza cómo se combinan: qué lugar ocupa cada uno en un mensaje, cómo sabe el receptor qué tipo de mensaje recibe, qué implica compartir el esquema entre los participantes y qué requisitos de los sistemas estudiados cubre cada pieza.
+
 === Protocol Buffers como carga útil
 
 MQTT y Protocol Buffers resuelven problemas distintos y complementarios:
@@ -248,7 +250,7 @@ La madurez de esta combinación se refleja en su estandarización. La especifica
 
 === Síntesis
 
-Cada pieza del stack cubre una parte de los requisitos planteados al comienzo del capítulo, como resume la @tab-stack-requisitos. Cuánto aporta cada una al tamaño y a la latencia de los mensajes se mide en el experimento de la @sec-exp-mqtt-https.
+Cada pieza del stack cubre una parte de los requisitos planteados al comienzo de la sección, como resume la @tab-stack-requisitos. Cuánto aporta cada una al tamaño y a la latencia de los mensajes se mide en el experimento de la @sec-exp-mqtt-https.
 
 #figure(
   table(
@@ -285,6 +287,7 @@ Las secciones anteriores describieron la combinación de MQTT y Protocol Buffers
 La comparación de protocolos considera el modelo de interacción, el protocolo de transporte, el tamaño de los encabezados, la confiabilidad y el paso por NAT y firewalls, mientras que la de mecanismos de serialización considera el tamaño de los mensajes, el costo de procesamiento y la necesidad de un esquema compartido. El análisis se apoya en las especificaciones de cada tecnología y en estudios publicados.
 
 === MQTT, HTTP y CoAP
+Se definirán brevemente los protocolos HTTP y CoAP, para posteriormente adentrarse en sus diferencias con MQTT.
 
 ==== HTTP
 
@@ -348,6 +351,8 @@ En síntesis, MQTT resulta preferible cuando se necesita una entrega confiable d
 ) <tab-comparacion-protocolos>
 
 === Protocol Buffers y JSON <sec-protobuf-json>
+
+Se definirá brevemente JSON, para posteriormente contrastarlo con Protocol Buffers.
 
 ==== JSON
 
