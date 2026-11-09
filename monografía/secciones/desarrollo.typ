@@ -117,14 +117,14 @@ se confirma por separado, y el publicador no sabe si el mensaje llegó a los sus
   caption: [Qué garantiza TCP y qué agrega cada nivel de QoS en cada tramo del recorrido de un mensaje @mqtt50.],
 ) <tab-garantias-qos>
 
-Los reenvíos de QoS 1 y 2 solo funcionan si el estado sobrevive a la conexión, estos ocurren cuando el cliente se reconecta con Clean Start en 0 y el broker
-conservó la sesión, que vence según el Session Expiry Interval @mqtt50. Si la sesión es nueva o expiró, después de un corte QoS 1 y 2 no aportan nada
-frente a QoS 0. Además, dentro de una conexión viva los reintentos de la aplicación se superponen con los de TCP. En el Experimento 1, con pérdida de
-paquetes pero sin cortes, QoS 1 no mejoró la entrega y generó duplicados, 9 por corrida con 1 % de pérdida y 52 con 5 %, porque el cliente reenvía el
+Los reenvíos de QoS 1 y 2 solo funcionan si el estado sobrevive a la conexión, estos ocurren cuando el cliente se reconecta con Clean Start en 0 y el
+broker conservó la sesión, que vence según el Session Expiry Interval @mqtt50. Si la sesión es nueva o expiró, después de un corte QoS 1 y 2 no aportan
+nada frente a QoS 0. Además, dentro de una conexión viva los reintentos de la aplicación se superponen con los de TCP. En el Experimento 1, con pérdida
+de paquetes pero sin cortes, QoS 1 no mejoró la entrega y generó duplicados, 9 por corrida con 1 % de pérdida y 52 con 5 %, porque el cliente reenvía el
 PUBLISH mientras TCP todavía está recuperando el original. Su costo fue de 202 B por lectura contra 140 B de QoS 0.
 
 La elección del nivel depende de qué ocurre cuando falta un mensaje. Si el siguiente lo reemplaza, como en una lectura periódica, QoS 0 sobre TCP
-alcanza, y su única exposición son los cortes de la conexión. Sparkplug lo lleva más lejos: publica con QoS 0 y suple la confirmación con un número de
+alcanza, y su única exposición son los cortes de la conexión. Sparkplug, por otra parte, publica con QoS 0 y suple la confirmación con un número de
 secuencia de 0 a 255, y si la aplicación advierte un salto le pide al nodo un nuevo certificado de nacimiento para reconstruir su estado
 (@sec-caso-industria, en los casos de uso). Si el mensaje es una orden o un evento que no se repite, conviene QoS 1 con sesión persistente y un
 receptor que tolere duplicados, y QoS 2 queda para los casos en que el duplicado es inaceptable. Los cortes de conexión, que el Experimento 1 no
