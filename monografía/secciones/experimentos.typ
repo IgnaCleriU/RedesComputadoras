@@ -421,19 +421,19 @@ La @tab-hipotesis contrasta las hipótesis del planteo con los resultados.
     columns: (1fr, 1.6fr),
     table.header[Hipótesis][Resultado],
     [MQTT envía menos bytes por lectura que HTTPS, y la diferencia crece cuando el período de envío es corto.],
-    [*Se confirma, con un matiz.* MQTT envió menos bytes en todos los casos medidos (12 lecturas por conexión o más), y su ventaja frente a HTTP con conexión reutilizada creció al acortar el período: 1,7 veces a 10 s, 3,4 a 1 s y 3,6 a 100 ms. Pero si la conexión dura menos de tres o cuatro lecturas, la relación se invierte (@tab-costo).],
+    [*Se confirma, con un matiz.* MQTT envió menos bytes en todos los casos medidos, y su ventaja frente a HTTP con conexión reutilizada creció al acortar el período, de 1,7 a 3,6 veces. Si la conexión dura menos de tres o cuatro lecturas, la relación se invierte (@tab-costo).],
 
     [HTTPS con conexión reutilizada reduce gran parte de la diferencia, pero los headers HTTP siguen pesando más que la cabecera MQTT.],
-    [*Se confirma.* Reutilizar la conexión bajó HTTPS de 2296 a 555 B por lectura (−76 %), pero siguió costando 3,4 veces MQTT QoS 0, por los headers (134 B contra 13 B), la respuesta obligatoria y los ACK adicionales, a los que se suman 40 ms por la espera de Nagle.],
+    [*Se confirma.* Reutilizar la conexión bajó HTTPS de 2296 a 555 B por lectura, pero siguió costando 3,4 veces MQTT QoS 0.],
 
     [HTTPS con una conexión por request es el caso más costoso, sobre todo con TLS y latencia alta.],
-    [*Se confirma.* Fue el más caro en bytes y en latencia, y el único que con 200 ms de RTT pagó unos 5,5 RTT por lectura.],
+    [*Se confirma.* Fue el más caro en bytes y en latencia, y con 200 ms de RTT pagó 5,3 RTT por lectura.],
 
     [Con pérdida, MQTT QoS 1 mantiene la entrega a costa de duplicados, mientras que QoS 0 pierde lecturas.],
-    [*Se confirma a medias.* QoS 1 generó duplicados (5,4 % de las lecturas con 5 % de pérdida), pero QoS 0 no perdió ninguna lectura: TCP recuperó todo porque ninguna conexión se cortó. QoS 1 sí tuvo mejor cola de latencia.],
+    [*Se confirma a medias.* QoS 1 generó duplicados, pero QoS 0 no perdió lecturas, porque TCP recuperó todo y ninguna conexión se cortó.],
 
     [Protobuf reduce el payload en ambos caminos, con efecto relativo mayor en MQTT, donde el payload es la mayor parte del mensaje.],
-    [*Se confirma, aunque no por la razón prevista.* El ahorro absoluto fue el mismo en todos los caminos (unos 54 B) y el relativo fue mayor en MQTT (33 %), pero porque su lectura es más chica, no porque el payload sea la mayor parte del mensaje: es el 11 %.],
+    [*Se confirma, aunque no por la razón prevista.* El ahorro fue de unos 54 B en todos los caminos y el relativo fue mayor en MQTT (33 %), pero porque su lectura es más chica, ya que el payload es solo el 11 % del mensaje.],
   ),
   caption: [Contraste de las hipótesis con los resultados.],
 ) <tab-hipotesis>
@@ -441,10 +441,7 @@ La @tab-hipotesis contrasta las hipótesis del planteo con los resultados.
 #subtitulo[Limitaciones]
 
 - *Criptografía emulada.* Los handshakes TLS tardaron entre 3 y 4 s en QEMU, mucho más que en un ESP32 físico, por lo que los tiempos de conexión y la latencia de HTTP con una conexión por lectura deben leerse en términos relativos. Los bytes y los paquetes, en cambio, son los del firmware real.
-- *Reloj.* Las latencias con RTT agregado se corrigieron restando RTT/2. Sin RTT agregado, la incertidumbre absoluta es de 1 ms, del orden de la latencia de MQTT, aunque no afecta las comparaciones entre transportes.
-- *Estado compartido entre corridas.* Las métricas TCP que Linux guarda por destino afectaron las retransmisiones innecesarias, que solo pesan en HTTP con una conexión por lectura.
 - *Un factor a la vez.* No se midieron interacciones entre factores, como pérdida y período o latencia y JSON, salvo la de Nagle y TLS.
-- *Configuración concreta.* Otras configuraciones darían otros números, en especial para el costo fijo por conexión y la latencia de HTTP: Nagle activo en HTTP, Mosquitto enviando el certificado de la autoridad de certificación (411 B más por handshake), sin reanudación de sesión TLS, TLS 1.2 (TLS 1.3 ahorraría un RTT en el handshake y 7 B por registro), MQTT 3.1.1 y un cliente HTTP que abre la conexión en el primer envío.
 - *Red emulada.* Se usó Ethernet emulado y pérdida aleatoria independiente, sin ráfagas. Con pérdidas en ráfaga o cortes de conexión, que no formaron parte de la matriz, las sesiones podrían caerse, y entonces QoS 0 sí perdería lecturas. Las corridas de 120 s tampoco permiten observar el keep-alive ni las reconexiones.
 - *Un solo sentido.* Solo se midió la telemetría del nodo al servidor. El envío de comandos del servidor al nodo, donde HTTP necesitaría consultas periódicas, quedó fuera de la comparación.
 
@@ -464,12 +461,10 @@ La @tab-proyeccion lleva los resultados a la escala de un despliegue. Supone una
   caption: [Proyección del tráfico con una lectura cada 10 s.],
 ) <tab-proyeccion>
 
-Para un sistema de telemetría como el estudiado, los resultados sugieren cuatro criterios:
+Para un sistema de telemetría como el estudiado, los resultados sugieren dos criterios:
 
 - Lo que más importa es mantener la conexión abierta. La ventaja de MQTT depende de que la conexión dure más que unas pocas lecturas; para dispositivos que duermen y se reconectan en cada envío, pesan más la reanudación de sesión TLS o TLS 1.3 que la elección del protocolo de aplicación.
 - Si se usa HTTP, conviene reutilizar la conexión y desactivar Nagle, o escribir cada solicitud con una sola llamada a `send()`. Con eso la latencia queda en el mismo orden que la de MQTT, aunque el costo en bytes sigue siendo unas tres veces mayor.
-- Mientras la conexión TCP se mantiene, QoS 1 no mejora la entrega y agrega duplicados, por lo que la aplicación debe poder descartarlos, por ejemplo con el número de secuencia. Su valor aparece ante cortes de conexión, que este experimento no midió.
-- Protocol Buffers ahorra lo mismo en todos los transportes, pero su efecto relativo es mayor justamente en MQTT, donde el resto de la lectura ya es chico.
 
 === Experimento 2: sincronización de osciladores acoplados <sec-exp-sincronizacion>
 
