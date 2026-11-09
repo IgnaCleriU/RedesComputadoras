@@ -29,7 +29,7 @@
 
 Los dos experimentos corren sobre el mismo entorno, montado en una sola computadora (distinta en cada experimento), donde cada nodo es un ESP32 emulado con QEMU.
 
-QEMU es un programa que permite ejecutar en una computadora el mismo código que correría en la placa, y se usa la versión que mantiene Espressif, el fabricante del ESP32, que emula su procesador, su memoria y varios periféricos @espressif-qemu. El programa de cada nodo, o _firmware_, está escrito en C con ESP-IDF, el entorno de desarrollo de Espressif @esp-idf. Como el ESP32 emulado no tiene WiFi, QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz TAP propia, una interfaz de red virtual de Linux que intercambia las tramas Ethernet con un programa, en este caso QEMU, en lugar de enviarlas por un medio físico @linux-tuntap. Todas se unen en un puente de Linux, que funciona como un conmutador por _software_ @linux-bridge y las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
+QEMU es un programa que permite ejecutar en una computadora el mismo código que correría en la placa, y se usa la versión que mantiene Espressif, el fabricante del ESP32, que emula su procesador, su memoria y varios periféricos @espressif-qemu. El programa de cada nodo, o _firmware_, está escrito en C con ESP-IDF, el entorno de desarrollo de Espressif @esp-idf. Como el ESP32 emulado no tiene Wi-Fi, QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz TAP propia, una interfaz de red virtual de Linux que intercambia las tramas Ethernet con un programa, en este caso QEMU, en lugar de enviarlas por un medio físico @linux-tuntap. Todas se unen en un puente de Linux, que funciona como un conmutador por _software_ @linux-bridge y las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
 
 La emulación impone algunas restricciones. Los tiempos de ejecución no son los de una placa real, porque dependen de la carga de la computadora anfitriona: cuando llega una difusión, todas las instancias compiten por la CPU, y el retardo de entrega crece alrededor de 0,3 ms por cada nodo agregado. Además, cada instancia ocupa unos 170 MB de memoria, lo que limita la cantidad de nodos que se pueden emular.
 
@@ -59,11 +59,11 @@ Este experimento corresponde al último de los objetivos específicos (@sec-obje
 
 #subtitulo[Fundamento]
 
-La diferencia principal entre ambos caminos no está en el contenido de la lectura, sino en cómo cada protocolo usa la conexión TCP. MQTT mantiene una conexión persistente por nodo, con un único handshake TLS y un encabezado binario de dos bytes, mientras que HTTP agrega a cada mensaje una línea de solicitud, headers en texto y una respuesta (@tab-comparacion-protocolos). Por eso se prueban dos variantes de HTTP: una conexión nueva por lectura y una conexión reutilizada. La segunda es la comparación justa con MQTT; la primera representa el peor caso, el de un dispositivo que duerme entre envíos y abre una conexión cada vez.
+La diferencia principal entre ambos caminos no está en el contenido de la lectura, sino en cómo cada protocolo usa la conexión TCP. MQTT mantiene una conexión persistente por nodo, con un único handshake TLS y un encabezado binario de dos bytes, mientras que HTTP agrega a cada mensaje una línea de solicitud, encabezados en texto y una respuesta (@tab-comparacion-protocolos). Por eso se prueban dos variantes de HTTP: una conexión nueva por lectura y una conexión reutilizada. La segunda es la comparación justa con MQTT; la primera representa el peor caso, el de un dispositivo que duerme entre envíos y abre una conexión cada vez.
 
 #subtitulo[Preguntas de investigación]
 
-+ ¿Cuántos bytes cuesta enviar una lectura por MQTT y por HTTPS, contando cabeceras y handshakes?
++ ¿Cuántos bytes cuesta enviar una lectura por MQTT y por HTTPS, contando encabezados y handshakes?
 + ¿Cómo se comparan la latencia extremo a extremo y la tasa de entrega de ambos?
 + ¿Cómo se degradan ambos protocolos con pérdida y latencia en la red?
 + ¿Qué parte de la diferencia viene de la conexión persistente y qué parte de TLS?
@@ -74,10 +74,10 @@ La diferencia principal entre ambos caminos no está en el contenido de la lectu
 Antes de las corridas se formularon las siguientes hipótesis, que se contrastan con los resultados al final del análisis (@tab-hipotesis):
 
 - MQTT envía menos bytes por lectura que HTTPS, y la diferencia crece cuando el período de envío es corto.
-- HTTPS con conexión reutilizada reduce gran parte de la diferencia, pero los headers HTTP siguen pesando más que la cabecera MQTT.
-- HTTPS con una conexión por request es el caso más costoso, sobre todo con TLS y latencia alta, porque cada handshake suma idas y vueltas.
+- HTTPS con conexión reutilizada reduce gran parte de la diferencia, pero los encabezados HTTP siguen pesando más que el encabezado MQTT.
+- HTTPS con una conexión por solicitud es el caso más costoso, sobre todo con TLS y latencia alta, porque cada handshake suma idas y vueltas.
 - Con pérdida, MQTT QoS 1 mantiene la entrega a costa de duplicados, mientras que MQTT QoS 0 pierde lecturas.
-- Protobuf reduce el payload en ambos caminos, pero su efecto sobre el total es mayor en MQTT, donde el payload es la mayor parte del mensaje. En HTTPS, los headers diluyen el ahorro.
+- Protocol Buffers reduce la carga útil en ambos caminos, pero su efecto sobre el total es mayor en MQTT, donde la carga útil es la mayor parte del mensaje. En HTTPS, los encabezados diluyen el ahorro.
 
 ==== Implementación
 
@@ -123,7 +123,7 @@ message Telemetry {
 
 Codificado con Protocol Buffers, el mensaje ocupa entre 16 y 19 bytes (18 en promedio), porque `seq` es un entero de longitud variable. En JSON, con los mismos nombres de campo y sin espacios, ocupa unos 72 bytes, cuatro veces más.
 
-La lectura se envía por uno de los cuatro caminos de la @tab-transportes. En HTTP, el formato se indica en el header `Content-Type` (`application/x-protobuf` o `application/json`).
+La lectura se envía por uno de los cuatro caminos de la @tab-transportes. En HTTP, el formato se indica en el encabezado `Content-Type` (`application/x-protobuf` o `application/json`).
 
 #figure(
   table(
@@ -295,7 +295,7 @@ Las capturas permiten ver de qué está hecha cada lectura, paquete por paquete.
     [Servidor → nodo], [PUBACK], [73], [4 B de MQTT, 29 B de TLS y 40 B de TCP/IP; incluye el ACK de TCP],
     [Nodo → servidor], [ACK], [40], [Sale solo, unos 83 ms después (ACK retardado de lwIP)],
     table.cell(colspan: 4, fill: luma(240))[*HTTP con conexión reutilizada: 6 paquetes, unos 543 B por lectura*],
-    [Nodo → servidor], [POST y headers], [203], [134 B de HTTP],
+    [Nodo → servidor], [POST y encabezados], [203], [134 B de HTTP],
     [Servidor → nodo], [ACK], [40], [Llega 40 ms después (ACK retardado de Linux)],
     [Nodo → servidor], [Cuerpo], [87], [18 B de Protocol Buffers, retenidos por Nagle hasta el ACK anterior],
     [Servidor → nodo], [ACK], [40], [Solo encabezados TCP/IP],
@@ -307,11 +307,11 @@ Las capturas permiten ver de qué está hecha cada lectura, paquete por paquete.
 
 HTTP con una conexión por lectura abre y cierra una conexión completa en cada lectura, con unos 22 paquetes: el handshake TCP (3 paquetes, 128 B), el handshake TLS 1.2 (unos 1525 B, de los cuales 655 B son el certificado y los demás mensajes del servidor), el POST con su cuerpo, la respuesta, el cierre de TLS y el cierre de TCP. Sin TLS son 12 paquetes y 742 B.
 
-El encabezado de MQTT es tan chico como plantea el marco teórico. El PUBLISH ocupa 31 bytes: 2 del encabezado fijo, 2 de la longitud del tópico, 9 del tópico `exp/tel/3` y 18 de la lectura. La sobrecarga de MQTT por mensaje es entonces de 13 bytes, contra 134 bytes de la línea de solicitud y los headers de HTTP (153 con una conexión por lectura, que agrega `Connection: close`), unas diez veces menos. Además, MQTT QoS 0 no tiene respuesta de aplicación, mientras que HTTP siempre responde (64 B).
+El encabezado de MQTT es tan chico como plantea el marco teórico. El PUBLISH ocupa 31 bytes: 2 del encabezado fijo, 2 de la longitud del tópico, 9 del tópico `exp/tel/3` y 18 de la lectura. La sobrecarga de MQTT por mensaje es entonces de 13 bytes, contra 134 bytes de la línea de solicitud y los encabezados de HTTP (153 con una conexión por lectura, que agrega `Connection: close`), unas diez veces menos. Además, MQTT QoS 0 no tiene respuesta de aplicación, mientras que HTTP siempre responde (64 B).
 
-Sin embargo, en una lectura de MQTT los encabezados de capa de aplicación no son lo que más pesa. Cada registro TLS agrega 29 bytes (5 de cabecera, 8 del _nonce_ explícito y 16 de la etiqueta de autenticación de AES-GCM) y cada paquete, 40 bytes de TCP/IP. En MQTT QoS 0 con TLS, el payload es solo el 11 % de los bytes de la lectura, y en HTTP con una conexión por lectura, menos del 1 %.
+Sin embargo, en una lectura de MQTT los encabezados de capa de aplicación no son lo que más pesa. Cada registro TLS agrega 29 bytes (5 de encabezado, 8 del _nonce_ explícito y 16 de la etiqueta de autenticación de AES-GCM) y cada paquete, 40 bytes de TCP/IP. En MQTT QoS 0 con TLS, la carga útil es solo el 11 % de los bytes de la lectura, y en HTTP con una conexión por lectura, menos del 1 %.
 
-Los 29 bytes por registro explican casi todo lo que agrega TLS en las conexiones persistentes. MQTT QoS 0 usa un registro por lectura (29 B), al que se suman 16 B del handshake repartido entre las lecturas, 45 B en total, y se midieron 46,5 B. MQTT QoS 1 usa dos registros, el PUBLISH y el PUBACK (74 B con el handshake; se midieron 75,6 B), y HTTP con conexión reutilizada usa tres, los headers, el cuerpo y la respuesta (100 B; se midieron 97 B). El cifrado simétrico casi no suma latencia: el costo de TLS en tiempo es el handshake, que solo se paga en cada lectura cuando no se reutiliza la conexión.
+Los 29 bytes por registro explican casi todo lo que agrega TLS en las conexiones persistentes. MQTT QoS 0 usa un registro por lectura (29 B), al que se suman 16 B del handshake repartido entre las lecturas, 45 B en total, y se midieron 46,5 B. MQTT QoS 1 usa dos registros, el PUBLISH y el PUBACK (74 B con el handshake; se midieron 75,6 B), y HTTP con conexión reutilizada usa tres, los encabezados, el cuerpo y la respuesta (100 B; se midieron 97 B). El cifrado simétrico casi no suma latencia: el costo de TLS en tiempo es el handshake, que solo se paga en cada lectura cuando no se reutiliza la conexión.
 
 #subtitulo[Costo fijo por conexión y costo por lectura]
 
@@ -352,15 +352,15 @@ Para separar las causas, la @tab-descomposicion pasa de HTTP con una conexión p
   caption: [Descomposición de la diferencia entre HTTP con una conexión por lectura y MQTT QoS 0. Los porcentajes son la parte de la diferencia total que explica cada paso.],
 ) <tab-descomposicion>
 
-Con TLS, la conexión persistente explica cuatro quintos de la diferencia, porque evita un handshake de 1525 B en cada lectura. El protocolo de aplicación (headers, respuesta obligatoria y ACK adicionales) explica el 18 % restante. Sin TLS, el handshake TCP pesa mucho menos y la diferencia se reparte casi por mitades entre la conexión y el protocolo. Es decir, el factor más pesado no es el protocolo de aplicación en sí, sino la decisión de mantener la conexión abierta. A eso se suma una parte que no es del protocolo ni de la conexión, sino de cómo el cliente HTTP usa TCP, que se analiza a continuación.
+Con TLS, la conexión persistente explica cuatro quintos de la diferencia, porque evita un handshake de 1525 B en cada lectura. El protocolo de aplicación (encabezados, respuesta obligatoria y ACK adicionales) explica el 18 % restante. Sin TLS, el handshake TCP pesa mucho menos y la diferencia se reparte casi por mitades entre la conexión y el protocolo. Es decir, el factor más pesado no es el protocolo de aplicación en sí, sino la decisión de mantener la conexión abierta. A eso se suma una parte que no es del protocolo ni de la conexión, sino de cómo el cliente HTTP usa TCP, que se analiza a continuación.
 
 #subtitulo[Nagle y ACK retardado]
 
 Los dos mecanismos de TCP presentados en la @sec-conceptos-exp1, el algoritmo de Nagle y el ACK retardado, explican buena parte de la latencia de HTTP y varios efectos secundarios observados en el experimento.
 
-*Bloqueo en HTTP con conexión reutilizada.* `esp_http_client` escribe cada solicitud con dos llamadas a `send()`: primero la línea de solicitud con los headers y después el cuerpo, y cada llamada sale como un segmento TCP distinto. La @fig-nagle muestra la secuencia medida en una lectura:
+*Bloqueo en HTTP con conexión reutilizada.* `esp_http_client` escribe cada solicitud con dos llamadas a `send()`: primero la línea de solicitud con los encabezados y después el cuerpo, y cada llamada sale como un segmento TCP distinto. La @fig-nagle muestra la secuencia medida en una lectura:
 
-+ Los headers salen y quedan sin confirmar, así que Nagle retiene el cuerpo (18 B) en el ESP32 hasta recibir su ACK.
++ Los encabezados salen y quedan sin confirmar, así que Nagle retiene el cuerpo (18 B) en el ESP32 hasta recibir su ACK.
 + El servidor Linux detecta una conexión de ida y vuelta, en la que contesta cada solicitud, y demora el ACK hasta 40 ms para enviarlo junto con la respuesta. Pero no puede responder, porque todavía no recibió el cuerpo.
 + Cada lado espera al otro, y el bloqueo se rompe recién cuando vence el temporizador de 40 ms del servidor: llega el ACK, Nagle libera el cuerpo y el servidor responde.
 
@@ -369,7 +369,7 @@ Los dos mecanismos de TCP presentados en la @sec-conceptos-exp1, el algoritmo de
     import chronos: *
     _par("E", display-name: "ESP32 (lwIP)", show-bottom: false)
     _par("S", display-name: "Servidor (Linux)", show-bottom: false)
-    _seq("E", "S", comment: [0 ms: POST y headers (134 B)])
+    _seq("E", "S", comment: [0 ms: POST y encabezados (134 B)])
     _delay(name: [Nagle retiene el cuerpo; el servidor demora el ACK])
     _seq("S", "E", comment: [40,3 ms: ACK], dashed: true)
     _seq("E", "S", comment: [41,1 ms: cuerpo (18 B)])
@@ -381,11 +381,11 @@ Los dos mecanismos de TCP presentados en la @sec-conceptos-exp1, el algoritmo de
   caption: [Una lectura de HTTP con conexión reutilizada, sin TLS, tomada de una captura. Las flechas punteadas son ACK sin datos.],
 ) <fig-nagle>
 
-La espera medida entre los headers y el cuerpo fue de 41,5 ms sin TLS y de 41,7 ms con TLS. Con TLS ocurre lo mismo porque mbedTLS cifra cada `send()` en su propio registro, de modo que también salen dos segmentos. Esa espera explica casi toda la mediana de 44,8 ms de HTTP con conexión reutilizada (@tab-latencia-base).
+La espera medida entre los encabezados y el cuerpo fue de 41,5 ms sin TLS y de 41,7 ms con TLS. Con TLS ocurre lo mismo porque mbedTLS cifra cada `send()` en su propio registro, de modo que también salen dos segmentos. Esa espera explica casi toda la mediana de 44,8 ms de HTTP con conexión reutilizada (@tab-latencia-base).
 
-*Prueba con Nagle desactivado.* Para verificar la explicación se corrió una matriz complementaria con Nagle activo y desactivado (`TCP_NODELAY`) en los dos caminos HTTP, con tres repeticiones. En HTTP con conexión reutilizada, la latencia bajó unas diez veces, de 44 ms a entre 4 y 5 ms, con y sin TLS, y cada lectura usó un paquete y unos 40 B menos, porque sin la espera el ACK del servidor a los headers viaja junto con la respuesta. HTTP con una conexión por lectura sin TLS no cambió, porque Linux confirma de inmediato los primeros segmentos de una conexión nueva y no sufría la espera.
+*Prueba con Nagle desactivado.* Para verificar la explicación se corrió una matriz complementaria con Nagle activo y desactivado (`TCP_NODELAY`) en los dos caminos HTTP, con tres repeticiones. En HTTP con conexión reutilizada, la latencia bajó unas diez veces, de 44 ms a entre 4 y 5 ms, con y sin TLS, y cada lectura usó un paquete y unos 40 B menos, porque sin la espera el ACK del servidor a los encabezados viaja junto con la respuesta. HTTP con una conexión por lectura sin TLS no cambió, porque Linux confirma de inmediato los primeros segmentos de una conexión nueva y no sufría la espera.
 
-*Latencia de la red: la penalidad de Nagle crece con el RTT.* MQTT pagó medio RTT por lectura (@tab-rtt), el mínimo posible: el PUBLISH sale y llega sin esperar nada. En HTTP, en cambio, el ACK de los headers tarda un RTT completo en volver, y el cuerpo espera ese tiempo además de los 40 ms del ACK retardado. Por eso HTTP con conexión reutilizada pagó 1,5 RTT por lectura: medio RTT del viaje de ida y un RTT de la espera de Nagle. HTTP con una conexión por lectura con TLS pagó 5,3 RTT, porque a eso suma los handshakes de TCP y de TLS 1.2 y otra espera de Nagle dentro de este último.
+*Latencia de la red: la penalidad de Nagle crece con el RTT.* MQTT pagó medio RTT por lectura (@tab-rtt), el mínimo posible: el PUBLISH sale y llega sin esperar nada. En HTTP, en cambio, el ACK de los encabezados tarda un RTT completo en volver, y el cuerpo espera ese tiempo además de los 40 ms del ACK retardado. Por eso HTTP con conexión reutilizada pagó 1,5 RTT por lectura: medio RTT del viaje de ida y un RTT de la espera de Nagle. HTTP con una conexión por lectura con TLS pagó 5,3 RTT, porque a eso suma los handshakes de TCP y de TLS 1.2 y otra espera de Nagle dentro de este último.
 
 *Retransmisiones innecesarias.* La variabilidad de HTTP con una conexión por lectura (2596 ± 298 B por lectura) no viene de la red. El ESP32 pasa unos 3 s calculando su parte del handshake TLS con criptografía emulada, y si el tiempo de retransmisión del servidor vence antes de que llegue su ACK, el servidor reenvía los 692 B de sus mensajes de handshake, que no se habían perdido. Los bytes de cada corrida siguen exactamente la cantidad de esas retransmisiones (correlación de 1,000), que ocurrieron en casi todas las conexiones de una corrida o en ninguna. Por eso, en el análisis se toma como referencia de ese camino el valor de 2296 B, sin retransmisiones innecesarias.
 
@@ -409,7 +409,7 @@ El costo en bytes de la pérdida fue bajo, entre 1 % y 13 %. El mayor fue el de 
 
 #subtitulo[Serialización]
 
-El ahorro de Protocol Buffers fue de unos 54 B por lectura en todos los caminos, porque el mensaje es el mismo. En HTTP fue 6 B menor, porque `application/json` es más corto que `application/x-protobuf` en el header `Content-Type`. La reducción del payload, del 75 %, está en línea con la de los estudios citados en el marco teórico @viotti2022 @friesel2021.
+El ahorro de Protocol Buffers fue de unos 54 B por lectura en todos los caminos, porque el mensaje es el mismo. En HTTP fue 6 B menor, porque `application/json` es más corto que `application/x-protobuf` en el encabezado `Content-Type`. La reducción de la carga útil, del 75 %, está en línea con la de los estudios citados en el marco teórico @viotti2022 @friesel2021.
 
 En términos relativos, en cambio, el efecto depende de cuánto pesa el resto de la lectura, que en MQTT es mucho menos que en HTTP. Esto confirma lo anticipado en el marco teórico: una vez que el transporte reduce sus encabezados al mínimo, la serialización pasa a tener un peso importante. Aun así, la elección del transporte pesa más: pasar de HTTP con conexión reutilizada a MQTT QoS 0 ahorra 390 B por lectura, más de siete veces lo que ahorra Protocol Buffers.
 
@@ -424,17 +424,17 @@ La @tab-hipotesis contrasta las hipótesis del planteo con los resultados.
     [MQTT envía menos bytes por lectura que HTTPS, y la diferencia crece cuando el período de envío es corto.],
     [*Se confirma, con un matiz.* MQTT envió menos bytes en todos los casos medidos, y su ventaja frente a HTTP con conexión reutilizada creció al acortar el período, de 1,7 a 3,6 veces. Si la conexión dura menos de tres o cuatro lecturas, la relación se invierte (@tab-costo).],
 
-    [HTTPS con conexión reutilizada reduce gran parte de la diferencia, pero los headers HTTP siguen pesando más que la cabecera MQTT.],
+    [HTTPS con conexión reutilizada reduce gran parte de la diferencia, pero los encabezados HTTP siguen pesando más que el encabezado MQTT.],
     [*Se confirma.* Reutilizar la conexión bajó HTTPS de 2296 a 555 B por lectura, pero siguió costando 3,4 veces MQTT QoS 0.],
 
-    [HTTPS con una conexión por request es el caso más costoso, sobre todo con TLS y latencia alta.],
+    [HTTPS con una conexión por solicitud es el caso más costoso, sobre todo con TLS y latencia alta.],
     [*Se confirma.* Fue el más caro en bytes y en latencia, y con 200 ms de RTT pagó 5,3 RTT por lectura.],
 
     [Con pérdida, MQTT QoS 1 mantiene la entrega a costa de duplicados, mientras que QoS 0 pierde lecturas.],
     [*Se confirma a medias.* QoS 1 generó duplicados, pero QoS 0 no perdió lecturas, porque TCP recuperó todo y ninguna conexión se cortó.],
 
-    [Protobuf reduce el payload en ambos caminos, con efecto relativo mayor en MQTT, donde el payload es la mayor parte del mensaje.],
-    [*Se confirma, aunque no por la razón prevista.* El ahorro fue de unos 54 B en todos los caminos y el relativo fue mayor en MQTT (33 %), pero porque su lectura es más chica, ya que el payload es solo el 11 % del mensaje.],
+    [Protocol Buffers reduce la carga útil en ambos caminos, con efecto relativo mayor en MQTT, donde la carga útil es la mayor parte del mensaje.],
+    [*Se confirma, aunque no por la razón prevista.* El ahorro fue de unos 54 B en todos los caminos y el relativo fue mayor en MQTT (33 %), pero porque su lectura es más chica, ya que la carga útil es solo el 11 % del mensaje.],
   ),
   caption: [Contraste de las hipótesis con los resultados.],
 ) <tab-hipotesis>
@@ -647,7 +647,7 @@ Una fase atraviesa el stack completo antes de influir en otro nodo, y cada paso 
 + La tarea de publicación copia la fase, su velocidad y el instante en que se calculó.
 + La fase se serializa con Protocol Buffers mediante nanopb, una biblioteca en C pensada para sistemas con muy poca memoria @nanopb.
 + El cliente esp-mqtt, la biblioteca MQTT de ESP-IDF @esp-mqtt, arma un paquete PUBLISH de QoS 0, sin confirmación de entrega (@sec-mqtt), con esos bytes como carga útil, en el tópico `kuramoto/phase/<id>`, y lo escribe en la única conexión TCP del nodo, que administra lwIP, la pila TCP/IP liviana que incluye ESP-IDF.
-+ El broker recibe el paquete y compara el tópico con las suscripciones. Sin interpretar la carga útil, reenvía una copia a cada nodo suscripto al filtro `kuramoto/phase/+`, donde el comodín `+` coincide con cualquier identificador. El emisor no recibe su propia fase gracias a la opción _No Local_ de MQTT 5.0, que pide al broker no devolverle al cliente sus propias publicaciones.
++ El broker recibe el paquete y compara el tópico con las suscripciones. Sin interpretar la carga útil, reenvía una copia a cada nodo suscrito al filtro `kuramoto/phase/+`, donde el comodín `+` coincide con cualquier identificador. El emisor no recibe su propia fase gracias a la opción _No Local_ de MQTT 5.0, que pide al broker no devolverle al cliente sus propias publicaciones.
 + Cada receptor decodifica la carga útil. Descarta el mensaje si no es más nuevo que el último de ese nodo, comparando el número de secuencia, y si lo es, reemplaza la entrada de la tabla.
 + En el siguiente paso de integración, a lo sumo 10 ms después, esa fase ya participa de la sumatoria, y sigue envejeciendo hasta que llegue la próxima.
 
@@ -924,7 +924,7 @@ La @tab-contraste-sincronizacion contrasta las hipótesis del planteo con los re
 #subtitulo[Limitaciones]
 
 - *Una realización por condición.* Salvo QoS con pérdida, cada ensayo se corrió una vez. Las diferencias grandes, como las de QoS, son claras, pero las pequeñas, como el efecto de la última voluntad, no se pueden distinguir de la variación entre corridas.
-- *Emulación.* El broker, los 20 nodos y la red comparten una computadora. Los retardos internos no son los de una placa física con WiFi.
+- *Emulación.* El broker, los 20 nodos y la red comparten una computadora. Los retardos internos no son los de una placa física con Wi-Fi.
 - *Perturbaciones sintéticas.* La pérdida de 5 % es aleatoria e independiente y no representa la de un enlace real, en el que suele darse en ráfagas.
 - *Un punto de operación acotado.* $overline(f)$ y el ancho de las frecuencias se fijaron, y $h$ solo se varió en dos corridas, por la capacidad de la computadora y el tiempo disponible. Otros valores cambian el peso relativo del período de publicación y de la red.
 - *Sin TLS.* Las corridas no usan cifrado, cuyo costo se analiza en el experimento de la @sec-exp-mqtt-https.
