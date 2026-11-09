@@ -1,0 +1,40 @@
+# Opciones del proyecto que cambian respecto de los valores por defecto de ESP-IDF.
+# idf.py las aplica al generar sdkconfig.
+CONFIG_IDF_TARGET="esp32"
+
+# Un solo núcleo: menos costo de CPU en el host al emular muchos nodos
+CONFIG_FREERTOS_UNICORE=y
+
+# Flash de 4 MB y tabla de particiones propia (con la partición cfg)
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# Red: Ethernet "open_eth" que emula QEMU (no hay WiFi en QEMU)
+CONFIG_ETH_ENABLED=y
+CONFIG_ETH_USE_OPENETH=y
+CONFIG_ETH_OPENETH_DMA_RX_BUFFER_NUM=8
+CONFIG_ETH_OPENETH_DMA_TX_BUFFER_NUM=4
+
+# Reloj: re-sincronización SNTP cada 15 s (mínimo permitido)
+CONFIG_LWIP_SNTP_UPDATE_DELAY=15000
+
+# MQTT 5 (necesario para la opción No Local) y sin TLS
+CONFIG_MQTT_PROTOCOL_5=y
+CONFIG_MQTT_TRANSPORT_SSL=n
+
+# Tick de FreeRTOS en el valor por defecto (100 Hz = 10 ms): menos carga en reposo.
+# Por eso ts_ms debe ser múltiplo de 10 ms. Las publicaciones usan esp_timer.
+CONFIG_FREERTOS_HZ=100
+
+# Consola: solo avisos del sistema, nuestras líneas van por printf
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+# Sin watchdog de tareas
+CONFIG_ESP_TASK_WDT_EN=n
+# Un host cargado no debe disparar el watchdog de interrupciones.
+CONFIG_ESP_INT_WDT=n
+# Ante un error, detenerse y dejarlo en la UART en vez de reiniciar en bucle.
+CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT=y
+
+# Solo IPv4
+CONFIG_LWIP_IPV6=n

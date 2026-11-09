@@ -1,0 +1,11 @@
+{
+  "defecto": {"n": 40, "h_ms": 1000, "ts_ms": 10, "duracion_s": 600, "f_hz": 0.25,
+              "semillas": [1, 2, 3], "perfil": ["", "jitter", "wifi", "wifi-perdida-1"],
+              "extrapolar": 1},
+  "entradas": [
+    {"nombre": "distintas", "config": "distintas", "ancho": 0.2,
+     "k": [0.8, 1.05, 1.2, 1.5, 2, 3]},
+    {"nombre": "iguales", "config": "iguales", "ancho": 0.0,
+     "k": [0.05, 0.1, 0.2]}
+  ]
+}

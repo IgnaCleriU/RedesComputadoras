@@ -1,0 +1,9 @@
+[project]
+name = "kuramoto-experimento"
+version = "0.1.0"
+description = "Herramientas del host y análisis del experimento de sincronización"
+requires-python = ">=3.12"
+dependencies = ["numpy", "scipy", "matplotlib"]
+
+[tool.uv]
+package = false

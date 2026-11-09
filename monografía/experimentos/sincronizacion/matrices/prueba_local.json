@@ -1,0 +1,10 @@
+{
+  "defecto": {"n": 2, "config": "distintas", "f_hz": 0.2, "ancho": 0.2, "h_ms": 500, "ts_ms": 10,
+              "semillas": [1], "perfil": [""], "extrapolar": 0, "k": [3], "arranque": "enganchado"},
+  "entradas": [
+    {"nombre": "todo", "duracion_s": 55, "keepalive_s": 5, "will": 1, "alias": 1, "qos": 1, "esquema": 1,
+     "eventos": [{"t": 15, "tipo": "broker", "dur": 4}]},
+    {"nombre": "union", "nodo_union": 2, "t_union_s": 10, "duracion_s": 30},
+    {"nombre": "cruzado", "esquema": 2, "duracion_s": 20}
+  ]
+}

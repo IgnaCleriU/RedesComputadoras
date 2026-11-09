@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+simulacion/datos/
+
+# Corridas de host/correr.py: no se versionan. Las figuras y tablas que usa la
+# monografía están en docs/resultados/figs/.
+resultados/

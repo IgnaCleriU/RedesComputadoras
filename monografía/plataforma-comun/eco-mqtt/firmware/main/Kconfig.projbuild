@@ -1,0 +1,26 @@
+menu "Eco MQTT"
+
+    config ECO_BROKER_URI
+        string "URI del broker"
+        default "mqtt://10.0.2.2:1883"
+        help
+            En QEMU (red de usuario) la computadora anfitriona es 10.0.2.2.
+
+    config ECO_NODE_ID
+        string "Identificador del nodo (va en los tópicos)"
+        default "n1"
+
+    config ECO_WIFI_NO_PS
+        bool "Desactivar el ahorro de energía del WiFi"
+        default y
+        depends on EXAMPLE_CONNECT_WIFI
+        help
+            Con el ahorro de energía por defecto la radio duerme entre beacons y
+            la latencia sube a cientos de ms.
+
+    config ECO_TAP
+        bool "Varios nodos QEMU sobre tap + puente (IP fija, índice en la flash)"
+        default n
+        select ETH_USE_OPENETH
+
+endmenu

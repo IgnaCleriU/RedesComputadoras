@@ -1,0 +1,11 @@
+// Mensaje que cada nodo publica en kuramoto/phase/<id> cada h.
+syntax = "proto3";
+package kur;
+
+message PhaseReport {
+  uint32 id = 1;        // nodo emisor, 1..N
+  float theta = 2;      // fase en [0, 2*pi) en el instante t_us
+  float velocidad = 3;  // ultimo d(theta)/dt calculado, en rad/s
+  uint32 seq = 4;       // numero de reporte, desde 0
+  fixed64 t_us = 5;     // epoch en microsegundos en que se muestreo theta
+}
