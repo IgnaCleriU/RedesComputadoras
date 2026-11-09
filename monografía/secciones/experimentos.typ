@@ -1240,3 +1240,17 @@ Para una aplicación en la que todos los nodos necesitan el dato de todos, los r
 - Tras una interrupción, el tiempo de reconexión del cliente puede pesar más que la propia interrupción, y es un parámetro que debe ajustarse.
 - Un keep-alive muy corto detecta antes una caída, pero vuelve frágil la conexión ante cortes breves.
 - El esquema es parte del sistema: los cambios incompatibles no producen errores, por lo que necesitan control de versiones y pruebas propias.
+
+==== Conclusiones
+
+El experimento mostró que MQTT y Protocol Buffers pueden sostener una aplicación en la que cada nodo necesita el dato de todos los demás, y, gracias a un modelo que predice el comportamiento esperado, permitió ver qué aporta cada mecanismo del stack y en qué condiciones deja de alcanzar.
+
+Con la red limpia, los nodos se comportan como predice el modelo. Por encima de $K_c$ se enganchan, por debajo no, y el parámetro de orden coincide con la simulación del modelo de los nodos con una diferencia de hasta 0,007. Los desvíos respecto de la teoría sin retardo se explican por la antigüedad de las fases, en la que los 250 ms del período de publicación pesan mucho más que los 5 ms de la red. En ese régimen, el stack no impone una limitación apreciable.
+
+Las virtudes atribuidas al stack se observaron en la práctica. Un nodo se integró al grupo en 7,5 s sin que el broker ni los demás cambiaran su configuración. Un campo desconocido no afectó a la sincronía, y los nodos se reconectaron y resincronizaron solos después de cada interrupción. El mensaje es compacto, aunque en uno tan corto el dato representa 23 de los 99 bytes de cada entrega, y el nombre del tópico pesa casi lo mismo que el dato. El alias de tópico recorta 14 bytes por entrega y un 9,7 % del tráfico total.
+
+Las limitaciones también quedaron a la vista. El broker es un punto único de falla: al detenerlo, las fases se dispersan siguiendo la oscilación libre que predice la @ec-libre, y la reconexión del cliente prolonga la interrupción unos 10 s más. El esquema es un acuerdo que el protocolo no verifica: dos campos cruzados produjeron mensajes que se decodifican sin error y un grupo que no se sincroniza, sin ninguna señal en la red. La carga del broker crece con la cantidad de pares de nodos, y un keep-alive muy corto vuelve frágil la conexión, como mostró el corte de 2 s que la cerró del lado del cliente.
+
+La observación más importante es que, para esta aplicación, la frescura de los datos vale más que su entrega. Con 5 % de pérdida, QoS 0 mantuvo la mediana de antigüedad en milisegundos, mientras que QoS 1 entregó las fases con una antigüedad mediana de 13,4 s y el grupo se desordenó. La confirmación de entrega, que resulta valiosa para datos que no se pueden perder, resulta perjudicial cuando cada dato queda reemplazado por el siguiente.
+
+Estas conclusiones se apoyan en una realización por condición y en nodos emulados, de modo que describen con confianza los efectos grandes, y no permiten sostener las diferencias pequeñas, como la de la última voluntad sobre la sincronía.

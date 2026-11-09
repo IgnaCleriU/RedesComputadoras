@@ -14,7 +14,7 @@ El documento está en [Typst](https://typst.app/docs/) (0.15.x, ver `mise.toml` 
 
 ## Orden del documento
 
-Sigue la estructura habitual de una monografía (portada, índice, introducción, marco teórico, desarrollo, conclusiones, bibliografía y anexos). Entre paréntesis, el archivo de `secciones/` de cada parte:
+Sigue la estructura habitual de una monografía (portada, índice, introducción, marco teórico, desarrollo, conclusiones y bibliografía). Entre paréntesis, el archivo de `secciones/` de cada parte:
 
 1. Carátula (en `monografia.typ`): título, integrantes, docente, institución y fecha.
 2. Índice (automático).
@@ -23,7 +23,6 @@ Sigue la estructura habitual de una monografía (portada, índice, introducción
 5. Desarrollo (`desarrollo`, `experimentos`): análisis y diseño experimental.
 6. Conclusiones (`conclusion`): responden a los objetivos; no agregan información nueva.
 7. Bibliografía (automática, desde `bibliografia.bib`).
-8. Anexos (`anexos`): material extenso que cortaría la lectura, como los `.proto` completos. Se numeran con letras.
 
 ## Compilar
 
