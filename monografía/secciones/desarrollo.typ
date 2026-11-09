@@ -360,7 +360,11 @@ en MQTT y en qué puntos se aparta de ellas.
 
 === Dirección IP y nombre de tópico
 
-La clave del router es la dirección IP de destino, un número de longitud fija (32 bits en IPv4) dividido en una parte de red y una parte de computador. Con el direccionamiento sin clases (CIDR), la parte de red puede tener cualquier longitud y se escribe como un prefijo de la forma `a.b.c.d/x`, donde `x` es la cantidad de bits que la componen @kurose2017[sec.~4.3.3].
+La clave del router es la dirección IP de destino, un número de longitud fija (32 bits en IPv4) dividido en una parte de red y una parte
+de computador. La frontera entre ambas la indica la máscara: el router realiza una operación AND bit a bit entre la dirección y la máscara
+y obtiene así el número de red sobre el que decide @stallings2004[pp.~612--613]. Con el direccionamiento sin clases (CIDR), la parte de
+red puede tener cualquier longitud y se escribe como un prefijo de la forma `a.b.c.d/x`, donde `x` es la cantidad de bits que la componen
+@kurose2017[sec.~4.3.3] @rfc4632.
 
 La clave del broker es el nombre de tópico, una cadena de texto UTF-8 de hasta 65 535 bytes, organizada en niveles separados por `/`,
 sin cantidad fija de niveles y en la que se distinguen mayúsculas de minúsculas @mqtt50. Al igual que una dirección IP, se lee de izquierda
@@ -387,7 +391,12 @@ nivel máximo de QoS. Sus entradas no las calcula ningún algoritmo a partir de 
 un paquete SUBSCRIBE y las eliminan con UNSUBSCRIBE o al terminar la sesión @mqtt50. En un broker único no hay ningún protocolo que
 sincronice tablas entre nodos, y la topología se reduce al conjunto de conexiones abiertas.
 
-Por eso, el análogo más cercano en IP no es el ruteo de unidifusión, sino la multidifusión, en la que las estaciones se suscriben a un grupo con IGMP y las fuentes no necesitan pertenecer al grupo para enviarle @stallings2004[p.~638]. El paquete SUBSCRIBE de MQTT cumple la función del informe de pertenencia de IGMP y el tópico, la de la dirección de grupo. La diferencia es que las
+Por eso, el análogo más cercano en IP no es el ruteo de unidifusión, sino la multidifusión. Allí, las estaciones usan IGMP para
+suscribirse a un grupo de multidifusión y para abandonarlo, y los routers consultan periódicamente qué grupos interesan a las estaciones
+de cada red @stallings2004[p.~638]. El router no necesita saber qué estaciones pertenecen a cada grupo, sino solo si queda al menos un
+miembro activo en la red @stallings2004[p.~641], y debe traducir cada dirección de grupo a la lista de redes que contienen miembros
+@stallings2004[p.~636]. El paquete SUBSCRIBE de MQTT cumple la función del informe de pertenencia de IGMP y el tópico, la de la dirección
+de grupo. Como en la multidifusión, las fuentes no necesitan suscribirse para enviar @stallings2004[p.~638]. La diferencia es que las
 direcciones de grupo IP son identificadores planos, mientras que los tópicos son jerárquicos y admiten comodines.
 
 La @tab-tabla-ruteo-suscripciones muestra una tabla de cada tipo y la decisión que produce cada una ante un mismo caso: un datagrama
@@ -435,17 +444,44 @@ entrada de la tabla, y en ese caso el router aplica la regla del prefijo más la
 solo por la interfaz asociada a ella @kurose2017[sec.~4.2.1]. Esa regla es la que permite que un bloque más específico «perfore» un bloque
 agregado más general sin que se pierda la agregación @kurose2017[sec.~4.3.3]. El broker, en cambio, no elige: entrega el mensaje a todos
 los clientes cuyos filtros coinciden. En la @tab-tabla-ruteo-suscripciones, la ruta por defecto solo recibe el tráfico que ninguna otra
-entrada captura, mientras que el cliente suscrito a `#` recibe todos los mensajes, además de los que reciben los otros dos.
+entrada captura, mientras que el cliente suscrito a `#` recibe todos los mensajes, además de los que reciben los otros dos. Cuando las
+coincidencias corresponden a un mismo cliente, como `flota/robot1/#` y `flota/+/bateria` suscritos por la misma sesión, la especificación
+de la versión 5.0 exige que el broker respete el mayor de los niveles de QoS de las suscripciones coincidentes y le permite enviar una sola
+copia o una por cada suscripción @mqtt50, de modo que el resultado depende de la implementación. Mosquitto, por ejemplo, ofrece una opción
+de configuración para elegir entre ambos comportamientos @mosquitto-conf. En la versión 5.0, el cliente puede además asociar un
+identificador a cada suscripción, que el broker incluye en los mensajes entregados para indicar qué suscripciones los originaron @mqtt50.
 
 El comodín `+`, que reemplaza exactamente un nivel en cualquier posición del filtro, no tiene equivalente en el ruteo con prefijos. Un
 prefijo CIDR solo puede fijar los bits del comienzo de la dirección y dejar libres los del final, mientras que `flota/+/bateria` fija el
-primer y el tercer nivel y deja libre el del medio. Para expresar lo mismo con prefijos haría falta una entrada por robot.
+primer y el tercer nivel y deja libre el del medio. Para expresar lo mismo con prefijos haría falta una entrada por robot. El análogo más
+cercano en la capa de red es el reenvío generalizado de las redes definidas por software, en el que cada entrada de la tabla de flujos
+compara varios campos de la cabecera a la vez y cada campo puede contener comodines, como una dirección `128.119.*.*`
+@kurose2017[sec.~4.4.1]. Cada nivel de un tópico se comporta, en ese sentido, como un campo independiente de la cabecera. Aun así, la regla
+de decisión vuelve a ser distinta, porque cuando un paquete coincide con varias entradas de la tabla de flujos se aplica solo la de mayor
+prioridad @kurose2017[sec.~4.4.1].
+
+La especificación agrega una excepción que no tiene análogo en IP. Los filtros que comienzan con un comodín no coinciden con los tópicos
+que comienzan con `$`, como los de `$SYS`, que muchos brokers usan para publicar sus propias estadísticas @mqtt50. Un cliente suscrito a `#`
+no recibe, por lo tanto, los mensajes internos del broker, salvo que se suscriba a ellos explícitamente.
+
+El costo de la búsqueda también se resuelve de manera diferente. Un router de alta velocidad debe encontrar el prefijo más largo en
+nanosegundos, por lo que la búsqueda se implementa en hardware y con algoritmos más eficientes que un recorrido lineal de la tabla
+@kurose2017[sec.~4.2.1]. Un broker hace la búsqueda en software. EMQX, por ejemplo, organiza los filtros en un árbol de tópicos, una estructura jerárquica
+en la que compara cada tópico publicado con los filtros suscritos, incluidos los que tienen comodines @emqx-cluster, y su documentación advierte que el uso de comodines en un gran número de clientes puede afectar el desempeño
+@emqx-wildcard. Cuando EMQX funciona como un conjunto de nodos, la analogía con el ruteo IP se vuelve literal. Además del árbol, cada nodo
+mantiene una tabla, que la propia documentación llama tabla de ruteo, que asocia cada filtro con los nodos que tienen suscriptores, y una
+tabla de suscripciones local, que asocia cada filtro con los clientes conectados a ese nodo. El nodo que recibe un PUBLISH consulta el
+árbol y la tabla de ruteo, reenvía el mensaje a los nodos correspondientes, y cada uno de ellos lo entrega a sus clientes según su tabla
+local @emqx-cluster. Es una estructura en dos niveles, como la del ruteo entre sistemas autónomos: un nodo no necesita saber qué cliente se
+suscribió en otro nodo, sino solo a qué nodo debe enviarle el mensaje.
 
 === Agregación y diseño del espacio de tópicos
 
 La utilidad de un prefijo depende de cómo se asignaron las direcciones. Si los bloques se reparten de manera jerárquica, primero a los
 proveedores y luego a sus clientes, un único prefijo puede anunciar muchas redes, lo que se conoce como agregación de rutas y mantiene
-pequeñas las tablas @kurose2017[sec.~4.3.3]. Si las direcciones no siguen esa jerarquía, la agregación deja de ser posible.
+pequeñas las tablas @kurose2017[sec.~4.3.3] @rfc4632. Stallings señala, a propósito de IPv6, que las direcciones pueden agruparse por
+jerarquías de red, por proveedores de acceso, por proximidad geográfica o por institución, y que esas agrupaciones conducen a tablas más
+pequeñas y a consultas más rápidas @stallings2004[p.~624]. Si las direcciones no siguen esa jerarquía, la agregación deja de ser posible.
 
 Con los tópicos ocurre lo mismo. Un filtro con comodines solo puede seleccionar conjuntos de mensajes que la jerarquía de tópicos agrupa,
 y lo que no se codifica en el tópico no puede seleccionarse con ninguna suscripción. El orden y el contenido de los niveles equivalen, por
@@ -454,13 +490,22 @@ lo tanto, al plan de direccionamiento de una red, y se fijan al diseñar el sist
 entrada que cumple la función de una ruta agregada.
 
 La API de posiciones de vehículos de Digitransit, el servicio de información de transporte público de Finlandia, lleva esta idea a la
-ubicación geográfica. El tópico de cada vehículo incluye, después de niveles como la ciudad, la línea y el viaje, una forma simplificada de
-_geohash_, en la que cada nivel agrega un decimal de la latitud y de la longitud @digitransit-mqtt. Cada nivel adicional reduce diez veces
-el lado de la celda en cada coordenada, del mismo modo que cada bit adicional de un prefijo reduce a la mitad el bloque de direcciones, y
-así un filtro con comodines recibe todos los vehículos de una zona, cualquiera sea su línea o su viaje. El ejemplo muestra también los
-límites de la analogía. Una zona que no coincide con las celdas exige varias suscripciones, del mismo modo que un rango de direcciones que
-no está alineado con una potencia de dos exige varios prefijos, y, a diferencia de una dirección IP, el tópico de un vehículo cambia a
-medida que se mueve.
+ubicación geográfica, de manera análoga al agrupamiento por proximidad que menciona Stallings. Su broker publica la posición de cada
+vehículo codificada como GTFS-Realtime en Protocol Buffers, y el tópico incluye, después de niveles como la ciudad, la línea, el viaje y
+el identificador del vehículo, una forma simplificada de _geohash_: un nivel con las partes enteras de la latitud y la longitud, en la
+forma `60;24`, seguido de tres niveles que intercalan el primer, el segundo y el tercer decimal de ambas coordenadas. Así, la posición
+(60,123; 24,789) se codifica como `60;24/17/28/39` @digitransit-mqtt. Cada nivel adicional reduce diez veces el lado de la celda en cada
+coordenada, del mismo modo que cada bit adicional de un prefijo reduce a la mitad el bloque de direcciones, y la documentación destaca que
+este formato permite suscribirse con facilidad a zonas geográficas y recomienda especificar los niveles del tópico para limitar lo que se
+recibe @digitransit-mqtt. A partir de la estructura documentada, por ejemplo, el filtro
+`/gtfsrt/vp/tampere/+/+/+/+/+/+/+/+/+/+/61;23/47/#` recibe los vehículos de Tampere ubicados en una celda de una décima de grado de lado,
+cualquiera sea su línea o su viaje.
+
+El ejemplo muestra también los límites de la analogía. Una zona que no coincide con las celdas exige varias suscripciones, del mismo modo
+que un rango de direcciones que no está alineado con una potencia de dos exige varios prefijos. Y, a diferencia de una dirección IP, el
+tópico de un vehículo cambia a medida que se mueve, de modo que un suscriptor que sigue una zona ve aparecer y desaparecer vehículos sin
+que nadie modifique su suscripción. El costo de esa expresividad es el tamaño del encabezado: un tópico de unos veinte niveles se repite en
+cada PUBLISH, un costo que el alias de tópico de la versión 5.0, descrito en la @sec-stack, permite reducir.
 
 === Entrega a uno, a todos y a uno de un grupo
 
@@ -498,9 +543,15 @@ Buffers, el tópico solo identifica el nodo o el dispositivo que las publica, y 
 y decodificar todos los mensajes de ese nodo (@sec-caso-industria) @sparkplug3. Es el equivalente a pedirle a un router que encamine
 según el contenido de un segmento, algo que su tabla no puede expresar.
 
-Por último, el broker no reconoce mensajes duplicados. Cuando varios puentes de Meshtastic reciben el mismo paquete de la malla y lo publican, el broker trata cada copia como un mensaje independiente y las entrega todas, ya que no interpreta el identificador que viaja en la carga útil. Son los suscriptores los que deben descartar las copias, a partir del número que la radio de origen asigna a cada paquete
+Por último, el broker no reconoce mensajes duplicados. Stallings describe la técnica de inundación, en la que cada nodo reenvía el paquete
+por todos sus enlaces salvo aquel por el que llegó, de modo que el destino recibe varias copias, y por eso el paquete debe llevar un
+identificador único, como el nodo de origen y un número de secuencia, para que el destino conserve una sola y descarte el resto
+@stallings2004[p.~387]. La malla de Meshtastic funciona de este modo, y cuando varios puentes reciben el mismo paquete de la malla y lo
+publican, el broker trata cada copia como un mensaje independiente y las entrega todas, ya que no interpreta el identificador que viaja en
+la carga útil. Son los suscriptores los que deben descartar las copias, a partir del número que la radio de origen asigna a cada paquete
 (@sec-caso-lora) @meshtastic-mqtt. La multidifusión IP evita ese problema en los propios routers, que encaminan cada paquete según un árbol
-de expansión con raíz en la fuente, de modo que cada red reciba una sola copia @stallings2004[p.~637].
+de expansión con raíz en la fuente, de modo que cada red reciba una sola copia @stallings2004[p.~637]. El broker no tiene un mecanismo
+equivalente porque no tiene forma de saber que dos PUBLISH son copias del mismo mensaje.
 
 La @tab-ruteo-topicos-ip resume la comparación.
 
