@@ -25,7 +25,7 @@
 #let dominio-mail = "mi.unc.edu.ar"
 
 // Borrador: agrega una marca de agua en todas las páginas. Pasar a `false` para la entrega.
-#let borrador = true
+#let borrador = false
 
 #let hoy = datetime.today()
 // `datetime.display` no traduce los meses, así que la fecha se arma a mano.
