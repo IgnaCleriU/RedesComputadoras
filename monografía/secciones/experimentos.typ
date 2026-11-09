@@ -622,13 +622,13 @@ Este experimento corresponde al último de los objetivos específicos (@sec-obje
 
 #subtitulo[Fundamento]
 
-*El modelo.* El experimento se basa en el modelo de osciladores acoplados que propuso Kuramoto @kuramoto1975. Para presentarlo se sigue la revisión de Strogatz @strogatz2000, y para el caso de una cantidad finita de osciladores, el trabajo de Verwoerd y Mason @verwoerd2008. Se consideran $N$ osciladores, cada uno descrito solo por su fase y acoplado a todos los demás con el mismo peso. El oscilador $i$ tiene una frecuencia natural $omega_i$, en rad/s, que es fija, y una fase $theta_i$, en radianes, que evoluciona según
+*El modelo.* El experimento se basa en el modelo de osciladores acoplados que propuso Kuramoto @kuramoto1975. Se consideran $N$ osciladores, cada uno descrito solo por su fase y acoplado a todos los demás con el mismo peso. El oscilador $i$ tiene una frecuencia natural $omega_i$, en rad/s, que es fija, y una fase $theta_i$, en radianes, que evoluciona según
 
 $ dot(theta)_i = omega_i + K/N sum_(j=1)^N sin(theta_j - theta_i), quad i = 1, dots, N $ <ec-kuramoto>
 
 donde el punto indica la derivada respecto del tiempo. El acoplamiento es la influencia que los osciladores ejercen entre sí, representada por el término de la sumatoria, que depende de las diferencias de fase. Su intensidad es $K$, en rad/s: con $K = 0$, cada oscilador avanza a su frecuencia natural sin afectar a los demás. El acoplamiento cambia la velocidad instantánea $dot(theta)_i$: si el oscilador $j$ va adelantado menos de media vuelta, $sin(theta_j - theta_i) > 0$ y el oscilador $i$ se acelera; si va atrasado menos de media vuelta, se frena.
 
-*Parámetro de orden y campo medio.* El grado de sincronía se mide con el centroide de las fases sobre el círculo unitario:
+*Parámetro de orden.* El grado de sincronía se mide con el centroide de las fases sobre el círculo unitario:
 
 $ r e^(upright(i) psi) = 1/N sum_(j=1)^N e^(upright(i) theta_j) $ <ec-orden>
 
@@ -672,84 +672,17 @@ donde $upright(i)$ es la unidad imaginaria. El módulo $r$, entre 0 y 1, se deno
   caption: [Fases de ocho osciladores sobre el círculo unitario (círculos vacíos) y su centroide $r e^(upright(i) psi)$ (punto negro). A la izquierda, fases dispersas; a la derecha, fases agrupadas.],
 ) <fig-orden>
 
-Si se multiplica la @ec-orden por $e^(-upright(i) theta_i)$ y se toma la parte imaginaria, resulta
+*Frecuencia común y acoplamiento crítico.* Se dice que el grupo está enganchado cuando todos los osciladores giran a una misma frecuencia, que se denota $Omega$, y sus diferencias de fase permanecen constantes. Sin retardo, esa frecuencia es la media de las frecuencias naturales, $Omega = overline(omega)$, porque el acoplamiento redistribuye las velocidades entre los osciladores sin cambiar su suma @verwoerd2008. Las desintonías $Delta_i = omega_i - overline(omega)$ indican cuánto se aparta cada frecuencia natural de la media.
 
-$ r sin(psi - theta_i) = 1/N sum_(j=1)^N sin(theta_j - theta_i) $
-
-Al reemplazar esa suma en la @ec-kuramoto se obtiene la forma de campo medio @strogatz2000, que vale para cualquier $N$:
-
-$ dot(theta)_i = omega_i + K r sin(psi - theta_i) $ <ec-campo-medio>
-
-Cada oscilador es atraído hacia la fase media con una fuerza $K r$. Esta forma muestra con claridad la dinámica del grupo, pero no es la que ejecutan los nodos, que suman directamente cada término porque cada fase recibida tiene su propia antigüedad. Para calcular $r$ y $psi$ al analizar los resultados, el promedio de fases tiene que ser circular: se suman los vectores $(cos theta_j, sin theta_j)$ y se toman el módulo y el ángulo de la suma. Promediar los ángulos directamente falla en el corte entre $2 pi$ y 0.
-
-*Frecuencia común.* Se dice que el grupo está enganchado cuando todos los osciladores giran a una misma frecuencia, que se denota $Omega$, y sus diferencias de fase permanecen constantes. Para hallar $Omega$, se suma la @ec-kuramoto sobre todos los osciladores:
-
-$ sum_(i=1)^N dot(theta)_i = sum_(i=1)^N omega_i + K/N sum_(i=1)^N sum_(j=1)^N sin(theta_j - theta_i) $
-
-La suma doble vale cero. Como el seno es impar, $sin(theta_j - theta_i) = -sin(theta_i - theta_j)$, de modo que el término del par $(i, j)$ se cancela con el del par $(j, i)$, y los términos con $i = j$ ya son nulos. Queda entonces
-
-$ sum_(i=1)^N dot(theta)_i = sum_(i=1)^N omega_i $ <ec-suma-fases>
-
-Esta relación vale siempre, haya o no enganche: el acoplamiento redistribuye las velocidades entre los osciladores, pero no cambia su suma. Si el grupo está enganchado, $dot(theta)_i = Omega$ para todo $i$, y la @ec-suma-fases da $N Omega = sum_i omega_i$, es decir
-
-$ Omega = overline(omega) = 1/N sum_(i=1)^N omega_i $ <ec-frecuencia-comun>
-
-Verwoerd y Mason llegan al mismo resultado: en un estado enganchado, cada oscilador avanza a una velocidad constante igual a la media de las frecuencias naturales @verwoerd2008. A partir de aquí se trabaja con las desintonías $Delta_i = omega_i - overline(omega)$, que indican cuánto se aparta cada frecuencia natural de la media.
-
-*Límite de infinitos osciladores.* Se denomina acoplamiento crítico $K_c$ al valor de $K$ a partir del cual aparece la sincronización. El primer resultado sobre este umbral es el análisis de Kuramoto para $N -> infinity$, que se resume siguiendo a Strogatz @strogatz2000. Las desintonías se distribuyen según una densidad de probabilidad $g(Delta)$ simétrica y que no crece al alejarse de $Delta = 0$, y se buscan soluciones estacionarias, con $r$ constante y $psi$ girando a la velocidad uniforme $Omega$. En este apartado, y solo en él, $theta_i$ denota la fase medida desde $psi$, es decir, en un marco que gira a la velocidad $Omega$ y tiene su origen en la fase media, con lo que la @ec-campo-medio se reduce a
-
-$ dot(theta)_i = Delta_i - K r sin theta_i $
-
-Según el valor de $Delta_i$, los osciladores se separan en dos grupos. Los que cumplen $|Delta_i| <= K r$ tienden a un punto fijo, en el que su fase relativa deja de cambiar, con $Delta_i = K r sin theta_i$ y $|theta_i| <= pi\/2$, y quedan enganchados. Los que tienen $|Delta_i| > K r$ no alcanzan ningún punto fijo y derivan alrededor del círculo.
-
-El valor de $r$ tiene que ser coherente con estas dos poblaciones. La simetría de $g$ anula la contribución de los osciladores a la deriva al centroide, y también la parte imaginaria de la contribución de los enganchados. Solo queda el promedio de $cos theta$ sobre los enganchados, donde $theta(Delta)$ es la fase que cumple $Delta = K r sin theta$, y con ese cambio de variable resulta
-
-$ r = integral_(-K r)^(K r) cos theta(Delta) thin g(Delta) dif Delta = K r integral_(-pi\/2)^(pi\/2) cos^2 theta thin g(K r sin theta) dif theta $
-
-Esta ecuación siempre admite la solución $r = 0$, que corresponde al estado incoherente, en el que las fases están repartidas sin un ritmo común. Las demás soluciones, que forman una rama de sincronización parcial, se obtienen dividiendo por $r$:
-
-$ 1 = K integral_(-pi\/2)^(pi\/2) cos^2 theta thin g(K r sin theta) dif theta $ <ec-rama-parcial>
-
-El acoplamiento crítico es el valor en el que esa rama nace desde $r = 0$. Al tomar $r -> 0^+$ en la @ec-rama-parcial, $g$ se evalúa en 0 y la integral de $cos^2 theta$ vale $pi\/2$, de modo que $1 = K_c g(0) pi\/2$, es decir
-
-$ K_c = 2/(pi g(0)) $ <ec-kc-infinito>
-
-Para una distribución de Lorentz de ancho $gamma$, $g(Delta) = gamma\/(pi (gamma^2 + Delta^2))$ y $g(0) = 1\/(pi gamma)$, por lo que $K_c = 2 gamma$ y, por encima del umbral, $r = sqrt(1 - K_c\/K)$ @strogatz2000. Estas expresiones valen en el límite de infinitos osciladores. Con $N$ finito, $r$ fluctúa con una amplitud del orden de $N^(-1\/2)$, que puede amplificarse cerca del umbral; Strogatz presenta este comportamiento como evidencia numérica y no como un resultado demostrado @strogatz2000. Las frecuencias del experimento se reparten a intervalos iguales en un rango de semiancho $b$, lo que se aproxima a una densidad uniforme con $g(0) = 1\/(2 b)$. Para ellas la @ec-kc-infinito daría $4 b \/ pi = #"0,320"$ rad/s. En este trabajo la @ec-kc-infinito queda solo como contexto: con $N$ finito, $K_c$ se calcula como se muestra a continuación, y salvo aviso ese es el umbral al que se refiere el símbolo $K_c$ en el resto del experimento.
-
-*Umbral exacto con $N$ finito.* Verwoerd y Mason estudian el mismo modelo para una cantidad finita de osciladores @verwoerd2008, y definen el acoplamiento crítico como el menor $K$ para el que existe un estado enganchado. No es el mismo umbral que el de la @ec-kc-infinito: aquel marca el comienzo de la sincronización parcial, y este, el enganche de todos los osciladores.
-
-En un estado enganchado, $dot(theta)_i = overline(omega)$ para todo $i$. Reemplazando en la @ec-campo-medio se obtiene
-
-$ Delta_i = u sin(theta_i - psi), quad u = K r $
-
-La magnitud $u$ es la fuerza con la que el grupo atrae a cada oscilador, y como el seno no supera 1 en módulo, cada oscilador necesita $|Delta_i| <= u$. De la parte real de la @ec-orden, multiplicada por $e^(-upright(i) psi)$, sale $r = 1\/N sum_i cos(theta_i - psi)$, y cada coseno vale $plus.minus sqrt(1 - (Delta_i\/u)^2)$. Verwoerd y Mason demuestran que existe un estado enganchado si y solo si la ecuación resultante tiene solución con todos los signos positivos @verwoerd2008, lo que da la condición de autoconsistencia:
+Se denomina acoplamiento crítico $K_c$ al menor valor de $K$ para el que existe un estado enganchado. Para una cantidad finita de osciladores, ese estado existe si y solo si tiene solución la condición de autoconsistencia @verwoerd2008
 
 $ r = u/K = f(u) = 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u)^2), quad u >= max_i |Delta_i| $ <ec-autoconsistencia>
 
-Despejando, $K = u\/f(u)$, y el menor acoplamiento para el que hay solución es
+donde $u = K r$ es la fuerza con la que el grupo atrae a cada oscilador. El menor acoplamiento para el que hay solución es
 
 $ K_c = min_(u >= max_i |Delta_i|) u/f(u) $ <ec-kc-finito>
 
-Al derivar $u\/f(u)$ e igualar a cero se obtiene $f(u) = u f'(u)$, y al desarrollar $f'(u)$, el mínimo queda en el valor $u^*$ que cumple
-
-$ 2 dot 1/N sum_(i=1)^N sqrt(1 - (Delta_i/u^*)^2) = 1/N sum_(i=1)^N 1/sqrt(1 - (Delta_i/u^*)^2) $
-
-Esa ecuación tiene una única solución @verwoerd2008, y entonces $K_c = u^* \/ f(u^*)$. El resultado garantiza que el estado enganchado existe, pero no que el sistema lo alcance desde cualquier condición inicial, porque el trabajo no aborda la estabilidad @verwoerd2008. Ese punto se analiza más abajo para las frecuencias del experimento y se comprueba mediante la simulación numérica del modelo.
-
-Con esto se calculan, para un conjunto dado de frecuencias naturales, el umbral de enganche total, el valor de $r$ y el desfasaje de cada oscilador respecto de la fase media, que es $theta_i - psi = arcsin(Delta_i\/u)$. Verwoerd y Mason prueban además que $max_i |Delta_i| <= K_c <= 2 max_i |Delta_i|$ @verwoerd2008. El caso $N = 2$, que sirve de ejemplo, alcanza la cota superior: con $Delta omega = omega_2 - omega_1$, las desintonías valen $plus.minus Delta omega\/2$ y resulta $K_c = |Delta omega|$.
-
-Para un $K$ dado, la @ec-autoconsistencia, escrita como $K f(u) = u$, tiene a lo sumo dos soluciones en $u$ @verwoerd2008. Cuando hay dos, se toma la mayor, que es la de mayor $r$. La razón de esa elección es la estabilidad. Si se linealiza la @ec-kuramoto alrededor de un estado enganchado, una perturbación $delta theta$ evoluciona según $dot(delta theta) = J delta theta$, donde $J_(i j) = K\/N cos(theta_j - theta_i)$ para $j != i$ y cada elemento de la diagonal es menos la suma de los demás de su fila. $J$ siempre tiene un autovalor nulo, que corresponde a girar todas las fases por igual. El estado es localmente estable si los demás autovalores son negativos.
-
-*Aplicación a las frecuencias del experimento.* Para los 20 osciladores que se usan, con frecuencias naturales a intervalos iguales entre 1,005 y 1,508 rad/s, la mayor desintonía vale #"0,2513" rad/s. El mínimo de la @ec-kc-finito se alcanza en $u^* = #"0,2591"$ rad/s, solo un 3,1 % por encima de esa desintonía, y da $K_c = #"0,3350"$ rad/s, entre las cotas de #"0,2513" y #"0,5027" rad/s. En el umbral, $r = f(u^*) = #"0,773"$, por lo que el enganche aparece con el grupo ya muy ordenado. Con estas frecuencias, las dos soluciones de $K f(u) = u$ coexisten solo entre $K_c$ y $#"1,018" K_c$; por encima queda una sola. El cálculo de los autovalores da estable la solución mayor e inestable la menor, y estable el estado enganchado en todos los valores de $K$ usados en el experimento. Es una estabilidad local: no asegura que el sistema llegue a ese estado desde cualquier condición inicial, y eso se comprueba por simulación.
-
-La @fig-teoria-r-k muestra la curva de $r$ en función de $K$ para las 20 frecuencias que se usan en el experimento. El estado enganchado aparece recién en $K_c$, con un valor de $r$ que ya es elevado, y $r$ crece con $K$ acercándose a 1. Es la curva contra la que se comparan las mediciones (@fig-modelo-r-k).
-
-#figure(
-  fig-exp2("00_teoria_r_k.png", width: 100%),
-  caption: [Parámetro de orden del estado enganchado en función del acoplamiento, según la @ec-autoconsistencia, sin retardo. Por debajo de $K_c$ no existe estado enganchado.],
-) <fig-teoria-r-k>
-
-*Enganche parcial y normalización.* Con $N >= 3$, puede engancharse un subgrupo mientras otro oscilador deriva. Este caso no tiene fórmula simple y se estudia por simulación, comparando las frecuencias efectivas de cada oscilador, es decir, la velocidad media a la que avanza su fase. Como el acoplamiento se divide por $N$, al agregar osciladores con el mismo $K$ cada interacción individual se debilita.
+y, para un $K$ dado, la @ec-autoconsistencia da el valor de $r$ del estado enganchado y el desfasaje de cada oscilador respecto de la fase media, $arcsin(Delta_i\/u)$ @verwoerd2008. Para los 20 osciladores que se usan, con frecuencias naturales a intervalos iguales entre 1,005 y 1,508 rad/s, resulta $K_c = #"0,335"$ rad/s, y en el umbral $r = #"0,773"$, por lo que el enganche aparece con el grupo ya muy ordenado. El cálculo de los autovalores del modelo linealizado da estable el estado enganchado en todos los valores de $K$ usados en el experimento. Es una estabilidad local, que no asegura que el sistema llegue a ese estado desde cualquier condición inicial, y eso se comprueba por simulación.
 
 *El modelo en los nodos.* El modelo anterior supone que cada oscilador conoce en todo instante la fase exacta de los demás. En la implementación esto no se cumple, porque la fase de cada nodo llega a los otros como un mensaje MQTT, con demora y solo cada cierto tiempo. Si $tau_(i j)(t)$ es la antigüedad, en el instante $t$, de la última fase del nodo $j$ que conoce el nodo $i$, la evolución de cada nodo está dada por
 
@@ -757,51 +690,31 @@ $ dot(theta)_i (t) = omega_i + K/N sum_(j != i) sin(theta_j (t - tau_(i j)(t)) -
 
 La suma excluye $j = i$ porque cada nodo conoce su propia fase sin demora, y ese término es nulo. El divisor $N$ es la cantidad total de nodos y permanece fijo aunque falte alguna fase, de modo que un mensaje ausente no altera el peso de los demás. Con todos los retardos nulos, la @ec-nodo coincide con la @ec-kuramoto.
 
-La antigüedad $tau_(i j)$ reúne varias demoras. Una fase recorre dos conexiones TCP, del publicador al broker y del broker al suscriptor (@sec-pubsub), y pasa por la cola del broker. Además, entre dos publicaciones sucesivas la fase conocida envejece: si cada nodo publica con período $h$, la fase guardada envejece desde casi cero hasta casi $h$, en forma de diente de sierra, y esa espera agrega en promedio alrededor de $h\/2$. Por último, MQTT delega la entrega en TCP (@sec-mqtt), de modo que un paquete descartado en la red no se pierde, sino que se retransmite y llega más tarde. Mientras la conexión se mantiene, la pérdida de paquetes se manifiesta entonces como un aumento y una variación de $tau_(i j)$. Si un mensaje no llega, el nodo sigue usando la última fase recibida, cuya antigüedad continúa creciendo. Con la política alternativa, usar solo las fases recibidas en cada paso y mantener $N$ fijo, una fracción $p$ de mensajes ausentes reduciría el acoplamiento a aproximadamente $K(1 - p)$.
+La antigüedad $tau_(i j)$ reúne varias demoras. Una fase recorre dos conexiones TCP, del publicador al broker y del broker al suscriptor (@sec-pubsub), y pasa por la cola del broker. Además, entre dos publicaciones sucesivas la fase conocida envejece: si cada nodo publica con período $h$, la fase guardada envejece desde casi cero hasta casi $h$, en forma de diente de sierra, y esa espera agrega en promedio alrededor de $h\/2$. Por último, MQTT delega la entrega en TCP (@sec-mqtt), de modo que un paquete descartado en la red no se pierde, sino que se retransmite y llega más tarde. Mientras la conexión se mantiene, la pérdida de paquetes se manifiesta entonces como un aumento y una variación de $tau_(i j)$. Si un mensaje no llega, el nodo sigue usando la última fase recibida, cuya antigüedad continúa creciendo.
 
-Si se corta la conexión o cae el broker, que es el punto de falla del sistema (@sec-casos-sintesis), dejan de llegar fases de todos los nodos. Cuando el cliente detecta la desconexión, descarta las fases guardadas, que ya no representan a los demás, y el acoplamiento se anula. Este caso se analiza más adelante.
-
-Cada nodo integra la @ec-nodo con un paso fijo $T_s$, que no tiene por qué coincidir con $h$, mediante el método de Euler:
+Cada nodo integra la @ec-nodo con el método de Euler y un paso fijo $T_s$ de 10 ms, que no tiene por qué coincidir con $h$:
 
 $ theta_i [k + 1] = theta_i [k] + T_s (omega_i + K/N sum_(j != i) sin(hat(theta)_j [k] - theta_i [k])) $ <ec-nodo-discreta>
 
-donde $hat(theta)_j [k]$ es la última fase recibida del nodo $j$ al llegar el paso $k$. Sin retardo y cerca de la sincronía, una perturbación de las fases se multiplica por $1 - K T_s$ en cada paso, por lo que la integración exige $0 < K T_s < 2$. En el firmware, $T_s$ es el tiempo que realmente transcurrió entre dos pasos, que vale 10 ms salvo demoras de planificación.
+donde $hat(theta)_j [k]$ es la última fase recibida del nodo $j$ al llegar el paso $k$.
 
 *Efecto del retardo.* Yeung y Strogatz analizan el modelo de Kuramoto con un retardo $tau$ constante e igual para todos los pares, incluido el término de cada oscilador consigo mismo @yeung1999. Para osciladores idénticos, con $omega_i = omega_0$, existe una solución en la que todos giran en fase a una frecuencia $Omega$ que cumple
 
 $ Omega = omega_0 - K sin(Omega tau) $ <ec-retardo-omega>
 
-y esa solución es estable si $cos(Omega tau) > 0$ @yeung1999. El retardo, por lo tanto, corre la frecuencia común respecto de la natural, y lo que determina la estabilidad no es $tau$ por sí solo, sino el producto $Omega tau$. Con acoplamiento débil, $Omega approx omega_0$ y la condición se cumple mientras el retardo sea menor que un cuarto del período de oscilación. El retardo se compara, entonces, con el período de oscilación y no con la desintonía: la frecuencia de oscilación define cuánta latencia tolera el sistema. A 1 Hz, ese cuarto de período equivale a 250 ms; a 0,5 Hz, a 500 ms; y a los 0,2 Hz de este experimento, a 1,25 s. La condición es periódica en $tau$: un retardo constante de varias vueltas también puede cumplirla, de modo que superar $Omega tau = pi\/2$ no implica por sí solo perder la estabilidad. Además, con $K$ suficientemente grande la @ec-retardo-omega tiene varias soluciones estables, y para determinadas combinaciones de $K$ y $tau$ la sincronía estable directamente no existe @yeung1999.
-
-El mismo trabajo trata frecuencias distribuidas según una Lorentziana de ancho $gamma$ centrada en $omega_0$, para $N -> infinity$. Sin ruido, el acoplamiento crítico es
-
-$ K_c = (2 gamma)/cos(Omega_c tau), quad Omega_c = omega_0 - gamma tan(Omega_c tau) $ <ec-kc-retardo-lorentz>
-
-que con $tau = 0$ se reduce al valor $2 gamma$ del caso sin retardo @yeung1999. El retardo corre así el valor en el que el estado incoherente deja de ser estable; cerca de él pueden coexistir estados sincronizados e incoherentes @yeung1999. Yeung y Strogatz incluyen además un ruido blanco en las frecuencias, de intensidad $D$, que en esta expresión se suma a $gamma$ y también eleva el umbral.
+y esa solución es estable si $cos(Omega tau) > 0$ @yeung1999. El retardo, por lo tanto, corre la frecuencia común respecto de la natural, y lo que determina la estabilidad no es $tau$ por sí solo, sino el producto $Omega tau$. Con acoplamiento débil, $Omega approx omega_0$ y la condición se cumple mientras el retardo sea menor que un cuarto del período de oscilación, que a los 0,2 Hz de este experimento equivale a 1,25 s. El retardo se compara, entonces, con el período de oscilación y no con la desintonía. La condición es periódica en $tau$, de modo que superar $Omega tau = pi\/2$ no implica por sí solo perder la estabilidad @yeung1999. Para frecuencias distribuidas y un número infinito de osciladores, el retardo multiplica además el acoplamiento crítico por $1\/cos(Omega_c tau)$ @yeung1999.
 
 Estos resultados no se aplican de forma directa a la @ec-nodo, y se utilizan como referencia. La diferencia del término propio es menor: al repetir el planteo para osciladores idénticos sin ese término, quedan $N - 1$ sumandos con retardo, y la condición pasa a ser $Omega = omega_0 - K (N - 1)\/N sin(Omega tau)$, que tiende a la @ec-retardo-omega cuando $N$ crece. No se dispone, en cambio, de un resultado cerrado para frecuencias arbitrarias, $N$ finito y retardos que varían en el tiempo. Se espera que la variación del retardo, o _jitter_, actúe como un ruido sobre las fases recibidas, baje $r$ en régimen y suba el $K_c$ medido, aunque no equivale al ruido blanco del modelo de Yeung y Strogatz. Ese caso se estudia comparando la simulación del modelo con las mediciones.
 
-*Ejemplo con $N = 2$.* Con $phi = theta_2 - theta_1$, restar las dos ecuaciones del modelo sin retardo da $dot(phi) = Delta omega - K sin phi$, que tiene puntos fijos solo si $K >= |Delta omega|$, en acuerdo con el valor de $K_c$ ya obtenido. Con un retardo $tau$ igual en ambos sentidos en la @ec-nodo, y siguiendo el mismo razonamiento de @yeung1999, un estado enganchado debe cumplir
-
-$ Delta omega = K sin phi cos(Omega tau), quad Omega = overline(omega) - K/2 cos phi sin(Omega tau) $
-
-Hay solución solo si $K |cos(Omega tau)| >= |Delta omega|$. El umbral crece entonces como $1\/|cos(Omega tau)|$, de forma análoga a la @ec-kc-retardo-lorentz.
-
-*Retardo uniforme con frecuencias distintas.* Los resultados anteriores no alcanzan para las frecuencias del experimento, pero el mismo razonamiento se puede extender. Esta cuenta no proviene de las fuentes citadas: se deduce aquí. Se supone en la @ec-nodo un retardo $tau$ constante e igual para todos los pares y un estado enganchado, $theta_i (t) = Omega t + a_i$, y se llaman $r$ y $psi$ al módulo y al ángulo del centroide de los $a_j$. Agregando y restando el término con $j = i$,
-
-$ sum_(j != i) sin(a_j - a_i - Omega tau) = N r sin(psi - a_i - Omega tau) + sin(Omega tau) $
-
-Con $beta_i = a_i - psi + Omega tau$, cada oscilador debe cumplir
+*Retardo uniforme con frecuencias distintas.* Los resultados anteriores no alcanzan para las frecuencias del experimento, pero el mismo razonamiento se puede extender. Esta cuenta no proviene de las fuentes citadas: se deduce aquí. Se supone en la @ec-nodo un retardo $tau$ constante e igual para todos los pares y un estado enganchado, $theta_i (t) = Omega t + a_i$, y se llaman $r$ y $psi$ al módulo y al ángulo del centroide de los $a_j$. Con $beta_i = a_i - psi + Omega tau$, cada oscilador debe cumplir
 
 $ omega_i + K/N sin(Omega tau) - Omega = K r sin beta_i $ <ec-nodo-retardo>
 
-De la definición del centroide resulta $1\/N sum_i e^(upright(i) beta_i) = r e^(upright(i) Omega tau)$. Promediando la @ec-nodo-retardo sobre todos los osciladores y usando la parte imaginaria de esa relación se obtiene
+y, promediando sobre todos los osciladores, la frecuencia común resulta
 
 $ Omega = overline(omega) - K (r^2 - 1/N) sin(Omega tau) $ <ec-omega-retardo-distintas>
 
-Con todos los osciladores iguales, $r = 1$ y se recupera la versión con $N - 1$ sumandos de la @ec-retardo-omega; con $tau = 0$ se recupera $Omega = overline(omega)$. La frecuencia común deja de ser la media porque el retardo rompe la antisimetría que anulaba la suma doble en la @ec-suma-fases.
-
-La @ec-nodo-retardo tiene solución solo si $|omega_i + K\/N sin(Omega tau) - Omega| <= K r$ para todo $i$. Como $Omega$ queda por debajo de la media, los osciladores más rápidos quedan más lejos de la frecuencia común que los más lentos, y son los primeros en no poder seguirla. Resolviendo numéricamente las ecuaciones para las 20 frecuencias, con $tau = 255$ ms ($h\/2$ más unos 5 ms de transporte), la primera solución aparece en $K = #"1,17" K_c$, mientras que el factor $1\/cos(Omega tau)$ solo sugeriría un aumento cercano al 5 %. La diferencia es justamente el corrimiento de $Omega$, y en ese umbral el oscilador más rápido es el que satura la condición. Se trata de una aproximación, porque la antigüedad real no es constante sino un diente de sierra alrededor de $h\/2$, y se contrasta con la simulación y las mediciones.
+Con $tau = 0$ se recupera $Omega = overline(omega)$. Con retardo, $Omega$ queda por debajo de la media, de modo que los osciladores más rápidos quedan más lejos de la frecuencia común y son los primeros en no poder seguirla. Resolviendo numéricamente las ecuaciones para las 20 frecuencias, con $tau = 255$ ms ($h\/2$ más unos 5 ms de transporte), la primera solución aparece en $K = #"1,17" K_c$, mientras que el factor $1\/cos(Omega tau)$ solo sugeriría un aumento cercano al 5 %. La diferencia es justamente el corrimiento de $Omega$. Se trata de una aproximación, porque la antigüedad real no es constante sino un diente de sierra alrededor de $h\/2$, y se contrasta con la simulación y las mediciones.
 
 *Acoplamiento fijo y efecto de la red.* $K$ es una ganancia del software de cada nodo, que se fija al comienzo de cada corrida y no cambia durante ella. Tampoco modifica el tráfico, que depende de $h$ y del tamaño de los mensajes. La red no altera $K$, pero sí el efecto que tiene sobre la dinámica, de modo que hace falta un acoplamiento mayor que el teórico para lograr el enganche. Por eso, comparar lo que predice el modelo con lo que se mide indica qué efecto tiene cada mecanismo del stack sobre la aplicación, y el experimento se organiza por mecanismos y no en torno a un único valor de $K_c$.
 
@@ -891,8 +804,6 @@ Cada término de la @ec-nodo-discreta tiene un lugar concreto en el firmware (@t
 Dos tareas reparten el trabajo. Una tarea es un hilo de ejecución con prioridad propia, y el planificador del sistema operativo decide en cada momento cuál corre. La de integración, de mayor prioridad, calcula el acoplamiento y avanza la fase cada 10 ms. Usa como paso el tiempo que realmente transcurrió desde la iteración anterior y no los 10 ms nominales, para que una demora en la planificación del emulador no cambie la velocidad de la fase. La de publicación toma la última fase cada 500 ms, la serializa y la entrega al cliente MQTT. Al estar separadas, un envío demorado no detiene la integración, que es el desacoplamiento de sincronización de la @sec-pubsub llevado al código.
 
 Los instantes de publicación de cada nodo se calculan desde el inicio de la corrida, de modo que un retraso en una publicación no se arrastra a las siguientes, y cada nodo tiene un desfase propio, elegido al azar dentro de $h$. Con ese desfase, los nodos no publican todos a la vez y la fase conocida de cada otro nodo envejece de manera repartida, como supone la estimación de una antigüedad media cercana a $h\/2$ que se hizo en el planteo. Si un envío se demora más de un período, el nodo no intenta publicar las fases atrasadas, porque una fase vieja ya no le sirve a nadie.
-
-Las fases se suman directamente y no mediante el campo medio de la @ec-campo-medio, porque cada fase recibida tiene su propia antigüedad y el nodo no dispone de un $r$ y un $psi$ instantáneos del grupo.
 
 #subtitulo[Recorrido de una fase]
 
@@ -1211,7 +1122,7 @@ Sin perturbaciones, la cantidad de entregas crece con $N (N - 1)$, y la mayor pa
 
 #subtitulo[Cuándo sincroniza y qué agrega el stack]
 
-Con la red limpia, la emulación coincide con la simulación del modelo de los nodos, con diferencias de hasta 0,007 en $r$ a 1,2, 1,5 y 2 $K_c$. Las dos quedan por debajo de la teoría sin retardo, y la diferencia de la emulación respecto de ella crece al acercarse a $K_c$: es de 0,031 a 1,2 $K_c$ y de 0,0035 a 2 $K_c$. Con una antigüedad media de unos 250 ms, la información vieja desplaza el umbral hacia arriba, y ese corrimiento se midió. El grupo no engancha a 1,05, 1,1 ni 1,15 $K_c$, aunque sin retardo allí existe un estado enganchado estable, y sí engancha a 1,2 y 1,25 $K_c$. La corrida de 1,15 $K_c$ queda muy cerca del criterio de enganche, con una dispersión de 0,012 rad/s contra el límite de 0,01. El umbral medido queda así entre 1,15 y 1,2 $K_c$, en acuerdo con el $#"1,17" K_c$ que predice la @ec-nodo-retardo y con la simulación del modelo de los nodos con retardo fijo de 10 ms, que deja de derivar entre 1,18 y 1,19 $K_c$. El corrimiento, cercano al 18 %, es más de tres veces el 5 % que sugeriría la @ec-kc-retardo-lorentz, porque la mayor parte se debe a la baja de la frecuencia común. Una consecuencia es que la corrida de 1,2 $K_c$ está apenas por encima del umbral real, y eso explica que su diferencia con la teoría sin retardo sea la mayor.
+Con la red limpia, la emulación coincide con la simulación del modelo de los nodos, con diferencias de hasta 0,007 en $r$ a 1,2, 1,5 y 2 $K_c$. Las dos quedan por debajo de la teoría sin retardo, y la diferencia de la emulación respecto de ella crece al acercarse a $K_c$: es de 0,031 a 1,2 $K_c$ y de 0,0035 a 2 $K_c$. Con una antigüedad media de unos 250 ms, la información vieja desplaza el umbral hacia arriba, y ese corrimiento se midió. El grupo no engancha a 1,05, 1,1 ni 1,15 $K_c$, aunque sin retardo allí existe un estado enganchado estable, y sí engancha a 1,2 y 1,25 $K_c$. La corrida de 1,15 $K_c$ queda muy cerca del criterio de enganche, con una dispersión de 0,012 rad/s contra el límite de 0,01. El umbral medido queda así entre 1,15 y 1,2 $K_c$, en acuerdo con el $#"1,17" K_c$ que predice la @ec-nodo-retardo y con la simulación del modelo de los nodos con retardo fijo de 10 ms, que deja de derivar entre 1,18 y 1,19 $K_c$. El corrimiento, cercano al 18 %, es más de tres veces el 5 % que sugeriría el factor $1\/cos(Omega tau)$, porque la mayor parte se debe a la baja de la frecuencia común. Una consecuencia es que la corrida de 1,2 $K_c$ está apenas por encima del umbral real, y eso explica que su diferencia con la teoría sin retardo sea la mayor.
 
 La frecuencia común también refleja el retardo. Baja de 1,176 a 1,098 rad/s al pasar de 1,2 a 2 $K_c$, por debajo de la media de 1,257 rad/s, y el freno aumenta con $K$, como indica la @ec-omega-retardo-distintas. Resuelta con $tau = 255$ ms, esa relación da 1,171, 1,137 y 1,093 rad/s para $K$ de 1,2, 1,5 y $2 K_c$, frente a los 1,176, 1,142 y 1,098 rad/s medidos, y $r$ de #"0,879", #"0,939" y #"0,969", frente a #"0,872", #"0,937" y #"0,968". La versión para osciladores idénticos daría, en cambio, 1,147, 1,122 y 1,083 rad/s. La frecuencia común de la corrida con frecuencias iguales difiere un 0,4 % de la que predice la condición para osciladores idénticos sin término propio, la versión con $N - 1$ sumandos de la @ec-retardo-omega, usando como antigüedad $h\/2$ más el retardo medido. Es coherente con esa aproximación, aunque se apoya en una sola corrida.
 
