@@ -335,13 +335,6 @@ El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos re
 
 // El router decide por dirección IP de destino. el broker decide por tópico.
 // Comparar tablas de ruteo con suscripciones y comodines (+, #).
-// TODO(casos de uso) Ejemplo real: Digitransit codifica un hash en los niveles del tópico y permite suscribirse por zona
-// geográfica con comodines, análogo a un prefijo en una tabla de ruteo.
-// Fuente: https://www.digitransit.fi/en/developers/apis/5-realtime-api/vehicle-positions/digitransit-mqtt (GTFS-Realtime en Protobuf sobre MQTT).
-// TODO(prometido en Casos de uso, @sec-caso-industria) Retomar la limitación de Sparkplug. Como las métricas viajan dentro de la
-// carga útil, el broker solo rutea por nodo o dispositivo y no se puede suscribir a una métrica individual.
-// TODO(prometido en Casos de uso, @sec-caso-lora) Comparar con Meshtastic. La malla difunde cada paquete, y el broker, que rutea
-// por tópico sin interpretar la carga útil, entrega todas las copias publicadas por varios puentes (la deduplicación queda en los suscriptores).
 //
 
 Las secciones anteriores describieron cómo la red lleva cada segmento desde el dispositivo hasta el broker. Entre el publicador y los
@@ -671,8 +664,6 @@ En cuanto a los mecanismos de MQTT, el Gateway Bridge publica el estado de conex
 Como en Meshtastic, una misma transmisión de radio puede ser recibida por varios _gateways_, pero en LoRaWAN es el servidor de red el que elimina los duplicados, para lo cual espera un breve intervalo a que lleguen todas las copias. Esa espera, sumada a la latencia del tramo MQTT, demora la respuesta que el servidor envía al dispositivo. Como el dispositivo, para ahorrar energía, solo enciende su receptor durante un breve lapso después de cada transmisión, una respuesta que llega tarde se pierde.
 
 Hacia el programa del usuario, ChirpStack publica los datos en JSON por defecto, con Protocol Buffers como opción @chirpstack-config. El formato se elige así según el tramo, con la codificación binaria donde se concentra el volumen de mensajes y JSON donde prima la facilidad de integración con otros sistemas.
-
-// TODO(casos de uso) Referenciar @sec-mapeo-tecnologico si la opción de conectividad LoRaWAN queda incluida en el mapeo.
 
 === Ventajas y limitaciones observadas <sec-casos-sintesis>
 
