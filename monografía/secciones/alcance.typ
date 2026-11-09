@@ -1,7 +1,7 @@
 == Alcance
 
-El trabajo se centra en el stack formado por MQTT y Protocol Buffers, considerando distintos transportes para MQTT (TCP, TLS y WebSockets), y
-en el recorrido de un mensaje desde el dispositivo que lo genera hasta el broker que lo distribuye. A continuación se precisa qué aspectos
+El trabajo se centra en el stack formado por MQTT y Protocol Buffers, con MQTT sobre TCP y TLS (WebSocket se menciona solo como alternativa
+para redes que únicamente dejan pasar el tráfico web), y en el recorrido de un mensaje desde el dispositivo que lo genera hasta el broker que lo distribuye. A continuación se precisa qué aspectos
 abarca el análisis y cuáles quedan fuera de él.
 
 === Tecnologías estudiadas
@@ -33,7 +33,7 @@ El trabajo incluye además un mapeo tecnológico, desarrollado en la @sec-mapeo-
 
 Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, un emulador que ejecuta en una computadora el código de la placa, que se comunican con un broker Mosquitto en la misma computadora, y contrastan con mediciones propias lo que el marco teórico y el desarrollo plantean de forma cualitativa.
 
-El primero, en un escenario de telemetría, compara MQTT (QoS 0 y QoS 1) con HTTP (con y sin reutilización de la conexión), con carga útil en JSON y en Protocol Buffers y con y sin TLS, y mide por separado el costo en bytes y en latencia. Se le aplican pérdidas y latencia de forma artificial, pero no cortes de conexión.
+El primero, en un escenario de telemetría, compara MQTT 3.1.1 (QoS 0 y QoS 1) con HTTP (con y sin reutilización de la conexión), con carga útil en JSON y en Protocol Buffers y con y sin TLS, y mide por separado el costo en bytes y en latencia. Se le aplican pérdidas y latencia de forma artificial, pero no cortes de conexión.
 
 El segundo no compara protocolos. Usa únicamente MQTT 5.0 con Protocol Buffers, sin TLS, y emplea la sincronización de osciladores acoplados como aplicación en la que cada nodo necesita el dato de todos los demás. Allí se ensayan los mecanismos del stack (QoS, keep-alive, última voluntad, alias de tópico y compatibilidad del esquema), su comportamiento ante pérdidas, cortes de conexión y caídas del broker, que se introducen de forma artificial, y la carga del broker con 5, 10 y 20 nodos.
 

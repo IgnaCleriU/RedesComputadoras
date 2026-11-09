@@ -36,8 +36,9 @@ y, en Sparkplug, la aplicación de supervisión sigue considerando vigentes los 
 mensaje.
 
 Elegir _K_ implica un compromiso, que resume la @tab-keepalive. Un intervalo corto detecta antes la caída y mantiene viva la entrada del NAT, pero
-tiene dos costos. El primero es el tráfico, ya que en una conexión inactiva con TLS, cada intercambio de PINGREQ y PINGRESP ocupa unos 182 B, y con
-10 s esto supera al volumen mensual de las lecturas que un nodo envía cada 10 s, de unos 36 MB, según el mapeo tecnológico (@sec-mapeo-tecnologico).
+tiene dos costos. El primero es el tráfico de un cliente que no publica, como un suscriptor que solo espera órdenes. Con TLS, cada intercambio
+de PINGREQ y PINGRESP ocupa unos 182 B, y con un intervalo de 10 s suma unos 47 MB por mes, más que los 36 MB que ocupan las lecturas de un nodo
+que publica cada 10 s (@sec-mapeo-tecnologico). Ese nodo, en cambio, no envía PINGREQ, porque cada publicación ya mantiene activa la conexión.
 El segundo son las desconexiones innecesarias, ya que el umbral de 1,5~_K_ es el corte del camino que el stack soporta sin perder la conexión, y con
 _K_ de 10 s es de 15 s, menor que los 40 s que OSPF tarda en detectar una falla por ausencia de Hellos @rfc2328. Ese corte cerraría la conexión y
 obligaría al dispositivo a repetir los handshakes de TCP y de TLS (@sec-tls). En la práctica se usan intervalos de decenas de segundos, por ejemplo, 30
