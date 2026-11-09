@@ -13,27 +13,122 @@
 
 === Conexión persistente y keep-alive <sec-keepalive>
 
-// Una sola conexión TCP saliente por cliente, que se mantiene abierta. Cómo detecta el broker un cliente caído, cuánto tarda.
-// TODO(prometido en Casos de uso, @sec-caso-robotica y @sec-caso-industria) Analizar el compromiso del intervalo de keep-alive.
-// Un valor corto detecta antes la caída y mantiene abiertas las asociaciones NAT, pero provoca falsas desonexiones cuando la
-// red está ocupada. En Sparkplug, el keep-alive determina cuánto tarda la aplicación de
-// supervisión en recibir el certificado de muerte de un nodo caído. Valores de referencia: 60 s por defecto en InOrbit, 30 s en
-// ChirpStack, menos de 1 min recomendado por Digitransit.
-// Si no se hace ese desarrollo, remover las referencias de los casos de uso.
+Como se planteó en el marco teórico (@sec-mqtt), el cliente MQTT abre una única conexión TCP hacia el broker y la mantiene abierta mientras dura la
+sesión. A diferencia de HTTP, en el que cada solicitud puede abrir una conexión nueva o reutilizar una abierta hasta que el servidor la cierra por
+inactividad @kurose2017, en MQTT el cierre anormal se interpreta como la caída del cliente y el broker publica
+su mensaje de última voluntad. Esto plantea el problema de saber si el otro extremo sigue ahí. Un dispositivo que se apaga o sale del alcance de la
+red no envía ningún segmento de cierre, y lo mismo ocurre cuando un NAT descarta la entrada de una conexión inactiva, situación que se analiza más
+adelante, en la @sec-nat-firewalls. Un extremo que solo recibe, como un suscriptor, no se entera nunca, porque TCP no verifica de forma continua que
+el otro extremo sea alcanzable @comer2014, y su keep-alive propio es opcional, viene desactivado por defecto y no debe tener un intervalo menor que
+dos horas @rfc1122.
 
-=== Cifrado con TLS
+MQTT lo resuelve con un keep-alive propio. En el paquete CONNECT, el cliente declara un intervalo _K_ en segundos, y el valor 0 desactiva el mecanismo.
+Mientras no sea cero, el cliente debe enviar algún paquete de control dentro de cada intervalo y, si no tiene nada que publicar, envía un PINGREQ, que
+el broker contesta con un PINGRESP. Si el broker no recibe ningún paquete del cliente durante 1,5~_K_, debe cerrar la conexión como si la red hubiera
+fallado @mqtt50. El tiempo que tarda en detectar una caída depende de cuándo ocurre, por ejemplo, si la falla sucede justo después de un paquete, el
+broker la detecta 1,5~_K_ más tarde, y si sucede justo antes del siguiente envío, 0,5~_K_ más tarde. Con el intervalo de 60 s del Experimento 1, que se
+describe en el diseño experimental (@sec-exp-mqtt-https), la detección demora entre 30 y 90 s. Hasta entonces el broker no publica la última voluntad
+y, en Sparkplug, la aplicación de supervisión sigue considerando vigentes los datos de un nodo caído, porque su certificado de muerte es justamente ese
+mensaje.
 
-// Handshake una sola vez al conectar. Comparación con HTTPS con handshake  una vez por conexión, con y sin conexión reusable.
-// Costo en bytes y tiempo.
+Elegir _K_ implica un compromiso, que resume la @tab-keepalive. Un intervalo corto detecta antes la caída y mantiene viva la entrada del NAT, pero
+tiene dos costos. El primero es el tráfico, ya que en una conexión inactiva con TLS, cada intercambio de PINGREQ y PINGRESP ocupa unos 182 B, y con
+10 s esto supera al volumen mensual de las lecturas que un nodo envía cada 10 s, de unos 36 MB, según el mapeo tecnológico (@sec-mapeo-tecnologico).
+El segundo son las desconexiones innecesarias, ya que el umbral de 1,5~_K_ es el corte del camino que el stack soporta sin perder la conexión, y con
+_K_ de 10 s es de 15 s, menor que los 40 s que OSPF tarda en detectar una falla por ausencia de Hellos @rfc2328. Ese corte cerraría la conexión y
+obligaría al dispositivo a repetir los handshakes de TCP y de TLS (@sec-tls). En la práctica se usan intervalos de decenas de segundos, por ejemplo, 30
+s en el  Gateway Bridge de ChirpStack @chirpstack-gwbridge-config, menos de un minuto recomendado por Digitransit @digitransit-mqtt y 60 s en el
+Experimento 1. Un valor de entre 30 y 60 s detecta una caída en menos de un minuto y medio y absorbe los cortes breves del ruteo.
+
+#figure(
+  table(
+    columns: (auto, auto, auto, auto),
+    align: (left, left, left, left),
+    table.header[Intervalo _K_][Umbral del broker (1,5~_K_)][Detección de una falla][Tráfico en una conexión inactiva],
+    [10~s], [15~s], [5 a 15~s], [47,2~MB por mes],
+    [30~s], [45~s], [15 a 45~s], [15,7~MB por mes],
+    [60~s], [90~s], [30 a 90~s], [7,9~MB por mes],
+    [300~s], [450~s], [150 a 450~s], [1,6~MB por mes],
+  ),
+  caption: [Efecto del intervalo de keep-alive _K_. El tráfico es una estimación con TLS, a razón de 182~B por intercambio de PINGREQ y PINGRESP (@tab-anatomia), durante 30 días. No se midió en el Experimento 1.],
+) <tab-keepalive>
+
+=== Cifrado con TLS <sec-tls>
+
+MQTT no define un mecanismo de cifrado propio y delega la protección de los datos en el transporte. Sobre TCP se utiliza TLS, en el puerto 8883
+registrado para ese fin @mqtt50. TLS ofrece confidencialidad, integridad de cada mensaje y autenticación del servidor mediante un certificado
+@kurose2017 @stallings2004, y se apoya en TCP para obtener un servicio fiable extremo a extremo @stallings2004, la misma exigencia que MQTT plantea al
+transporte @mqtt50. TLS se ubica entre TCP y MQTT, primero se establece la conexión TCP, luego se realiza el handshake de TLS y recién después el
+cliente envía el CONNECT, que ya viaja cifrado, de modo que el usuario y la contraseña quedan protegidos.
+
+El costo del cifrado tiene dos partes. La primera es el handshake, que se realiza una sola vez al conectar. En TLS 1.2, la versión empleada en el
+Experimento 1, requiere dos idas y vueltas @rfc5246 @stallings2004, de modo que, sumado al handshake de TCP, el cliente envía el CONNECT recién
+después de unos tres RTT. Con 200 ms de RTT agregados, el tiempo de conexión aumentó entre 340 y 570 ms (@sec-exp-mqtt-https). TLS 1.3 reduce el
+handshake completo a una sola ida y vuelta @rfc8446. La segunda parte es el recargo de cada mensaje, con TLS 1.2 y AES-GCM, cada registro agrega 29 B
+(5 de cabecera, 8 de _nonce_ explícito y 16 de etiqueta de autenticación), lo que explica casi todo el aumento de 46,5 B por lectura de MQTT QoS 0,
+cuya latencia crece menos de 0,6 ms.
+
+Lo que determina cuánto pesa el handshake es cuántos mensajes se envían por cada conexión. En MQTT la conexión es persistente, por lo que el handshake
+se paga una vez y se reparte entre todas las lecturas. HTTPS puede lograr lo mismo, por ejemplo: HTTP/1.1 mantiene las conexiones abiertas por defecto
+@kurose2017, y con una conexión reutilizada el costo es comparable. Pero un dispositivo que duerme entre envíos, o un servidor que cierra las
+conexiones inactivas, paga el handshake completo en cada lectura. En el Experimento 1 con una conexión por lectura, TLS
+multiplicó por 3,1 los bytes por lectura y sumó 3,4 s de latencia, mientras que en las conexiones persistentes sumó entre 46 y 97 B y menos de 0,6 ms
+(@tab-tls). Por eso la conexión persistente y el keep-alive de la @sec-keepalive son lo que hace barato el cifrado.
+
+Por último, TLS protege el tramo entre el cliente y el broker, no el recorrido completo del mensaje. Como el broker termina la conexión TLS, ve el
+contenido en claro, y un mensaje que va de un publicador a un suscriptor atraviesa dos conexiones TLS independientes, una por tramo. Proteger el
+contenido frente al propio broker exige cifrar la carga útil en la aplicación, como hace Meshtastic con la clave de cada canal.
 
 === QoS MQTT sobre la confiabilidad de TCP <sec-qos-tcp>
 
-// TODO(prometido en Marco teórico, @sec-mqtt) Analizar la relación entre los niveles de QoS y la confiabilidad que ya ofrece TCP.
-// TODO(prometido en Casos de uso, @sec-caso-industria) Sparkplug publica datos con QoS 0 y suple la confirmación con números de
-// secuencia de 0 a 255 y pedidos de nuevo nacimiento ante pérdidas. Ejemplo de confiabilidad resuelta en la aplicación sobre TCP.
+Los niveles de calidad de servicio de MQTT, presentados en el marco teórico (@sec-mqtt), plantean una pregunta, ya que el protocolo opera sobre TCP,
+que entrega los datos de forma fiable y ordenada. TCP construye sobre el servicio no confiable de IP un flujo de bytes sin errores, huecos ni
+duplicados que llega en el orden en que se envió @kurose2017, mediante números de secuencia, confirmaciones y retransmisiones. Por eso un mensaje de
+QoS 0 sobre TCP no equivale a un datagrama que puede perderse en el camino, en el Experimento 1 entregó el 100 % de las lecturas con 5 % de pérdida,
+también con QoS 0, y lo que se degradó fue la latencia, con un percentil 99 de unos 3 s por el temporizador de retransmisión y el bloqueo de cabeza de
+línea (@tab-perdida). La confiabilidad de TCP y la de MQTT se refieren, entonces, a cosas distintas, y los niveles de QoS cubren lo que TCP no
+garantiza, que son tres cosas.
 
-// TCP garantiza entrega ordenada dentro de una conexión, no que la aplicación procesó el mensaje. Si la conexión se cae, lo que estaba en tránsito se pierde.
-// Publisher -> broker -> siscriber son dos conexiones TCP distintas
++ *Que el mensaje llegó a su destino final.* Un mensaje MQTT atraviesa dos conexiones TCP independientes, la del publicador con el broker y la del broker con cada suscriptor, y el nivel de QoS se aplica por separado en cada tramo.
++ *Que la aplicación lo recibió.* El ACK de TCP lo genera la pila del receptor cuando coloca los datos en el buffer de recepción, y el programa los lee después @kurose2017. Si el programa falla o la conexión se aborta entre ambos momentos, el emisor da por entregado un dato que no lo está.
++ *Que sobreviva a la conexión.* La confiabilidad de TCP existe mientras la conexión existe. Después de un corte mayor que 1,5~_K_, un reset del broker o un cambio de NAT, el emisor no sabe cuáles de los datos que envió llegaron.
+
+QoS 0 no agrega nada a TCP @mqtt50, sin embargo QoS 1 agrega una confirmación de la aplicación, esta es que el emisor
+conserva el mensaje hasta recibir el PUBACK, de modo que sabe que el broker lo aceptó y no solo que su pila TCP lo recibió, y si la conexión se rompe
+lo reenvía al retomar la sesión @mqtt50. Su garantía es de al menos una vez, porque si el corte ocurre después de que el receptor procesó el mensaje y
+antes del PUBACK, el receptor lo recibe dos veces. QoS 2 agrega un intercambio de cuatro paquetes con el que el receptor evita entregar el mensaje dos
+veces, a costa de dos idas y vueltas por mensaje. La @tab-garantias-qos resume qué cubre cada nivel. Ninguno resuelve la primera carencia (cada tramo
+se confirma por separado, y el publicador no sabe si el mensaje llegó a los suscriptores).
+
+#figure(
+  table(
+    columns: (1.5fr, 1fr, 1fr, 1fr, 1fr),
+    align: (left, left, left, left, left),
+    table.header[Situación][TCP][QoS 0][QoS 1][QoS 2],
+    [Segmento perdido en la red, con la conexión viva],
+    table.cell(colspan: 4)[TCP lo retransmite; los niveles de QoS no agregan nada],
+    [El receptor MQTT confirma que aceptó el mensaje, en cada tramo],
+    [No: el ACK confirma a la pila, no a la aplicación], [No], [Sí, con PUBACK], [Sí, con PUBREC y PUBCOMP],
+    [Conexión cortada con el mensaje en tránsito],
+    [Se pierde], [Se pierde], [Se reenvía si se retoma la sesión], [Se reenvía si se retoma la sesión],
+    [Entregas de cada mensaje],
+    [No aplica], [A lo sumo una], [Al menos una], [Exactamente una],
+  ),
+  caption: [Qué garantiza TCP y qué agrega cada nivel de QoS en cada tramo del recorrido de un mensaje @mqtt50.],
+) <tab-garantias-qos>
+
+Los reenvíos de QoS 1 y 2 solo funcionan si el estado sobrevive a la conexión, estos ocurren cuando el cliente se reconecta con Clean Start en 0 y el
+broker conservó la sesión, que vence según el Session Expiry Interval @mqtt50. Si la sesión es nueva o expiró, después de un corte QoS 1 y 2 no aportan
+nada frente a QoS 0. Además, dentro de una conexión viva los reintentos de la aplicación se superponen con los de TCP. En el Experimento 1, con pérdida
+de paquetes pero sin cortes, QoS 1 no mejoró la entrega y generó duplicados, 9 por corrida con 1 % de pérdida y 52 con 5 %, porque el cliente reenvía el
+PUBLISH mientras TCP todavía está recuperando el original. Su costo fue de 202 B por lectura contra 140 B de QoS 0.
+
+La elección del nivel depende de qué ocurre cuando falta un mensaje. Si el siguiente lo reemplaza, como en una lectura periódica, QoS 0 sobre TCP
+alcanza, y su única exposición son los cortes de la conexión. Sparkplug, por otra parte, publica con QoS 0 y suple la confirmación con un número de
+secuencia de 0 a 255, y si la aplicación advierte un salto le pide al nodo un nuevo certificado de nacimiento para reconstruir su estado
+(@sec-caso-industria, en los casos de uso). Si el mensaje es una orden o un evento que no se repite, conviene QoS 1 con sesión persistente y un
+receptor que tolere duplicados, y QoS 2 queda para los casos en que el duplicado es inaceptable. Los cortes de conexión, que el Experimento 1 no
+cubrió, quedan para el ensayo que se plantea más adelante en la @sec-convergencia.
 
 == Capa de red
 
@@ -59,11 +154,11 @@ TCP 1883, sin cifrado, y 8883, sobre TLS, y, cuando una red restrictiva solo dej
 @mqtt50, a cambio de la sobrecarga de ese protocolo adicional.
 
 La contracara de este esquema es que las entradas de la tabla no son permanentes. El NAT no tiene forma de saber si una conexión inactiva sigue en
-uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF (Internet Engineering Task Force), una organización 
-internacional abierta de normalización que tiene como objetivos el contribuir a la ingeniería de internet, exige que ese tiempo no sea menor que dos 
-horas y cuatro minutos @rfc5382. En las mediciones sobre gateways domésticos que cita el RFC 8323, el promedio para TCP fue seis horas y veintiseis 
-minutos @rfc8323, pero se trata de un mínimo recomendado y no de una garantía, para un equipo que no lo cumple, o un firewall intermedio configurado 
-con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera. 
+uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF (Internet Engineering Task Force), una organización
+internacional abierta de normalización que tiene como objetivos el contribuir a la ingeniería de internet, exige que ese tiempo no sea menor que dos
+horas y cuatro minutos @rfc5382. En las mediciones sobre gateways domésticos que cita el RFC 8323, el promedio para TCP fue seis horas y veintiseis
+minutos @rfc8323, pero se trata de un mínimo recomendado y no de una garantía, para un equipo que no lo cumple, o un firewall intermedio configurado
+con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera.
 El siguiente segmento del broker hacia el dispositivo se descarta en el NAT, y el siguiente del dispositivo genera una entrada nueva, con otro puerto
 público, que el broker no reconoce como parte de ninguna conexión. El resultado es una conexión que figura como abierta en ambos extremos pero que ya
 no transporta datos, situación especialmente grave para un suscriptor que espera comandos y no transmite por iniciativa propia.
@@ -253,6 +348,244 @@ El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos re
 // carga útil, el broker solo rutea por nodo o dispositivo y no se puede suscribir a una métrica individual.
 // TODO(prometido en Casos de uso, @sec-caso-lora) Comparar con Meshtastic. La malla difunde cada paquete, y el broker, que rutea
 // por tópico sin interpretar la carga útil, entrega todas las copias publicadas por varios puentes (la deduplicación queda en los suscriptores).
+//
+
+Las secciones anteriores describieron cómo la red lleva cada segmento desde el dispositivo hasta el broker. Entre el publicador y los
+suscriptores hay, sin embargo, una segunda decisión de encaminamiento, que se toma en la capa de aplicación. Un router que recibe un
+datagrama examina la dirección IP de destino de su cabecera y decide, a partir de su tabla, si lo entrega directamente, a qué otro router
+lo reenvía o si debe descartarlo e informar el error al origen @stallings2004[pp.~602--603]. El broker, al recibir un paquete PUBLISH,
+examina el nombre de tópico y decide, a partir de las suscripciones registradas, a qué clientes debe entregarlo. Ambos son mecanismos de
+encaminamiento basados en una tabla y en una clave que viaja en el encabezado, y compararlos permite ver qué ideas del ruteo IP reaparecen
+en MQTT y en qué puntos se aparta de ellas.
+
+=== Dirección IP y nombre de tópico
+
+La clave del router es la dirección IP de destino, un número de longitud fija (32 bits en IPv4) dividido en una parte de red y una parte
+de computador. La frontera entre ambas la indica la máscara: el router realiza una operación AND bit a bit entre la dirección y la máscara
+y obtiene así el número de red sobre el que decide @stallings2004[pp.~612--613]. Con el direccionamiento sin clases (CIDR), la parte de
+red puede tener cualquier longitud y se escribe como un prefijo de la forma `a.b.c.d/x`, donde `x` es la cantidad de bits que la componen
+@kurose2017[sec.~4.3.3] @rfc4632.
+
+La clave del broker es el nombre de tópico, una cadena de texto UTF-8 de hasta 65 535 bytes, organizada en niveles separados por `/`,
+sin cantidad fija de niveles y en la que se distinguen mayúsculas de minúsculas @mqtt50. Al igual que una dirección IP, se lee de izquierda
+a derecha, de lo general a lo particular: en el tópico `flota/robot1/bateria` de la @sec-mqtt, cada nivel restringe el anterior, como
+cada bit adicional del prefijo restringe el bloque de direcciones. La diferencia está en quién define la jerarquía. En IP la fijan la
+asignación de bloques a proveedores y organizaciones, y la máscara se expresa en bits; en MQTT la define quien diseña el sistema, y cada
+nivel tiene el significado que la aplicación le asigne.
+
+Hay, además, una diferencia de fondo en lo que identifica cada clave. Una dirección IP de unidifusión identifica una interfaz, es decir, un
+receptor, y es el emisor quien elige a quién se dirige. Un tópico identifica el contenido del mensaje y no a sus receptores: el publicador
+no sabe quién lo recibirá, y son los suscriptores quienes eligen qué reciben. Es el desacoplamiento en el espacio del modelo
+publicador/suscriptor descrito en la @sec-pubsub.
+
+=== Tablas de ruteo y tablas de suscripciones
+
+Cada entrada de una tabla de ruteo asocia un destino con el siguiente nodo por el que debe salir el paquete, de modo que cada router solo
+necesita conocer el próximo salto hacia cada destino @stallings2004[p.~386]. Esas entradas las instala el administrador o las calculan los
+protocolos de ruteo, como OSPF, RIP, EIGRP y BGP, a partir del conocimiento que cada router tiene de la topología
+@stallings2004[p.~642], tal como se analizó en la @sec-ruteo-interno y la @sec-ruteo-externo. Los hosts de destino no participan en su
+construcción.
+
+La tabla del broker asocia, en cambio, filtros de tópico con sesiones de clientes, junto con las opciones de cada suscripción, como el
+nivel máximo de QoS. Sus entradas no las calcula ningún algoritmo a partir de una topología, sino que las crean los propios receptores con
+un paquete SUBSCRIBE y las eliminan con UNSUBSCRIBE o al terminar la sesión @mqtt50. En un broker único no hay ningún protocolo que
+sincronice tablas entre nodos, y la topología se reduce al conjunto de conexiones abiertas.
+
+Por eso, el análogo más cercano en IP no es el ruteo de unidifusión, sino la multidifusión. Allí, las estaciones usan IGMP para
+suscribirse a un grupo de multidifusión y para abandonarlo, y los routers consultan periódicamente qué grupos interesan a las estaciones
+de cada red @stallings2004[p.~638]. El router no necesita saber qué estaciones pertenecen a cada grupo, sino solo si queda al menos un
+miembro activo en la red @stallings2004[p.~641], y debe traducir cada dirección de grupo a la lista de redes que contienen miembros
+@stallings2004[p.~636]. El paquete SUBSCRIBE de MQTT cumple la función del informe de pertenencia de IGMP y el tópico, la de la dirección
+de grupo. Como en la multidifusión, las fuentes no necesitan suscribirse para enviar @stallings2004[p.~638]. La diferencia es que las
+direcciones de grupo IP son identificadores planos, mientras que los tópicos son jerárquicos y admiten comodines.
+
+La @tab-tabla-ruteo-suscripciones muestra una tabla de cada tipo y la decisión que produce cada una ante un mismo caso: un datagrama
+dirigido a una dirección que coincide con varias entradas, y un mensaje cuyo tópico coincide con varias suscripciones.
+
+#figure(
+  kind: table,
+  grid(
+    columns: 2,
+    gutter: 1.5em,
+    table(
+      columns: 2,
+      align: (left, left),
+      table.header([*Prefijo*], [*Interfaz de salida*]),
+      [`10.1.0.0/16`], [`eth1`],
+      [`10.1.2.0/24`], [`eth2`],
+      [`0.0.0.0/0`], [`eth0`],
+      table.cell(colspan: 2)[Destino `10.1.2.7`: coinciden las tres entradas y se reenvía solo por `eth2`.],
+    ),
+    table(
+      columns: 2,
+      align: (left, left),
+      table.header([*Filtro*], [*Cliente*]),
+      [`flota/robot1/#`], [`panel`],
+      [`flota/+/bateria`], [`monitor-energia`],
+      [`#`], [`registro`],
+      table.cell(
+        colspan: 2,
+      )[Tópico `flota/robot1/bateria`: coinciden los tres filtros y se entrega a los tres clientes.],
+    ),
+  ),
+  caption: [Tabla de reenvío de un router (izquierda) y tabla de suscripciones de un broker (derecha). Ante varias coincidencias, el router elige una sola entrada, la de prefijo más largo, mientras que el broker entrega el mensaje a todas.],
+) <tab-tabla-ruteo-suscripciones>
+
+=== Comodines y prefijos
+
+El comodín `#` cumple en una suscripción el papel de un prefijo en una tabla de ruteo. El filtro `flota/robot1/#` abarca todos los
+tópicos que comienzan con esos dos niveles, incluido el propio `flota/robot1`, del mismo modo que `200.23.16.0/20` abarca todas las
+direcciones cuyos primeros 20 bits coinciden con los del bloque, y el filtro `#` por sí solo, que coincide con cualquier tópico, se asemeja
+a la ruta por defecto `0.0.0.0/0`. Por eso, la especificación exige que `#` sea el último carácter del filtro y ocupe un nivel completo
+@mqtt50: como un prefijo, solo puede dejar libre el final de la clave.
+
+La semejanza se rompe en la regla que se aplica cuando hay varias coincidencias. Una dirección de destino puede coincidir con más de una
+entrada de la tabla, y en ese caso el router aplica la regla del prefijo más largo: elige la entrada más específica y reenvía el datagrama
+solo por la interfaz asociada a ella @kurose2017[sec.~4.2.1]. Esa regla es la que permite que un bloque más específico «perfore» un bloque
+agregado más general sin que se pierda la agregación @kurose2017[sec.~4.3.3]. El broker, en cambio, no elige: entrega el mensaje a todos
+los clientes cuyos filtros coinciden. En la @tab-tabla-ruteo-suscripciones, la ruta por defecto solo recibe el tráfico que ninguna otra
+entrada captura, mientras que el cliente suscrito a `#` recibe todos los mensajes, además de los que reciben los otros dos. Cuando las
+coincidencias corresponden a un mismo cliente, como `flota/robot1/#` y `flota/+/bateria` suscritos por la misma sesión, la especificación
+de la versión 5.0 exige que el broker respete el mayor de los niveles de QoS de las suscripciones coincidentes y le permite enviar una sola
+copia o una por cada suscripción @mqtt50, de modo que el resultado depende de la implementación. Mosquitto, por ejemplo, ofrece una opción
+de configuración para elegir entre ambos comportamientos @mosquitto-conf. En la versión 5.0, el cliente puede además asociar un
+identificador a cada suscripción, que el broker incluye en los mensajes entregados para indicar qué suscripciones los originaron @mqtt50.
+
+El comodín `+`, que reemplaza exactamente un nivel en cualquier posición del filtro, no tiene equivalente en el ruteo con prefijos. Un
+prefijo CIDR solo puede fijar los bits del comienzo de la dirección y dejar libres los del final, mientras que `flota/+/bateria` fija el
+primer y el tercer nivel y deja libre el del medio. Para expresar lo mismo con prefijos haría falta una entrada por robot. El análogo más
+cercano en la capa de red es el reenvío generalizado de las redes definidas por software, en el que cada entrada de la tabla de flujos
+compara varios campos de la cabecera a la vez y cada campo puede contener comodines, como una dirección `128.119.*.*`
+@kurose2017[sec.~4.4.1]. Cada nivel de un tópico se comporta, en ese sentido, como un campo independiente de la cabecera. Aun así, la regla
+de decisión vuelve a ser distinta, porque cuando un paquete coincide con varias entradas de la tabla de flujos se aplica solo la de mayor
+prioridad @kurose2017[sec.~4.4.1].
+
+La especificación agrega una excepción que no tiene análogo en IP. Los filtros que comienzan con un comodín no coinciden con los tópicos
+que comienzan con `$`, como los de `$SYS`, que muchos brokers usan para publicar sus propias estadísticas @mqtt50. Un cliente suscrito a `#`
+no recibe, por lo tanto, los mensajes internos del broker, salvo que se suscriba a ellos explícitamente.
+
+El costo de la búsqueda también se resuelve de manera diferente. Un router de alta velocidad debe encontrar el prefijo más largo en
+nanosegundos, por lo que la búsqueda se implementa en hardware y con algoritmos más eficientes que un recorrido lineal de la tabla
+@kurose2017[sec.~4.2.1]. Un broker hace la búsqueda en software. EMQX, por ejemplo, organiza los filtros en un árbol de tópicos, una estructura jerárquica
+en la que compara cada tópico publicado con los filtros suscritos, incluidos los que tienen comodines @emqx-cluster, y su documentación advierte que el uso de comodines en un gran número de clientes puede afectar el desempeño
+@emqx-wildcard. Cuando EMQX funciona como un conjunto de nodos, la analogía con el ruteo IP se vuelve literal. Además del árbol, cada nodo
+mantiene una tabla, que la propia documentación llama tabla de ruteo, que asocia cada filtro con los nodos que tienen suscriptores, y una
+tabla de suscripciones local, que asocia cada filtro con los clientes conectados a ese nodo. El nodo que recibe un PUBLISH consulta el
+árbol y la tabla de ruteo, reenvía el mensaje a los nodos correspondientes, y cada uno de ellos lo entrega a sus clientes según su tabla
+local @emqx-cluster. Es una estructura en dos niveles, como la del ruteo entre sistemas autónomos: un nodo no necesita saber qué cliente se
+suscribió en otro nodo, sino solo a qué nodo debe enviarle el mensaje.
+
+=== Agregación y diseño del espacio de tópicos
+
+La utilidad de un prefijo depende de cómo se asignaron las direcciones. Si los bloques se reparten de manera jerárquica, primero a los
+proveedores y luego a sus clientes, un único prefijo puede anunciar muchas redes, lo que se conoce como agregación de rutas y mantiene
+pequeñas las tablas @kurose2017[sec.~4.3.3] @rfc4632. Stallings señala, a propósito de IPv6, que las direcciones pueden agruparse por
+jerarquías de red, por proveedores de acceso, por proximidad geográfica o por institución, y que esas agrupaciones conducen a tablas más
+pequeñas y a consultas más rápidas @stallings2004[p.~624]. Si las direcciones no siguen esa jerarquía, la agregación deja de ser posible.
+
+Con los tópicos ocurre lo mismo. Un filtro con comodines solo puede seleccionar conjuntos de mensajes que la jerarquía de tópicos agrupa,
+y lo que no se codifica en el tópico no puede seleccionarse con ninguna suscripción. El orden y el contenido de los niveles equivalen, por
+lo tanto, al plan de direccionamiento de una red, y se fijan al diseñar el sistema. En el Experimento 1, cada nodo publica en
+`exp/tel/{ID del nodo}` y el backend recibe las lecturas de todos con una única suscripción a `exp/tel/+` (@sec-exp-mqtt-https), una
+entrada que cumple la función de una ruta agregada.
+
+La API de posiciones de vehículos de Digitransit, el servicio de información de transporte público de Finlandia, lleva esta idea a la
+ubicación geográfica, de manera análoga al agrupamiento por proximidad que menciona Stallings. Su broker publica la posición de cada
+vehículo codificada como GTFS-Realtime en Protocol Buffers, y el tópico incluye, después de niveles como la ciudad, la línea, el viaje y
+el identificador del vehículo, una forma simplificada de _geohash_: un nivel con las partes enteras de la latitud y la longitud, en la
+forma `60;24`, seguido de tres niveles que intercalan el primer, el segundo y el tercer decimal de ambas coordenadas. Así, la posición
+(60,123; 24,789) se codifica como `60;24/17/28/39` @digitransit-mqtt. Cada nivel adicional reduce diez veces el lado de la celda en cada
+coordenada, del mismo modo que cada bit adicional de un prefijo reduce a la mitad el bloque de direcciones, y la documentación destaca que
+este formato permite suscribirse con facilidad a zonas geográficas y recomienda especificar los niveles del tópico para limitar lo que se
+recibe @digitransit-mqtt. A partir de la estructura documentada, por ejemplo, el filtro
+`/gtfsrt/vp/tampere/+/+/+/+/+/+/+/+/+/+/61;23/47/#` recibe los vehículos de Tampere ubicados en una celda de una décima de grado de lado,
+cualquiera sea su línea o su viaje.
+
+El ejemplo muestra también los límites de la analogía. Una zona que no coincide con las celdas exige varias suscripciones, del mismo modo
+que un rango de direcciones que no está alineado con una potencia de dos exige varios prefijos. Y, a diferencia de una dirección IP, el
+tópico de un vehículo cambia a medida que se mueve, de modo que un suscriptor que sigue una zona ve aparecer y desaparecer vehículos sin
+que nadie modifique su suscripción. El costo de esa expresividad es el tamaño del encabezado: un tópico de unos veinte niveles se repite en
+cada PUBLISH, un costo que el alias de tópico de la versión 5.0, descrito en la @sec-stack, permite reducir.
+
+=== Entrega a uno, a todos y a uno de un grupo
+
+IP distingue tres tipos de direcciones: las de unidifusión, que identifican una única interfaz; las de multidifusión, cuyo paquete se
+entrega a todas las interfaces de un conjunto; y las de monodifusión (_anycast_), cuyo paquete se entrega a una sola interfaz de un
+conjunto, la más cercana según la métrica de los protocolos de ruteo @stallings2004[p.~624]. Una suscripción ordinaria de MQTT se comporta
+como la multidifusión, ya que el mensaje llega a todas las sesiones con un filtro coincidente. La versión 5.0 agrega las suscripciones
+compartidas, que usan filtros de la forma `$share/{nombre del grupo}/{filtro}` y entregan cada mensaje a una sola de las sesiones del
+grupo @mqtt50, lo que las asemeja a la monodifusión. La diferencia es el criterio de elección, ya que en IP decide la métrica de ruteo,
+mientras que la especificación de MQTT no establece cómo elige el broker y en la práctica suele usarse para repartir la carga entre varias
+copias de un mismo servicio, como el servidor de red de ChirpStack (@sec-caso-lora). Las suscripciones ordinarias que coinciden con el
+mismo tópico siguen recibiendo cada una su copia.
+
+MQTT no tiene, en cambio, una forma de dirigir un mensaje a un cliente concreto. Para enviar una orden a `robot1` se publica en un tópico
+al que, por convención, solo ese robot se suscribe, como `flota/robot1/comandos`. La unidifusión surge así de la convención de nombres,
+y solo queda garantizada si el broker controla quién puede suscribirse a cada tópico. Mosquitto lo permite con listas de control de acceso
+cuyos patrones sustituyen el identificador o el usuario de cada cliente, de modo que una regla como `pattern read flota/%c/comandos` deja
+leer ese tópico solo al cliente cuyo identificador coincide con el nivel correspondiente @mosquitto-conf. Es el esquema que aplica
+OpenRobOps para que un robot no pueda leer los datos de otro (@sec-caso-inorbit), y cumple en el broker la función que en la red cumplen
+las listas de acceso de un router o un firewall, aunque filtra por tópico y no por dirección.
+
+=== Límites del ruteo por tópicos
+
+El ruteo por tópicos se apoya en el ruteo IP y no lo reemplaza. Con un único broker, la decisión por tópico se toma una sola vez, en un
+solo salto de la capa de aplicación, y no requiere mecanismos contra bucles como el tiempo de vida de IP. Pero el publicador y cada
+suscriptor tienen su propia conexión TCP con el broker, y cada una se encamina por IP de manera independiente, de modo que una falla de
+ruteo como las analizadas en la @sec-convergencia puede cortar la entrega a un suscriptor sin afectar a los demás. Como el broker es el
+punto por el que pasan todos los mensajes, el ruteo por tópicos funciona como una red superpuesta a Internet, cuyo único nodo intermedio
+es el broker.
+
+Además, el broker, como el router, decide únicamente a partir del encabezado. El router no examina el segmento que transporta el datagrama,
+y el broker no interpreta la carga útil (@sec-stack), lo que corresponde a la menor expresividad del esquema basado en tópicos frente al
+basado en contenido @eugster2003pubsub. Sparkplug muestra la consecuencia. Como las métricas viajan dentro de la carga útil de Protocol
+Buffers, el tópico solo identifica el nodo o el dispositivo que las publica, y una aplicación interesada en una única métrica debe recibir
+y decodificar todos los mensajes de ese nodo (@sec-caso-industria) @sparkplug3. Es el equivalente a pedirle a un router que encamine
+según el contenido de un segmento, algo que su tabla no puede expresar.
+
+Por último, el broker no reconoce mensajes duplicados. Stallings describe la técnica de inundación, en la que cada nodo reenvía el paquete
+por todos sus enlaces salvo aquel por el que llegó, de modo que el destino recibe varias copias, y por eso el paquete debe llevar un
+identificador único, como el nodo de origen y un número de secuencia, para que el destino conserve una sola y descarte el resto
+@stallings2004[p.~387]. La malla de Meshtastic funciona de este modo, y cuando varios puentes reciben el mismo paquete de la malla y lo
+publican, el broker trata cada copia como un mensaje independiente y las entrega todas, ya que no interpreta el identificador que viaja en
+la carga útil. Son los suscriptores los que deben descartar las copias, a partir del número que la radio de origen asigna a cada paquete
+(@sec-caso-lora) @meshtastic-mqtt. La multidifusión IP evita ese problema en los propios routers, que encaminan cada paquete según un árbol
+de expansión con raíz en la fuente, de modo que cada red reciba una sola copia @stallings2004[p.~637]. El broker no tiene un mecanismo
+equivalente porque no tiene forma de saber que dos PUBLISH son copias del mismo mensaje.
+
+La @tab-ruteo-topicos-ip resume la comparación.
+
+#figure(
+  table(
+    columns: 3,
+    align: (left, left, left),
+    table.header([], [*Router IP*], [*Broker MQTT*]),
+    [*Clave de la decisión*],
+    [Dirección IP de destino, de longitud fija],
+    [Nombre de tópico, cadena UTF-8 de niveles separados por `/`],
+
+    [*Qué identifica la clave*], [El receptor (una interfaz)], [El contenido del mensaje],
+    [*Quién crea las entradas*], [El administrador o los protocolos de ruteo], [Los suscriptores, con SUBSCRIBE],
+    [*Agrupamiento de claves*],
+    [Prefijos CIDR: solo fijan el comienzo de la dirección],
+    [`#` al final del filtro; `+` en cualquier nivel],
+
+    [*Varias coincidencias*],
+    [Se usa solo la de prefijo más largo],
+    [Se entrega a todas las suscripciones coincidentes],
+
+    [*Destinos por mensaje*],
+    [Uno en unidifusión; todos los miembros en multidifusión; uno del conjunto en monodifusión],
+    [Todos los suscriptores; uno por grupo en suscripciones compartidas],
+
+    [*Alcance de la decisión*], [Salto a salto, en cada router del camino], [Una vez, en el broker],
+    [*Lo que no examina*], [El segmento de transporte y los datos], [La carga útil],
+    [*Duplicados*],
+    [La multidifusión los evita con árboles de expansión],
+    [No los detecta; quedan a cargo de los suscriptores],
+  ),
+  caption: [Comparación entre el ruteo IP y el ruteo por tópicos de MQTT @stallings2004 @kurose2017 @mqtt50.],
+) <tab-ruteo-topicos-ip>
 
 == Casos de uso <sec-casos-de-uso>
 
