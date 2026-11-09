@@ -298,7 +298,7 @@ convergido antes de los 90 s. Así, según la duración del corte se distinguen 
 ) <tab-regimenes-corte>
 
 *Cortes de hasta unos pocos segundos.* Son los que produce un IGP cuando la falla se detecta en la interfaz o mediante BFD, o EIGRP cuando cuenta con
-un sucesor factible. TCP los absorbe con uno o dos reintentos y la única consecuencia es una demora adicional del orden del RTO. Es el único régimen que cubrió el Experimento 1, de forma indirecta, con pérdidas aleatorias en lugar de cortes: la entrega fue completa, pero la cola de la latencia creció por los reintentos de TCP (@tab-perdida). En este régimen, QoS 1 no mejora la entrega y agrega duplicados (@sec-qos-tcp).
+un sucesor factible. TCP los absorbe con uno o dos reintentos y la única consecuencia es una demora adicional del orden del RTO. Es el único régimen que cubrió el Experimento 1, de forma indirecta, con pérdidas aleatorias en lugar de cortes, y en él la entrega fue completa, aunque la cola de la latencia creció por los reintentos de TCP (@tab-perdida). En este régimen, QoS 1 no mejora la entrega y agrega duplicados (@sec-qos-tcp).
 
 *Cortes menores que una vez y media el keep-alive.* Corresponden, por ejemplo, a una falla que OSPF o EIGRP detectan por la ausencia de Hellos con sus
 temporizadores predeterminados (@tab-convergencia-igp). La conexión sobrevive, pero las lecturas generadas durante el corte se acumulan sin confirmar
