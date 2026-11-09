@@ -240,10 +240,7 @@ conmuta a otro equipo de NAT de gran escala, o cuando el dispositivo cambia de r
 no existe en el nuevo NAT (@sec-nat-firewalls), por lo que la conexión se pierde aunque la red converja de inmediato, con las mismas consecuencias que
 en el tercer régimen.
 
-El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos regímenes no se midieron (@sec-exp-mqtt-https). Un ensayo que los cubra
-podría reutilizar la misma plataforma: aplicar con `tc netem` una pérdida del 100 % sobre la interfaz de un nodo durante un intervalo fijo, con
-duraciones por debajo y por encima del umbral del keep-alive, y medir para cada nivel de QoS, con sesión persistente y sin ella, las lecturas perdidas,
-duplicadas y demoradas, y el tiempo hasta que el nodo vuelve a publicar.
+El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos regímenes no se midieron allí (@sec-exp-mqtt-https). Se ensayan en el experimento de la @sec-exp-sincronizacion, sobre la misma plataforma, aplicando con `tc netem` una pérdida del 100 % sobre la interfaz de un nodo durante un intervalo fijo, con duraciones por debajo y por encima del umbral del keep-alive. Esas mediciones muestran además que un corte breve puede cerrar la conexión por el lado del cliente, antes del umbral de una vez y media el keep-alive que aplica el broker.
 
 == Ruteo por tópicos y ruteo IP <sec-ruteo-topicos>
 

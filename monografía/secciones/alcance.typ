@@ -31,23 +31,12 @@ El trabajo incluye además un mapeo tecnológico, desarrollado en la @sec-mapeo-
 
 === Parte experimental
 
-Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, que se comunican con un broker Mosquitto y un backend, estos cumplen la
-función de contrastar con mediciones propias lo que el marco teórico y el desarrollo plantean de forma cualitativa. El primero cuantifica la ventaja
-en bytes y en latencia que la bibliografía atribuye a MQTT y a Protocol Buffers, y permite separar cuánto aporta cada uno y cuánto cuesta el cifrado.
-El segundo ilustra el comportamiento del stack en una aplicación de tiempo real con intercambio a alta frecuencia, en la que las pérdidas, la latencia
-y los cortes de conexión analizados en el desarrollo tienen un efecto directo y observable sobre el resultado.
+Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, que se comunican con un broker Mosquitto en la misma computadora, y contrastan con mediciones propias lo que el marco teórico y el desarrollo plantean de forma cualitativa.
 
-Se plantean dos experimentos en los que se comparan las siguientes combinaciones de protocolo y formato de serialización:
-- MQTT con Protocol Buffers
-- MQTT con JSON
-- HTTP con Protocol Buffers
-- HTTP con JSON
+El primero, en un escenario de telemetría, compara MQTT (QoS 0 y QoS 1) con HTTP (con y sin reutilización de la conexión), con carga útil en JSON y en Protocol Buffers y con y sin TLS, y mide por separado el costo en bytes y en latencia. Se le aplican pérdidas y latencia de forma artificial, pero no cortes de conexión.
 
-El primer experimento se realiza en un escenario de telemetría y mide por separado el costo en bytes y en latencia del transporte y de la serialización.
-El segundo compara las mismas combinaciones en la sincronización de osciladores acoplados. En ambos, las condiciones de red, como las pérdidas, la latencia
-y los cortes de conexión, se introducen de forma artificial, y cada combinación se evalúa con y sin TLS.
+El segundo no compara protocolos. Usa únicamente MQTT 5.0 con Protocol Buffers, sin TLS, y emplea la sincronización de osciladores acoplados como aplicación en la que cada nodo necesita el dato de todos los demás. Allí se ensayan los mecanismos del stack (QoS, keep-alive, última voluntad, alias de tópico y compatibilidad del esquema) y su comportamiento ante pérdidas y cortes de conexión, que se introducen de forma artificial.
 
 La emulación impone limitaciones que acotan el alcance de los resultados. No reproduce el comportamiento de una radio real, por lo que no se mide el
 consumo de energía de los dispositivos y no se incluyen enlaces inalámbricos restringidos como LoRa, NB-IoT o satelitales. Tampoco reproduce los tiempos
-de procesamiento de un microcontrolador físico. Los escenarios de ruteo se emulan, en lugar de reproducirse sobre una red con múltiples sistemas
-autónomos reales. Por último, no se evalúan la escalabilidad del broker con miles de clientes ni las configuraciones en clúster.
+de procesamiento de un microcontrolador físico. Los escenarios de ruteo y convergencia de la capa de red no se reproducen experimentalmente: se analizan en el desarrollo, y su efecto sobre la conexión se representa con cortes de duración controlada. Por último, no se evalúan la escalabilidad del broker con miles de clientes ni las configuraciones en clúster.
