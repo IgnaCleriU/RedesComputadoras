@@ -53,7 +53,7 @@ valor de entre 30 y 60 s detecta una caída en menos de un minuto y medio y abso
   caption: [Efecto del intervalo de keep-alive _K_. El tráfico es una estimación con TLS, a razón de 182~B por intercambio de PINGREQ y PINGRESP (@tab-anatomia), durante 30 días. No se midió en el Experimento 1.],
 ) <tab-keepalive>
 
-=== Cifrado con TLS
+=== Cifrado con TLS <sec-tls>
 
 MQTT no define un mecanismo de cifrado propio y delega la protección de los datos en el transporte: sobre TCP se utiliza TLS, en el puerto 8883
 registrado para ese fin @mqtt50. TLS ofrece confidencialidad, integridad de cada mensaje y autenticación del servidor mediante un certificado
