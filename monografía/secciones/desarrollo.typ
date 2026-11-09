@@ -148,16 +148,22 @@ quien administra el broker no controla esos equipos, que pertenecen al cliente o
 
 El modelo de MQTT se ajusta a esta restricción, ya que, como se vio en la @sec-mqtt, todos los participantes son clientes y es el dispositivo quien
 abre la conexión TCP hacia el broker. Esa conexión saliente crea la entrada en el NAT y en el firewall, y a partir de ella el broker puede entregarle
-mensajes al dispositivo, incluidos los comandos que se originan en la nube, como segmentos de una conexión ya establecida. El único requisito sobre la red del cliente es que permita las conexiones salientes hacia la dirección y el puerto del broker, y cuando una red restrictiva solo deja pasar el tráfico web, MQTT puede transportarse sobre WebSocket
+mensajes al dispositivo, incluidos los comandos que se originan en la nube, como segmentos de una conexión ya establecida. El único requisito sobre
+la red del cliente es que permita las conexiones salientes hacia la dirección y el puerto del broker. IANA tiene registrados para MQTT los puertos
+TCP 1883, sin cifrado, y 8883, sobre TLS, y, cuando una red restrictiva solo deja pasar el tráfico web, MQTT puede transportarse sobre WebSocket
 @mqtt50, a cambio de la sobrecarga de ese protocolo adicional.
 
 La contracara de este esquema es que las entradas de la tabla no son permanentes. El NAT no tiene forma de saber si una conexión inactiva sigue en
-uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF exige que ese tiempo no sea menor que dos horas y cuatro minutos @rfc5382, y en las mediciones sobre gateways domésticos que cita el RFC 8323 el promedio fue de seis horas y veintiséis minutos @rfc8323. Se trata, sin embargo, de un mínimo recomendado y no de una garantía, y un equipo que no lo cumple, o un firewall intermedio configurado con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera.
+uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF exige que ese tiempo no sea menor que dos horas y cuatro minutos @rfc5382, y en las mediciones sobre gateways domésticos que cita el RFC 8323 el promedio para TCP fue de seis horas y veintiséis minutos @rfc8323. Se trata, sin embargo, de un mínimo recomendado y no de una garantía, y un equipo que no lo cumple, o un firewall intermedio configurado con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera.
 El siguiente segmento del broker hacia el dispositivo se descarta en el NAT, y el siguiente del dispositivo genera una entrada nueva, con otro puerto
 público, que el broker no reconoce como parte de ninguna conexión. El resultado es una conexión que figura como abierta en ambos extremos pero que ya
 no transporta datos, situación especialmente grave para un suscriptor que espera comandos y no transmite por iniciativa propia.
 
-El keep-alive de MQTT (@sec-keepalive) resuelve también este problema, porque obliga al cliente a enviar algún paquete de control dentro de cada intervalo y así refresca la entrada en cada NAT y firewall del trayecto, siempre que el intervalo sea menor que su tiempo de expiración. El keep-alive de TCP no sirve para esto, porque su intervalo no debe ser menor que dos horas @rfc1122, un valor demasiado largo frente a los plazos de muchos equipos intermedios. Elegir el intervalo de MQTT implica, además del compromiso de la @sec-keepalive, un costo de energía, porque en los dispositivos móviles cada PINGREQ obliga a activar la radio.
+El keep-alive de MQTT, analizado en la @sec-keepalive, resuelve también este problema. Al obligar al cliente a enviar algún paquete de control dentro de
+cada intervalo, aunque sea un PINGREQ, garantiza que la conexión nunca permanezca inactiva más que ese intervalo, y con ello refresca la entrada en
+cada NAT y firewall del trayecto, siempre que el intervalo sea menor que su tiempo de expiración. TCP ofrece un mecanismo análogo, pero es opcional y
+su intervalo predeterminado no debe ser menor que dos horas @rfc1122, un valor demasiado largo frente a los plazos de muchos equipos intermedios.
+Por eso el mantenimiento de la conexión se resuelve en la capa de aplicación, donde el intervalo es configurable por cada cliente. La especificación de MQTT indica que su valor depende de la aplicación y que suele ser de algunos minutos @mqtt50. Al compromiso entre detección y tráfico de la @sec-keepalive se suma, en los dispositivos móviles, el gasto de energía, porque cada PINGREQ obliga a activar la radio.
 
 === Ruteo interno <sec-ruteo-interno>
 
@@ -176,12 +182,22 @@ la detecta inunda un LSA actualizado y cada router recalcula sus rutas de forma 
 OSPF una convergencia rápida. El factor que suele dominar es la detección. Si la falla deja la interfaz caída, el router la advierte de inmediato; si
 no, como cuando el enlace pasa por un switch intermedio, recién la advierte cuando deja de recibir paquetes Hello durante el RouterDeadInterval, que
 con los valores habituales de 10 segundos entre Hellos es de 40 segundos @rfc2328. Mecanismos como BFD reducen esa detección a fracciones de segundo
-@rfc5880.
+@rfc5880. OSPF admite además dividir el AS en áreas, de modo que la inundación y el recálculo se limitan al área afectada @kurose2017.
 
 RIP, en cambio, es un protocolo de vector distancia basado en el algoritmo de Bellman-Ford. Cada router conoce solo las distancias, medidas en saltos,
-que le anuncian sus vecinos, y les envía su tabla completa cada 30 segundos @rfc2453. Su convergencia es lenta, porque una ruta se da por perdida recién después de 180 segundos sin anuncios que la confirmen, y la noticia de la falla avanza de a un router por intercambio, con el riesgo de que la métrica crezca de a poco hasta el valor que representa un destino inalcanzable, el problema conocido como conteo hasta el infinito @kurose2017.
+que le anuncian sus vecinos, y les envía su tabla completa cada 30 segundos @rfc2453. La métrica admite como máximo 15 saltos, ya que el valor 16
+representa un destino inalcanzable, lo que limita el tamaño de las redes en las que puede usarse. Su convergencia es lenta: una ruta se da por perdida
+recién después de 180 segundos sin anuncios que la confirmen, y la noticia de la falla avanza de a un router por intercambio. Además, como los vecinos
+pueden seguir anunciando caminos que pasaban por el enlace caído, la métrica de la ruta puede crecer de a poco hasta llegar a 16, el problema conocido
+como conteo hasta el infinito @kurose2017. El horizonte dividido con reversa envenenada y las actualizaciones disparadas atenúan el problema, pero no
+lo eliminan en los bucles de tres o más routers @rfc2453.
 
-EIGRP, desarrollado por Cisco, es un protocolo de vector distancia avanzado que envía actualizaciones solo cuando hay cambios y que, para cada destino, registra además de la mejor ruta otras de respaldo que no forman bucles, llamadas sucesores factibles. Si la ruta principal falla y existe un sucesor factible, el router conmuta a él de forma local e inmediata, y solo si no lo hay consulta a sus vecinos, lo que demora la convergencia @rfc7868. Para detectar vecinos caídos, en los enlaces de alta velocidad envía Hellos cada 5
+EIGRP, desarrollado por Cisco y publicado como RFC informativo, es un protocolo de vector distancia avanzado que evita estas limitaciones mediante el
+algoritmo DUAL @rfc7868. Usa una métrica compuesta, que por defecto combina ancho de banda y retardo, y envía actualizaciones solo cuando hay cambios.
+Para cada destino registra, además del sucesor (el vecino por el que pasa la mejor ruta), los sucesores factibles: vecinos cuya distancia anunciada es
+menor que la mejor distancia que el router conoce hacia ese destino, condición que garantiza que el camino a través de ellos no forma un bucle. Si el
+sucesor falla y existe un sucesor factible, el router conmuta a él de forma local e inmediata; solo si no lo hay pasa la ruta a estado activo y
+consulta a sus vecinos, lo que demora la convergencia @rfc7868. Para detectar vecinos caídos, en los enlaces de alta velocidad envía Hellos cada 5
 segundos con un tiempo de espera de 15 segundos @rfc7868. La @tab-convergencia-igp resume las diferencias entre los tres protocolos.
 
 #figure(
@@ -189,6 +205,10 @@ segundos con un tiempo de espera de 15 segundos @rfc7868. La @tab-convergencia-i
     columns: 4,
     align: (left, left, left, left),
     table.header([], [*RIP*], [*OSPF*], [*EIGRP*]),
+    [*Tipo*], [Vector distancia], [Estado de enlace], [Vector distancia avanzado],
+    [*Algoritmo*], [Bellman-Ford], [Dijkstra], [DUAL],
+    [*Métrica*], [Saltos (máximo 15)], [Costo por enlace], [Compuesta (ancho de banda y retardo)],
+    [*Actualizaciones*], [Tabla completa cada 30~s], [LSA ante cambios y refresco cada 30~min], [Solo ante cambios],
     [*Detección de una falla no visible en la interfaz*], [180~s sin anuncios], [40~s sin Hellos], [15~s sin Hellos],
     [*Recuperación*],
     [Propagación de a un salto; posible conteo hasta el infinito],
@@ -208,7 +228,9 @@ El broker no suele estar en el mismo AS que el dispositivo. Un robot conectado a
 de acceso, el broker se aloja en el AS de un proveedor de nube y entre ambos puede haber uno o más proveedores de tránsito. El camino entre AS lo
 determina BGP, el protocolo de ruteo externo de Internet @rfc4271.
 
-BGP es un protocolo de vector de caminos, en el que los routers de borde de AS vecinos se anuncian prefijos junto con el AS-PATH, la lista de AS que atravesó cada anuncio, lo que permite descartar las rutas que contienen al propio AS y evitar así los bucles @kurose2017. A diferencia de un IGP,
+BGP es un protocolo de vector de caminos. Los routers de borde de AS vecinos establecen sesiones eBGP sobre conexiones TCP y se anuncian prefijos
+acompañados de atributos, entre ellos el AS-PATH, la lista de AS que atravesó el anuncio, que permite descartar las rutas que contienen al propio AS y
+evitar así los bucles. Dentro de cada AS, las sesiones iBGP distribuyen esas rutas a los demás routers @rfc4271 @kurose2017. A diferencia de un IGP,
 BGP no busca el camino más corto. Cada AS elige entre las rutas disponibles según sus políticas, que reflejan relaciones comerciales, como la de no
 ofrecer tránsito gratuito a otro proveedor, y solo después considera la longitud del AS-PATH y otros criterios de desempate @kurose2017. En
 consecuencia, el trayecto entre un dispositivo y el broker no es necesariamente el más corto ni el de menor latencia, y puede cambiar por decisiones
@@ -231,7 +253,8 @@ convergencia de BGP.
 === Convergencia y conexiones de larga duración <sec-convergencia>
 
 Las subsecciones anteriores describieron cuánto tarda la red en encontrar un camino alternativo después de una falla. Mientras tanto, el trayecto entre
-el dispositivo y el broker se comporta como un agujero negro, porque los routers que todavía apuntan al enlace caído descartan los segmentos. Ni TCP ni MQTT reciben aviso
+el dispositivo y el broker se comporta como un agujero negro: los routers que todavía apuntan al enlace caído descartan los segmentos, y durante la
+reconvergencia pueden formarse bucles transitorios, en los que los segmentos circulan hasta que se agota su TTL @rfc5715. Ni TCP ni MQTT reciben aviso
 de lo que ocurre, porque el ruteo opera en la capa de red y las direcciones de los extremos no cambian. Lo único que observa el emisor es que sus
 segmentos dejan de ser confirmados. Lo que le pasa a la conexión depende, entonces, de cómo se compara la duración del corte con dos temporizadores de
 los extremos: el de retransmisión de TCP y el keep-alive de MQTT.
@@ -275,7 +298,7 @@ convergido antes de los 90 s. Así, según la duración del corte se distinguen 
 ) <tab-regimenes-corte>
 
 *Cortes de hasta unos pocos segundos.* Son los que produce un IGP cuando la falla se detecta en la interfaz o mediante BFD, o EIGRP cuando cuenta con
-un sucesor factible. TCP los absorbe con uno o dos reintentos y la única consecuencia es una demora adicional del orden del RTO. Es el único régimen que cubrió el Experimento 1, de forma indirecta, con pérdidas aleatorias en lugar de cortes (@tab-perdida). En él, QoS 1 no mejora la entrega y agrega duplicados (@sec-qos-tcp).
+un sucesor factible. TCP los absorbe con uno o dos reintentos y la única consecuencia es una demora adicional del orden del RTO. Es el único régimen que cubrió el Experimento 1, de forma indirecta, con pérdidas aleatorias en lugar de cortes: la entrega fue completa, pero la cola de la latencia creció por los reintentos de TCP (@tab-perdida). En este régimen, QoS 1 no mejora la entrega y agrega duplicados (@sec-qos-tcp).
 
 *Cortes menores que una vez y media el keep-alive.* Corresponden, por ejemplo, a una falla que OSPF o EIGRP detectan por la ausencia de Hellos con sus
 temporizadores predeterminados (@tab-convergencia-igp). La conexión sobrevive, pero las lecturas generadas durante el corte se acumulan sin confirmar
@@ -300,7 +323,7 @@ conmuta a otro equipo de NAT de gran escala, o cuando el dispositivo cambia de r
 no existe en el nuevo NAT (@sec-nat-firewalls), por lo que la conexión se pierde aunque la red converja de inmediato, con las mismas consecuencias que
 en el tercer régimen.
 
-El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos regímenes no se midieron allí (@sec-exp-mqtt-https). Se ensayan en el experimento de la @sec-exp-sincronizacion, sobre la misma plataforma, aplicando con `tc netem` una pérdida del 100 % sobre la interfaz de un nodo durante un intervalo fijo, con duraciones por debajo y por encima del umbral del keep-alive. Esas mediciones muestran que un corte breve puede cerrar la conexión del lado del cliente antes de ese umbral, un matiz que la @tab-regimenes-corte no contempla.
+El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos regímenes no se midieron allí (@sec-exp-mqtt-https). Se ensayan en el experimento de la @sec-exp-sincronizacion, sobre la misma plataforma, aplicando con `tc netem` una pérdida del 100 % sobre la interfaz de un nodo durante un intervalo fijo, con duraciones por debajo y por encima del umbral del keep-alive. Esas mediciones muestran además que un corte breve puede cerrar la conexión por el lado del cliente, antes del umbral de una vez y media el keep-alive que aplica el broker.
 
 == Ruteo por tópicos y ruteo IP <sec-ruteo-topicos>
 
