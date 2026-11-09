@@ -242,7 +242,7 @@ La combinación tiene, a su vez, costos propios que se suman a las limitaciones 
 
 === Sparkplug B
 
-La madurez de esta combinación se refleja en su estandarización. La especificación Eclipse Sparkplug, adoptada como norma ISO/IEC 20237 @sparkplug-iso, define para los sistemas industriales precisamente lo que MQTT deja abierto, y en su versión B codifica la carga útil con Protocol Buffers @sparkplug30. Entre otras cosas, fija el espacio de tópicos, y con él la asociación entre tópico y esquema, y la forma de informar el estado de conexión de cada nodo mediante el mensaje de última voluntad. Su funcionamiento se analiza en la @sec-caso-industria.
+La madurez de esta combinación se refleja en su estandarización. La especificación Eclipse Sparkplug, adoptada como norma ISO/IEC 20237 @sparkplug-iso, define para los sistemas industriales precisamente lo que MQTT deja abierto, y en su versión B codifica la carga útil con Protocol Buffers @sparkplug3. Entre otras cosas, fija el espacio de tópicos, y con él la asociación entre tópico y esquema, y la forma de informar el estado de conexión de cada nodo mediante el mensaje de última voluntad. Su funcionamiento se analiza en la @sec-caso-industria.
 
 === Síntesis
 
