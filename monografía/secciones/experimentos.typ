@@ -43,9 +43,9 @@ Además de lo presentado en el marco teórico, el análisis de este experimento 
 
 *Algoritmo de Nagle.* Una aplicación entrega datos a TCP con llamadas a `send()` sobre un _socket_, y TCP decide cómo repartirlos en segmentos. Si cada llamada saliera de inmediato en su propio segmento, una aplicación que escribe de a pocos bytes llenaría la red de segmentos casi vacíos, en los que los 40 bytes de encabezados TCP/IP pesan más que los datos. El algoritmo de Nagle evita eso: mientras haya datos enviados sin confirmar, TCP no envía un segmento más chico que el tamaño máximo, sino que acumula los datos nuevos hasta recibir el ACK pendiente @rfc9293. Si no hay nada sin confirmar, el segmento sale enseguida. Así, una escritura aislada no se demora, pero la segunda de dos escrituras seguidas espera el ACK de la primera. La especificación vigente de TCP recomienda implementar Nagle, pero exige que cada aplicación pueda desactivarlo en una conexión @rfc9293, opción que en la interfaz de _sockets_ se llama `TCP_NODELAY`.
 
-*ACK retardado.* Del lado del receptor existe una optimización equivalente. En lugar de confirmar cada segmento apenas llega, el receptor puede esperar, hasta 500 ms según la especificación, para enviar el ACK junto con los datos de su respuesta y ahorrar un paquete @rfc1122. Si el temporizador vence antes de que haya una respuesta, el ACK sale solo. Cada mecanismo tiene sentido por separado, pero combinados pueden bloquearse entre sí como sucedió durante el experimento. 
+*ACK retardado.* Del lado del receptor existe una optimización equivalente. En lugar de confirmar cada segmento apenas llega, el receptor puede esperar, hasta 500 ms según la especificación, para enviar el ACK junto con los datos de su respuesta y ahorrar un paquete @rfc1122. Si el temporizador vence antes de que haya una respuesta, el ACK sale solo. Cada mecanismo tiene sentido por separado, pero combinados pueden bloquearse entre sí. 
 
-*Sincronización de relojes con SNTP.* Para medir la latencia extremo a extremo, el nodo y el servidor tienen que compartir la hora. NTP (_Network Time Protocol_) sincroniza el reloj de un cliente con el de un servidor: el cliente envía una consulta, el servidor responde con su hora y, con las marcas de tiempo de envío y de recepción de ambos mensajes, el cliente estima el tiempo de viaje y lo descuenta @rfc5905. SNTP (_Simple Network Time Protocol_) es una versión reducida de NTP para dispositivos con pocos recursos, que omite los algoritmos con los que NTP filtra las mediciones y elige entre varios servidores @rfc5905.
+*Sincronización de relojes con SNTP.* Para medir la latencia extremo a extremo, el nodo y el servidor tienen que compartir la hora. SNTP (_Simple Network Time Protocol_), una versión reducida de NTP para dispositivos con pocos recursos, sincroniza el reloj de un cliente con el de un servidor: el cliente envía una consulta, el servidor responde con su hora y, con las marcas de tiempo de ambos mensajes, el cliente estima el tiempo de viaje y lo descuenta @rfc5905.
 
 ==== Planteo
 
@@ -55,27 +55,11 @@ A diferencia del experimento de sincronización, el caso de uso es neutral: envi
 
 #subtitulo[Motivación]
 
-Este experimento corresponde al último de los objetivos específicos (@sec-objetivos): medir el costo en bytes y en latencia de MQTT y Protocol Buffers frente a HTTPS y JSON, y su comportamiento ante pérdidas y latencia. También aporta datos al objetivo que analiza MQTT sobre la capa de transporte, en lo que respecta a TCP y TLS. En el marco teórico se planteó que MQTT envía mensajes más livianos y con menor latencia que HTTP, por su encabezado fijo de dos bytes y su conexión persistente, y que Protocol Buffers produce mensajes más chicos que JSON, por su codificación binaria. Esas ventajas surgen de comparaciones cualitativas y de estudios con otros mensajes y plataformas. El experimento las mide sobre un mismo sistema. Para atribuir cada parte de la diferencia a su causa, incluye dos variantes de HTTP, corridas con y sin TLS y las dos serializaciones.
+Este experimento corresponde al último de los objetivos específicos (@sec-objetivos): medir el costo en bytes y en latencia de MQTT y Protocol Buffers frente a HTTPS y JSON, y su comportamiento ante pérdidas y latencia. También aporta datos al objetivo que analiza MQTT sobre la capa de transporte, en lo que respecta a TCP y TLS. En el marco teórico (@sec-alternativas) se planteó que MQTT envía mensajes más livianos y con menor latencia que HTTP, por su encabezado fijo de dos bytes y su conexión persistente, y que Protocol Buffers produce mensajes más chicos que JSON, por su codificación binaria. Esas ventajas surgen de comparaciones cualitativas y de estudios con otros mensajes y plataformas. El experimento las mide sobre un mismo sistema. Para atribuir cada parte de la diferencia a su causa, incluye dos variantes de HTTP, corridas con y sin TLS y las dos serializaciones.
 
 #subtitulo[Fundamento]
 
-La diferencia principal entre ambos caminos no está en el contenido de la lectura, sino en cómo cada protocolo usa la conexión TCP (@tab-fundamento).
-
-#figure(
-  table(
-    columns: (auto, 1fr, 1fr),
-    table.header[Aspecto][MQTT][HTTP],
-    [Conexión], [Una conexión TCP persistente por nodo], [Una conexión por lectura, o una reutilizada para varias],
-    [Handshake TLS], [Una vez, al conectar], [En cada conexión nueva],
-    [Encabezado por mensaje], [Binario: 2 bytes fijos, más el tópico], [Línea de solicitud y headers en texto],
-    [Respuesta], [Ninguna con QoS 0; PUBACK con QoS 1], [Siempre una respuesta HTTP],
-    [Garantía de entrega], [QoS 0, 1 o 2, definidos por el protocolo], [La de TCP, más los reintentos que implemente la aplicación],
-    [Iniciativa], [El servidor puede enviar al nodo por la misma conexión], [Solo el cliente inicia],
-  ),
-  caption: [Diferencias entre MQTT y HTTP en el uso de la conexión.],
-) <tab-fundamento>
-
-Por eso se prueban dos variantes de HTTP: una conexión nueva por lectura y una conexión reutilizada. La segunda es la comparación justa con MQTT; la primera representa el peor caso, el de un dispositivo que duerme entre envíos y abre una conexión cada vez.
+La diferencia principal entre ambos caminos no está en el contenido de la lectura, sino en cómo cada protocolo usa la conexión TCP. MQTT mantiene una conexión persistente por nodo, con un único handshake TLS y un encabezado binario de dos bytes, mientras que HTTP agrega a cada mensaje una línea de solicitud, headers en texto y una respuesta (@tab-comparacion-protocolos). Por eso se prueban dos variantes de HTTP: una conexión nueva por lectura y una conexión reutilizada. La segunda es la comparación justa con MQTT; la primera representa el peor caso, el de un dispositivo que duerme entre envíos y abre una conexión cada vez.
 
 #subtitulo[Preguntas de investigación]
 
@@ -99,11 +83,11 @@ Antes de las corridas se formularon las siguientes hipótesis, que se contrastan
 
 #subtitulo[Arquitectura]
 
-Cada nodo es un ESP32 emulado con el QEMU de Espressif que ejecuta un firmware real, escrito en C con ESP-IDF. Por eso los bytes que se miden son los que producen las bibliotecas que usaría una placa física, sin modificaciones: la pila TCP/IP lwIP, mbedTLS para TLS, esp-mqtt como cliente MQTT y `esp_http_client` como cliente HTTP. Como QEMU no emula WiFi, cada nodo usa una placa Ethernet emulada.
+El experimento corre sobre la plataforma común (@sec-plataforma-comun), con 8 nodos. Cada uno ejecuta un firmware real, por lo que los bytes que se miden son los que producen las bibliotecas que usaría una placa física, sin modificaciones: la pila TCP/IP lwIP, mbedTLS para TLS, esp-mqtt como cliente MQTT y `esp_http_client` como cliente HTTP.
 
-Cada instancia de QEMU se conecta a una interfaz TAP propia, y todas las interfaces se unen en un puente (_bridge_) de Linux en la computadora anfitriona, que tiene la dirección del servidor (`10.10.0.1`); los nodos usan las direcciones `10.10.0.11` en adelante. Se eligió este esquema, y no la red de usuario de QEMU, por dos motivos. La red de usuario termina las conexiones TCP del nodo dentro del propio emulador, de modo que la red no vería los paquetes tal como los arma el ESP32. Además, una interfaz por nodo permite degradar cada enlace por separado. Sobre cada interfaz se aplica `tc netem` en ambos sentidos para inyectar pérdida y latencia, y `dumpcap` captura en el puente todo el tráfico de la corrida (@fig-arq-telemetria).
+Se usaron interfaces TAP y no la red de usuario de QEMU porque esta termina las conexiones TCP del nodo dentro del propio emulador, de modo que la red no vería los paquetes tal como los arma el ESP32. Sobre cada interfaz se aplica `tc netem` en ambos sentidos para inyectar pérdida y latencia, y `dumpcap` captura en el puente todo el tráfico de la corrida (@fig-arq-telemetria).
 
-Del lado del servidor hay dos procesos: el broker Mosquitto y un backend escrito en Go. El backend atiende `POST /tel/{esp}` por HTTP (puerto 80) y por HTTPS (puerto 443) y responde `204 No Content`. Además, está suscripto al broker en el tópico `exp/tel/+` por una conexión local que no pasa por el puente y, por lo tanto, no entra en la captura. Las lecturas de ambos caminos terminan en la misma función de registro, que anota la hora de llegada, de modo que la latencia se calcula igual para los dos. El backend también funciona como servidor SNTP, para que los nodos sincronicen su reloj con el de la computadora anfitriona.
+Del lado del servidor hay dos procesos: el broker Mosquitto y un backend escrito en Go. El backend recibe los POST por HTTP y por HTTPS y responde `204 No Content`. Además, está suscrito al broker por una conexión local que no pasa por el puente y, por lo tanto, no entra en la captura. Las lecturas de ambos caminos terminan en la misma función de registro, que anota la hora de llegada, de modo que la latencia se calcula igual para los dos. El backend también funciona como servidor SNTP, para que los nodos sincronicen su reloj con el de la computadora anfitriona.
 
 #figure(
   diagram(
@@ -137,11 +121,7 @@ message Telemetry {
 }
 ```
 
-Codificado con Protocol Buffers, el mensaje ocupa entre 16 y 19 bytes (18 en promedio), porque `seq` es un entero de longitud variable. En JSON, con los mismos nombres de campo y sin espacios, ocupa unos 72 bytes, cuatro veces más:
-
-```json
-{"esp_id":3,"seq":142,"t_us":1793041765379595,"value":23.4567,"status":0}
-```
+Codificado con Protocol Buffers, el mensaje ocupa entre 16 y 19 bytes (18 en promedio), porque `seq` es un entero de longitud variable. En JSON, con los mismos nombres de campo y sin espacios, ocupa unos 72 bytes, cuatro veces más.
 
 La lectura se envía por uno de los cuatro caminos de la @tab-transportes. En HTTP, el formato se indica en el header `Content-Type` (`application/x-protobuf` o `application/json`).
 
@@ -157,15 +137,13 @@ La lectura se envía por uno de los cuatro caminos de la @tab-transportes. En HT
   caption: [Transportes comparados.],
 ) <tab-transportes>
 
-Los cuatro caminos se corrieron con y sin TLS. Con TLS se usó la misma configuración en el broker y en el backend: TLS 1.2 @rfc5246 con la suite `ECDHE-ECDSA-AES128-GCM-SHA256`, el mismo certificado ECDSA P-256 firmado por una autoridad de certificación propia, que el nodo verifica, y sin reanudación de sesión. El cliente MQTT de ESP-IDF admite las versiones 3.1.1 y 5.0 @esp-mqtt, y en este experimento se configuró la 3.1.1 @mqtt311. Para este experimento la diferencia es menor, porque el encabezado fijo es el mismo en ambas versiones y la 5.0 solo agrega a cada PUBLISH un byte con la longitud de sus propiedades.
+Los cuatro caminos se corrieron con y sin TLS. Con TLS se usó la misma configuración en el broker y en el backend: TLS 1.2 @rfc5246 con cifrado AES-GCM, un certificado firmado por una autoridad de certificación propia, que el nodo verifica, y sin reanudación de sesión. El cliente MQTT de ESP-IDF admite las versiones 3.1.1 y 5.0 @esp-mqtt, y en este experimento se configuró la 3.1.1 @mqtt311. Para este experimento la diferencia es menor, porque el encabezado fijo es el mismo en ambas versiones y la 5.0 solo agrega a cada PUBLISH un byte con la longitud de sus propiedades.
 
 #subtitulo[Firmware]
 
 En cada nodo, una tarea productora crea una lectura por período con la hora sincronizada (`t_us`) y la encola, y otra tarea, la emisora, la saca de la cola, la serializa y la envía. Separar la creación del envío hace que el tiempo que una lectura espera en la cola, por ejemplo mientras el emisor está bloqueado en un handshake o en una retransmisión, quede incluido en la latencia medida.
 
 Salvo el keep-alive de MQTT, que se fijó en 60 s, más que el período más largo (10 s), para que el cliente no necesite enviar PINGREQ, se dejaron los valores por defecto de las bibliotecas, que son los que tendría un ESP32 sin ajustes. En MQTT, un PUBLISH de QoS 1 se reenvía si su PUBACK no llega en 1 s. En HTTP, cada envío tiene hasta tres intentos con un tiempo de espera de 5 s, y el algoritmo de Nagle (@sec-conceptos-exp1) está activo. El cliente MQTT abre la conexión antes de que empiece la medición, mientras que el cliente HTTP la abre recién al enviar la primera lectura.
-
-La configuración de cada nodo (transporte, TLS, período y serialización) se lee de una partición de la memoria _flash_, de modo que el firmware se compila una sola vez para todas las corridas.
 
 #subtitulo[Diseño de las corridas]
 
@@ -193,44 +171,13 @@ Además, para verificar la explicación de la latencia de HTTP, se corrió una m
 
 #subtitulo[Métricas]
 
-Los bytes se miden en la red y no en la aplicación, para incluir todo lo que agregan TCP, TLS y cada protocolo (@tab-metricas-telemetria).
-
-#figure(
-  table(
-    columns: (auto, 1fr),
-    table.header[Métrica][Cómo se calcula],
-    [Bytes por lectura], [Bytes de los paquetes IP del puerto del servidor en la captura, divididos por las lecturas entregadas. Incluyen encabezados TCP/IP y TLS, ACK, handshakes, cierres y retransmisiones],
-    [Paquetes por lectura], [Paquetes de la captura divididos por las lecturas entregadas],
-    [Bytes de handshake], [Bytes de cada conexión antes del primer dato de aplicación],
-    [Latencia extremo a extremo], [Hora de llegada al servidor menos `t_us`, de la primera llegada de cada lectura (mediana y percentiles 95 y 99)],
-    [Tasa de entrega], [Lecturas distintas recibidas sobre lecturas producidas],
-    [Duplicados], [Lecturas recibidas más de una vez],
-    [Retransmisiones], [Segmentos TCP retransmitidos en la captura],
-    [Factor de tiempo real], [Avance del reloj del nodo sobre avance del reloj de la computadora anfitriona],
-  ),
-  caption: [Métricas del experimento.],
-) <tab-metricas-telemetria>
+Los bytes se miden en la red y no en la aplicación, para incluir todo lo que agregan TCP, TLS y cada protocolo. Los bytes por lectura son los de los paquetes IP del puerto del servidor en la captura, divididos por las lecturas entregadas, e incluyen encabezados, ACK, handshakes, cierres y retransmisiones. La latencia es la hora de llegada de cada lectura al servidor menos su hora de creación en el nodo, y se reporta con la mediana y los percentiles 95 y 99. La tasa de entrega es la cantidad de lecturas distintas recibidas sobre las producidas.
 
 #subtitulo[Entorno y validez]
 
-La @tab-entorno-telemetria resume el entorno en el que se corrió el experimento.
+El experimento se corrió en una computadora con un AMD Ryzen 7 5700U y 14 GB de RAM, con QEMU de Espressif 9.2.2, ESP-IDF 5.5.6, nanopb 0.4.9.1, Mosquitto 2.1.2 y un backend en Go. Las 210 corridas resultaron válidas: los nodos nunca corrieron más lento que el tiempo real, ninguno se atrasó al producir lecturas, no quedaron lecturas sin enviar y no hubo desconexiones de MQTT. Dos corridas en las que un nodo no logró sincronizar su reloj con 5 % de pérdida, antes de empezar a medir, se repitieron con más tiempo de espera para la sincronización.
 
-#figure(
-  table(
-    columns: (auto, 1fr),
-    table.header[Componente][Versión],
-    [Computadora anfitriona], [AMD Ryzen 7 5700U (8 núcleos, 16 hilos), 14 GB de RAM, Linux],
-    [Emulador], [QEMU de Espressif 9.2.2],
-    [Firmware], [ESP-IDF 5.5.6 (lwIP, mbedTLS, esp-mqtt, `esp_http_client`) y nanopb 0.4.9.1],
-    [Broker], [Mosquitto 2.1.2],
-    [Backend y análisis], [Go 1.27.3 y TShark 4.7.4],
-  ),
-  caption: [Entorno del experimento.],
-) <tab-entorno-telemetria>
-
-Las 210 corridas resultaron válidas, el factor de tiempo real mínimo fue 1,000 en todas, ningún nodo se atrasó al producir lecturas, no quedaron lecturas sin enviar ni se descartaron lecturas de la cola, y no hubo desconexiones de MQTT. Dos corridas fallaron antes de empezar a medir, porque un nodo no logró sincronizar su reloj con 5 % de pérdida. Se amplió el tiempo de espera de la sincronización de 30 s a 90 s y se repitieron. Ese cambio solo afecta el arranque del nodo, antes de que empiece la medición.
-
-Para calcular la latencia, a la hora de llegada, tomada del reloj del servidor, se le resta la hora de creación de la lectura, tomada del reloj del nodo. Ambos relojes se sincronizan por SNTP (@sec-conceptos-exp1), pero el cliente SNTP de lwIP no descuenta el tiempo de viaje de la respuesta del servidor, así que el reloj del nodo queda atrasado medio RTT y cada latencia medida resulta medio RTT más larga. Sin latencia agregada, ese error es de alrededor de 1 ms. Con latencia agregada, el error crece a la mitad del RTT agregado, pero como netem agrega un retardo fijo se lo puede descontar: a cada latencia medida se le restó RTT/2.
+El cliente SNTP de lwIP no descuenta el tiempo de viaje de la respuesta del servidor (@sec-conceptos-exp1), así que el reloj del nodo queda atrasado medio RTT y cada latencia medida resulta medio RTT más larga. Sin latencia agregada, ese error es de alrededor de 1 ms. Con latencia agregada, como netem la aplica como un retardo fijo, a cada latencia medida se le restó RTT/2.
 
 ==== Resultados
 
