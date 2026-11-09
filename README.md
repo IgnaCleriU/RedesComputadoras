@@ -4,25 +4,27 @@
 
 ## Trabajos Prácticos
 
-| Informe                                               | Enunciado                                           |
-| ----------------------------------------------------- | --------------------------------------------------- |
-| [TP1 — Práctico](tps/practico/TP1/informe-tp-1.md)    | [RC - TP N1.pdf](<tps/practico/TP1/RC - TP N1.pdf>) |
-| [TP2 — Práctico](tps/practico/TP2/InformeTP2.md)      | [RC - TP N2.pdf](<tps/practico/TP2/RC - TP N2.pdf>) |
-| [TP3 — Práctico](tps/practico/TP3/InformeTP3.pdf)     | [RC - TP N3.pdf](<tps/practico/TP3/RC - TP N3.pdf>) |
-| [TP4 — Práctico](tps/practico/TP4/InformeTP4.md)      | [RC - TP N4.pdf](<tps/practico/TP4/RC - TP N4.pdf>) |
-| [TP5 — Práctico](tps/practico/TP5/InformeTP5.md)      | [RC - TP N5.pdf](<tps/practico/TP5/RC - TP N5.pdf>) |
-| [TP6 — Práctico](tps/practico/TP6/main.pdf)           | [RC - TP N6.pdf](<tps/practico/TP6/Consigna/RC - TP N6.pdf>) |
-| [TP7 — Práctico](tps/practico/TP7/InformeTP7.md)      | [RC - TP N7.pdf](<tps/practico/TP7/RC - TP N7.pdf>) |
-| [Tarea 2 — Teórico](tps/tp-teorico/tarea2/tarea2.pdf) | [Tarea02.pdf](tps/tp-teorico/tarea2/Tarea02.pdf)    |
-| [Tarea 3 — Teórico](tps/tp-teorico/tarea3/main.pdf)   | —                                                   |
-| [Tarea 4 — Teórico](tps/tp-teorico/tarea4/main.pdf)   | —                                                   |
+| Informe                                                 | Enunciado                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| [TP1 — Práctico](tps/practico/TP1/informe-tp-1.md)      | [RC - TP N1.pdf](<tps/practico/TP1/RC - TP N1.pdf>)          |
+| [TP2 — Práctico](tps/practico/TP2/InformeTP2.md)        | [RC - TP N2.pdf](<tps/practico/TP2/RC - TP N2.pdf>)          |
+| [TP3 — Práctico](tps/practico/TP3/InformeTP3.pdf)       | [RC - TP N3.pdf](<tps/practico/TP3/RC - TP N3.pdf>)          |
+| [TP4 — Práctico](tps/practico/TP4/InformeTP4.md)        | [RC - TP N4.pdf](<tps/practico/TP4/RC - TP N4.pdf>)          |
+| [TP5 — Práctico](tps/practico/TP5/InformeTP5.md)        | [RC - TP N5.pdf](<tps/practico/TP5/RC - TP N5.pdf>)          |
+| [TP6 — Práctico](tps/practico/TP6/main.pdf)             | [RC - TP N6.pdf](<tps/practico/TP6/Consigna/RC - TP N6.pdf>) |
+| [TP7 — Práctico](tps/practico/TP7/InformeTP7.md)        | [RC - TP N7.pdf](<tps/practico/TP7/RC - TP N7.pdf>)          |
+| [Tarea 2 — Teórico](tps/teorico/tarea2/tarea2.pdf)      | [Tarea02.pdf](tps/teorico/tarea2/Tarea02.pdf)                |
+| [Tarea 3 — Teórico](tps/teorico/tarea3/main.pdf)        | —                                                            |
+| [Tarea 4 — Teórico](tps/teorico/tarea4/main.pdf)        | —                                                            |
+| [Tarea 5 — Teórico](tps/teorico/tarea5/WireGuardians-T5.pdf) | [Consigna](<tps/teorico/tarea5/Redes2026-2doSem-Capa de Transporte-Actividades.docx.pdf>) |
+| [Monografía](<monografía/WireGuardians-MONOGRAFÍA.pdf>) | —                                                            |
 
 ### Esquema de archivos
 
 ```
 tps/
 ├── practico/TP{N}/       # un TP del práctico
-├── tp-teorico/tarea{N}/  # una tarea del teórico
+├── teorico/tarea{N}/     # una tarea del teórico
 └── template/             # plantilla Typst para informes
     ├── main.typ
     ├── bibliografia.bib
@@ -34,8 +36,8 @@ tps/
 Los informes se escriben en [Typst](https://typst.app/docs/) partiendo de `tps/template/`:
 
 ```
-cp -r tps/template tps/{practico|tp-teorico}/{tareaN|TPN}     # crea la carpeta del TP con la plantilla adentro
-cp -r tps/template/* tps/{practico|tp-teorico}/{tareaN|TPN}/  # si la carpeta ya existe
+cp -r tps/template tps/{practico|teorico}/{tareaN|TPN}     # crea la carpeta del TP con la plantilla adentro
+cp -r tps/template/* tps/{practico|teorico}/{tareaN|TPN}/  # si la carpeta ya existe
 ```
 
 y se completan `trabajo`, `titulo` y `resumen` al principio de `main.typ` (los pasos están comentados arriba de todo en el archivo).
@@ -63,8 +65,8 @@ Sin `mise` también funciona instalando Typst a mano (`cargo install typst-cli -
 
 ## Horario de cursada
 
-| Día   | Tipo      | Inicio | Finaliza | Sede      |
-| ------ | --------- | ------ | -------- | --------- |
+| Día    | Tipo     | Inicio | Finaliza | Sede      |
+| ------ | -------- | ------ | -------- | --------- |
 | Lunes  | Teórico  | 18:30  | 21:00    | CU107 Lab |
 | Jueves | Práctica | 18:30  | 21:00    | CU301     |
 
@@ -79,12 +81,12 @@ Este repositorio guarda el material de estudio de la materia: trabajos práctico
 
 ### Estructura de carpetas
 
-| Tipo de contenido                | Carpeta destino                      |
-| -------------------------------- | ------------------------------------ |
-| TP del práctico                 | `tps/practico/TPN/`                |
-| TP del teórico                  | `tps/tp-teorico/tareaN/`           |
-| Apuntes de clase                 | `Material/clases/teorico/claseN/` o `.../practico/claseN/` |
-| Bibliografía (libros, programa) | `Material/Bibliografia/`           |
+| Tipo de contenido               | Carpeta destino                                            |
+| ------------------------------- | ---------------------------------------------------------- |
+| TP del práctico                 | `tps/practico/TPN/`                                        |
+| TP del teórico                  | `tps/teorico/tareaN/`                                      |
+| Apuntes de clase                | `Material/clases/teorico/claseN/` o `.../practico/claseN/` |
+| Bibliografía (libros, programa) | `Material/Bibliografia/`                                   |
 
 Si un archivo no encaja en ninguna categoría existente, creá la carpeta que corresponda siguiendo el mismo criterio (tipo de contenido, no persona ni fecha) y documentala acá (ver [Mantener esto actualizado](#mantener-esto-actualizado)).
 

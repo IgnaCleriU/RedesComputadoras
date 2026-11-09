@@ -1,5 +1,5 @@
 // 1. Copiar la plantilla al directorio del TP:
-//    cp -r tps/template tps/tp-teorico/tareaN   (o `tps/template/*` si ya existe)
+//    cp -r tps/template tps/teorico/tareaN   (o `tps/template/*` si ya existe)
 // 2. Actualizar "trabajo" en L38 (número de trabajo práctico) y "titulo" en L75
 // 3. Actualizar el "resumen" u objetivo en L76
 // 4. Al entregar, poner `drafting` en false para sacar la marca de BORRADOR
