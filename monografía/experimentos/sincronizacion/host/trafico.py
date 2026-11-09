@@ -20,6 +20,8 @@ import struct
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 PUERTO = 1883
 BROKER = bytes([10, 10, 0, 1])
 COLUMNAS = [
@@ -27,7 +29,8 @@ COLUMNAS = [
     "tramas_bajada", "bytes_bajada", "bytes_por_s_total", "bytes_por_s_subida_nodo",
     "bytes_por_s_bajada_nodo", "publish_subida_B", "cabecera_mqtt_subida_B", "topico_subida_B",
     "protobuf_subida_B", "publish_bajada_B", "cabecera_mqtt_bajada_B", "topico_bajada_B",
-    "protobuf_bajada_B", "retransmisiones",
+    "protobuf_bajada_B", "retransmisiones", "entregas_medidas", "edad_entrega_p50_ms",
+    "edad_entrega_p95_ms", "edad_entrega_p99_ms",
 ]
 
 
@@ -86,6 +89,62 @@ def anatomia_publish(tcp):
         return total, i, largo_topico, carga
     except (IndexError, struct.error):
         return None
+
+
+def edad_de_las_entregas(directorio, cfg):
+    """Antigüedad con la que el broker entrega cada fase, en ms: envío a la red menos t_us.
+
+    Reconstruye el flujo TCP broker -> nodo (la captura ve cada byte antes de netem, y una
+    retransmisión no cambia su primera aparición) y recorre sus paquetes MQTT.
+    """
+    from analizar import decodificar  # noqa: PLC0415
+
+    flujos = {}
+    for t, f in tramas(directorio / "captura.pcap"):
+        if len(f) < 54 or f[12:14] != b"\x08\x00" or f[23] != 6 or f[26:30] != BROKER:
+            continue
+        ihl = (f[14] & 0x0F) * 4
+        tcp = 14 + ihl
+        if struct.unpack(">H", f[tcp:tcp + 2])[0] != PUERTO:
+            continue
+        seq = struct.unpack(">I", f[tcp + 4:tcp + 8])[0]
+        offset = (f[tcp + 12] >> 4) * 4
+        carga = f[tcp + offset:14 + struct.unpack(">H", f[16:18])[0]]
+        destino = struct.unpack(">H", f[tcp + 2:tcp + 4])[0]
+        flujo = flujos.setdefault((f[30:34], destino), {})
+        if carga and seq not in flujo:
+            flujo[seq] = (t, carga)
+    inicio = cfg["t_inicio_ms"] / 1000.0
+    fin = inicio + cfg["duracion_s"]
+    edades = []
+    for segmentos in flujos.values():
+        flujo, tiempos, esperado = bytearray(), [], None
+        for seq in sorted(segmentos):
+            t, carga = segmentos[seq]
+            if esperado is not None and seq != esperado:
+                break  # hueco en la captura: el resto del flujo no se puede alinear
+            flujo += carga
+            tiempos += [t] * len(carga)
+            esperado = seq + len(carga)
+        i = 0
+        while i < len(flujo):
+            try:
+                resto, j = varint_mqtt(flujo, i + 1)
+                total = j + resto
+                if total > len(flujo):
+                    break
+                if flujo[i] >> 4 == 3:
+                    k = j + 2 + struct.unpack(">H", flujo[j:j + 2])[0]
+                    k += 2 if (flujo[i] >> 1) & 3 else 0
+                    largo, k = varint_mqtt(flujo, k)
+                    m = decodificar(bytes(flujo[k + largo:total]))
+                    t = tiempos[total - 1]
+                    if inicio <= t <= fin and m["t_us"]:
+                        edades.append((t - m["t_us"] * 1e-6) * 1e3)
+                i = total
+            except (IndexError, ValueError, struct.error):
+                break
+    return edades
 
 
 def analizar(directorio):
@@ -151,6 +210,13 @@ def analizar(directorio):
         fila[f"cabecera_mqtt_{sentido}_B"] = cab
         fila[f"topico_{sentido}_B"] = topico
         fila[f"protobuf_{sentido}_B"] = pb
+    edades = sorted(edad_de_las_entregas(directorio, cfg))
+    if edades:
+        def percentil(q):
+            return round(edades[min(len(edades) - 1, int(q * len(edades)))], 1)
+
+        fila.update(entregas_medidas=len(edades), edad_entrega_p50_ms=percentil(0.50),
+                    edad_entrega_p95_ms=percentil(0.95), edad_entrega_p99_ms=percentil(0.99))
     return fila
 
 
