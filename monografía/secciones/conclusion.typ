@@ -64,7 +64,7 @@ permite replicarlo, como ocurre con Mosquitto, se convierte en el punto único d
 Las mediciones confirmaron lo anterior y le pusieron números. En el primer experimento, una lectura por MQTT QoS 0 con TLS ocupó
 165~B, 3,4 veces menos que por HTTP con conexión reutilizada y entre 14 y 16 veces menos que con una conexión por lectura, con una mediana de latencia
 de unos 3~ms, frente a 45~ms y 3,4~s. Estos datos concluyen en que con TLS, mantener la conexión abierta explica el 82~% del ahorro, y el protocolo de
-aplicación, el 18~% restante. Protocol Buffers redujo el payload un 75~% respecto de JSON, unos 54~B por lectura en todos los caminos, pero cambiar de
+aplicación, el 18~% restante. Protocol Buffers redujo la carga útil un 75~% respecto de JSON, unos 54~B por lectura en todos los caminos, pero cambiar de
 HTTP con conexión reutilizada a MQTT QoS 0 ahorró más de siete veces eso.
 El experimento mostró también los límites de esa ventaja. MQTT tiene el costo fijo por conexión más alto, por lo que deja de convenir si la conexión
 dura menos de tres o cuatro lecturas, como en un dispositivo que duerme y se reconecta en cada envío. Además, parte de la diferencia de latencia con

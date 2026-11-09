@@ -8,7 +8,7 @@ abarca el análisis y cuáles quedan fuera de él.
 
 En la capa de aplicación, el estudio considera MQTT en su versión 5.0 y Protocol Buffers en su sintaxis proto3. Del protocolo MQTT
 se analizan el modelo de broker, los tópicos y sus comodines, los niveles de calidad de servicio, las sesiones, los mensajes retenidos
-y el _last will_. De Protocol Buffers se analizan el esquema, la codificación binaria y la compatibilidad entre versiones. Como puntos
+y el mensaje de última voluntad (_last will_). De Protocol Buffers se analizan el esquema, la codificación binaria y la compatibilidad entre versiones. Como puntos
 de comparación se toman HTTP (y HTTPS) y CoAP como protocolos de transporte de mensajes, y JSON como formato de serialización.
 
 En la capa de transporte, el análisis se limita a TCP y TLS en la medida en que afectan a MQTT, conceptos como la conexión persistente,
@@ -31,7 +31,7 @@ El trabajo incluye además un mapeo tecnológico, desarrollado en la @sec-mapeo-
 
 === Parte experimental
 
-Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, que se comunican con un broker Mosquitto en la misma computadora, y contrastan con mediciones propias lo que el marco teórico y el desarrollo plantean de forma cualitativa.
+Los experimentos se realizan sobre placas ESP32 emuladas con QEMU, un emulador que ejecuta en una computadora el código de la placa, que se comunican con un broker Mosquitto en la misma computadora, y contrastan con mediciones propias lo que el marco teórico y el desarrollo plantean de forma cualitativa.
 
 El primero, en un escenario de telemetría, compara MQTT (QoS 0 y QoS 1) con HTTP (con y sin reutilización de la conexión), con carga útil en JSON y en Protocol Buffers y con y sin TLS, y mide por separado el costo en bytes y en latencia. Se le aplican pérdidas y latencia de forma artificial, pero no cortes de conexión.
 

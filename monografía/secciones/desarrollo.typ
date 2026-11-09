@@ -63,9 +63,9 @@ cliente envía el CONNECT, que ya viaja cifrado, de modo que el usuario y la con
 
 El costo del cifrado tiene dos partes. La primera es el handshake, que se realiza una sola vez al conectar. En TLS 1.2, la versión empleada en el
 Experimento 1, requiere dos idas y vueltas @rfc5246, de modo que, sumado al handshake de TCP, el cliente envía el CONNECT recién
-después de unos tres RTT. Con 200 ms de RTT agregados, el tiempo de conexión aumentó entre 340 y 570 ms (@sec-exp-mqtt-https). TLS 1.3 reduce el
+después de unos tres tiempos de ida y vuelta (RTT, _round-trip time_). Con 200 ms de RTT agregados, el tiempo de conexión aumentó entre 340 y 570 ms (@sec-exp-mqtt-https). TLS 1.3 reduce el
 handshake completo a una sola ida y vuelta @rfc8446. La segunda parte es el recargo de cada mensaje, con TLS 1.2 y AES-GCM, cada registro agrega 29 B
-(5 de cabecera, 8 de _nonce_ explícito y 16 de etiqueta de autenticación), lo que explica casi todo el aumento de 46,5 B por lectura de MQTT QoS 0,
+(5 de encabezado, 8 de _nonce_ explícito y 16 de etiqueta de autenticación), lo que explica casi todo el aumento de 46,5 B por lectura de MQTT QoS 0,
 cuya latencia crece menos de 0,6 ms.
 
 Lo que determina cuánto pesa el handshake es cuántos mensajes se envían por cada conexión. En MQTT la conexión es persistente, por lo que el handshake
@@ -149,7 +149,7 @@ quien administra el broker no controla esos equipos, que pertenecen al cliente o
 El modelo de MQTT se ajusta a esta restricción, ya que, como se vio en la @sec-mqtt, todos los participantes son clientes y es el dispositivo quien
 abre la conexión TCP hacia el broker. Esa conexión saliente crea la entrada en el NAT y en el firewall, y a partir de ella el broker puede entregarle
 mensajes al dispositivo, incluidos los comandos que se originan en la nube, como segmentos de una conexión ya establecida. El único requisito sobre
-la red del cliente es que permita las conexiones salientes hacia la dirección y el puerto del broker. IANA tiene registrados para MQTT los puertos
+la red del cliente es que permita las conexiones salientes hacia la dirección y el puerto del broker. IANA, el organismo que asigna los números de puerto, tiene registrados para MQTT los puertos
 TCP 1883, sin cifrado, y 8883, sobre TLS, y, cuando una red restrictiva solo deja pasar el tráfico web, MQTT puede transportarse sobre WebSocket
 @mqtt50, a cambio de la sobrecarga de ese protocolo adicional.
 
@@ -175,16 +175,16 @@ información de alcanzabilidad @kurose2017. Para MQTT, ambos niveles son transpa
 un router falla y la red debe encontrar un camino alternativo, porque durante ese lapso los segmentos de la conexión se pierden. Esta subsección y la
 siguiente describen cómo y en cuánto tiempo se recupera cada protocolo.
 
-OSPF es un protocolo de estado de enlace. Cada router descubre a sus vecinos mediante paquetes Hello y describe sus enlaces, con el costo de cada uno,
+OSPF (_Open Shortest Path First_) es un protocolo de estado de enlace. Cada router descubre a sus vecinos mediante paquetes Hello y describe sus enlaces, con el costo de cada uno,
 en anuncios de estado de enlace (LSA) que se inundan a todos los routers del área. Así, todos construyen la misma base de datos con la topología
 completa, y cada uno calcula, con el algoritmo de Dijkstra, el árbol de caminos más cortos con raíz en sí mismo @rfc2328. Ante una falla, el router que
 la detecta inunda un LSA actualizado y cada router recalcula sus rutas de forma independiente, sin esperar a que lo hagan sus vecinos, lo que le da a
 OSPF una convergencia rápida. El factor que suele dominar es la detección. Si la falla deja la interfaz caída, el router la advierte de inmediato; si
 no, como cuando el enlace pasa por un switch intermedio, recién la advierte cuando deja de recibir paquetes Hello durante el RouterDeadInterval, que
-con los valores habituales de 10 segundos entre Hellos es de 40 segundos @rfc2328. Mecanismos como BFD reducen esa detección a fracciones de segundo
+con los valores habituales de 10 segundos entre Hellos es de 40 segundos @rfc2328. Mecanismos como BFD (_Bidirectional Forwarding Detection_) reducen esa detección a fracciones de segundo
 @rfc5880. OSPF admite además dividir el AS en áreas, de modo que la inundación y el recálculo se limitan al área afectada @kurose2017.
 
-RIP, en cambio, es un protocolo de vector distancia basado en el algoritmo de Bellman-Ford. Cada router conoce solo las distancias, medidas en saltos,
+RIP (_Routing Information Protocol_), en cambio, es un protocolo de vector distancia basado en el algoritmo de Bellman-Ford. Cada router conoce solo las distancias, medidas en saltos,
 que le anuncian sus vecinos, y les envía su tabla completa cada 30 segundos @rfc2453. La métrica admite como máximo 15 saltos, ya que el valor 16
 representa un destino inalcanzable, lo que limita el tamaño de las redes en las que puede usarse. Su convergencia es lenta: una ruta se da por perdida
 recién después de 180 segundos sin anuncios que la confirmen, y la noticia de la falla avanza de a un router por intercambio. Además, como los vecinos
@@ -192,7 +192,7 @@ pueden seguir anunciando caminos que pasaban por el enlace caído, la métrica d
 como conteo hasta el infinito @kurose2017. El horizonte dividido con reversa envenenada y las actualizaciones disparadas atenúan el problema, pero no
 lo eliminan en los bucles de tres o más routers @rfc2453.
 
-EIGRP, desarrollado por Cisco y publicado como RFC informativo, es un protocolo de vector distancia avanzado que evita estas limitaciones mediante el
+EIGRP (_Enhanced Interior Gateway Routing Protocol_), desarrollado por Cisco y publicado como RFC informativo, es un protocolo de vector distancia avanzado que evita estas limitaciones mediante el
 algoritmo DUAL @rfc7868. Usa una métrica compuesta, que por defecto combina ancho de banda y retardo, y envía actualizaciones solo cuando hay cambios.
 Para cada destino registra, además del sucesor (el vecino por el que pasa la mejor ruta), los sucesores factibles: vecinos cuya distancia anunciada es
 menor que la mejor distancia que el router conoce hacia ese destino, condición que garantiza que el camino a través de ellos no forma un bucle. Si el
@@ -226,7 +226,7 @@ Qué ocurre con la conexión según la duración de ese lapso se analiza en la @
 
 El broker no suele estar en el mismo AS que el dispositivo. Un robot conectado a la red de un cliente llega a Internet a través del AS de su proveedor
 de acceso, el broker se aloja en el AS de un proveedor de nube y entre ambos puede haber uno o más proveedores de tránsito. El camino entre AS lo
-determina BGP, el protocolo de ruteo externo de Internet @rfc4271.
+determina BGP (_Border Gateway Protocol_), el protocolo de ruteo externo de Internet @rfc4271.
 
 BGP es un protocolo de vector de caminos. Los routers de borde de AS vecinos establecen sesiones eBGP sobre conexiones TCP y se anuncian prefijos
 acompañados de atributos, entre ellos el AS-PATH, la lista de AS que atravesó el anuncio, que permite descartar las rutas que contienen al propio AS y
@@ -254,7 +254,7 @@ convergencia de BGP.
 
 Las subsecciones anteriores describieron cuánto tarda la red en encontrar un camino alternativo después de una falla. Mientras tanto, el trayecto entre
 el dispositivo y el broker se comporta como un agujero negro: los routers que todavía apuntan al enlace caído descartan los segmentos, y durante la
-reconvergencia pueden formarse bucles transitorios, en los que los segmentos circulan hasta que se agota su TTL @rfc5715. Ni TCP ni MQTT reciben aviso
+reconvergencia pueden formarse bucles transitorios, en los que los segmentos circulan hasta que se agota su tiempo de vida (TTL) @rfc5715. Ni TCP ni MQTT reciben aviso
 de lo que ocurre, porque el ruteo opera en la capa de red y las direcciones de los extremos no cambian. Lo único que observa el emisor es que sus
 segmentos dejan de ser confirmados. Lo que le pasa a la conexión depende, entonces, de cómo se compara la duración del corte con dos temporizadores de
 los extremos: el de retransmisión de TCP y el keep-alive de MQTT.
@@ -340,7 +340,7 @@ El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos re
 
 Las secciones anteriores describieron cómo la red lleva cada segmento desde el dispositivo hasta el broker. Entre el publicador y los
 suscriptores hay, sin embargo, una segunda decisión de encaminamiento, que se toma en la capa de aplicación. Un router que recibe un
-datagrama examina la dirección IP de destino de su cabecera y decide, a partir de su tabla, si lo entrega directamente, a qué otro router
+datagrama examina la dirección IP de destino de su encabezado y decide, a partir de su tabla, si lo entrega directamente, a qué otro router
 lo reenvía o si debe descartarlo e informar el error al origen @stallings2004[pp.~602--603]. El broker, al recibir un paquete PUBLISH,
 examina el nombre de tópico y decide, a partir de las suscripciones registradas, a qué clientes debe entregarlo. Ambos son mecanismos de
 encaminamiento basados en una tabla y en una clave que viaja en el encabezado, y compararlos permite ver qué ideas del ruteo IP reaparecen
@@ -379,7 +379,7 @@ nivel máximo de QoS. Sus entradas no las calcula ningún algoritmo a partir de 
 un paquete SUBSCRIBE y las eliminan con UNSUBSCRIBE o al terminar la sesión @mqtt50. En un broker único no hay ningún protocolo que
 sincronice tablas entre nodos, y la topología se reduce al conjunto de conexiones abiertas.
 
-Por eso, el análogo más cercano en IP no es el ruteo de unidifusión, sino la multidifusión. Allí, las estaciones usan IGMP para
+Por eso, el análogo más cercano en IP no es el ruteo de unidifusión, sino la multidifusión. Allí, las estaciones usan IGMP (_Internet Group Management Protocol_) para
 suscribirse a un grupo de multidifusión y para abandonarlo, y los routers consultan periódicamente qué grupos interesan a las estaciones
 de cada red @stallings2004[p.~638]. El router no necesita saber qué estaciones pertenecen a cada grupo, sino solo si queda al menos un
 miembro activo en la red @stallings2004[p.~641], y debe traducir cada dirección de grupo a la lista de redes que contienen miembros
@@ -443,8 +443,8 @@ El comodín `+`, que reemplaza exactamente un nivel en cualquier posición del f
 prefijo CIDR solo puede fijar los bits del comienzo de la dirección y dejar libres los del final, mientras que `flota/+/bateria` fija el
 primer y el tercer nivel y deja libre el del medio. Para expresar lo mismo con prefijos haría falta una entrada por robot. El análogo más
 cercano en la capa de red es el reenvío generalizado de las redes definidas por software, en el que cada entrada de la tabla de flujos
-compara varios campos de la cabecera a la vez y cada campo puede contener comodines, como una dirección `128.119.*.*`
-@kurose2017[sec.~4.4.1]. Cada nivel de un tópico se comporta, en ese sentido, como un campo independiente de la cabecera. Aun así, la regla
+compara varios campos del encabezado a la vez y cada campo puede contener comodines, como una dirección `128.119.*.*`
+@kurose2017[sec.~4.4.1]. Cada nivel de un tópico se comporta, en ese sentido, como un campo independiente del encabezado. Aun así, la regla
 de decisión vuelve a ser distinta, porque cuando un paquete coincide con varias entradas de la tabla de flujos se aplica solo la de mayor
 prioridad @kurose2017[sec.~4.4.1].
 
