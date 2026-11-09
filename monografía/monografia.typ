@@ -20,7 +20,6 @@
   (nombre: "Grafión, Atilio Leonel", dni: "43940195", mail: "atilio.grafion"),
   (nombre: "Badenes, Tomás", dni: "44785038", mail: "tomasbadenes"),
   (nombre: "Oviedo, Ignacio Nicolás", dni: "44169239", mail: "ignacio.oviedo.239"),
-  (nombre: "Mendez, Jorge Nicolas", dni: "41301342", mail: "jorge.mendez"),
 )
 
 #let dominio-mail = "mi.unc.edu.ar"
