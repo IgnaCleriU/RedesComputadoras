@@ -17,6 +17,12 @@
     {"nombre": "qos1_perdida", "qos": 1, "perfil": ["perdida-5"], "duracion_s": 90, "captura": 1},
     {"nombre": "alias", "alias": 1, "duracion_s": 30, "captura": 1},
     {"nombre": "escala_n5", "n": 5, "duracion_s": 45, "captura": 1},
-    {"nombre": "escala_n10", "n": 10, "duracion_s": 45, "captura": 1}
+    {"nombre": "escala_n10", "n": 10, "duracion_s": 45, "captura": 1},
+    {"nombre": "qos1_sin_perdida", "qos": 1, "duracion_s": 90, "captura": 1},
+    {"nombre": "umbral", "k": [1.05, 1.1, 1.15, 1.25], "duracion_s": 200},
+    {"nombre": "periodo_250", "h_ms": 250, "k": [1.1, 1.5], "duracion_s": 200},
+    {"nombre": "keepalive_captura", "keepalive_s": 5, "will": 0, "duracion_s": 60, "captura": 1, "eventos": [{"t": 20, "tipo": "corte", "nodo": 10, "dur": 2}]},
+    {"nombre": "qos0_rep", "qos": 0, "perfil": ["perdida-5"], "semillas": [2, 3], "duracion_s": 90, "captura": 1},
+    {"nombre": "qos1_rep", "qos": 1, "perfil": ["perdida-5"], "semillas": [2, 3], "duracion_s": 90, "captura": 1}
   ]
 }
