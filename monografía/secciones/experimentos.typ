@@ -137,6 +137,7 @@ La lectura se envía por uno de los cuatro caminos de la @tab-transportes. En HT
   caption: [Transportes comparados.],
 ) <tab-transportes>
 
+
 Los cuatro caminos se corrieron con y sin TLS. Con TLS se usó la misma configuración en el broker y en el backend: TLS 1.2 @rfc5246 con cifrado AES-GCM, un certificado firmado por una autoridad de certificación propia, que el nodo verifica, y sin reanudación de sesión. El cliente MQTT de ESP-IDF admite las versiones 3.1.1 y 5.0 @esp-mqtt, y en este experimento se configuró la 3.1.1 @mqtt311. Para este experimento la diferencia es menor, porque el encabezado fijo es el mismo en ambas versiones y la 5.0 solo agrega a cada PUBLISH un byte con la longitud de sus propiedades.
 
 #subtitulo[Firmware]
