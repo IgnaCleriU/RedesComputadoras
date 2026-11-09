@@ -1,2 +1,0 @@
-corrida;n;h_ms;alias;qos;duracion_captura_s;tramas_subida;bytes_subida;tramas_bajada;bytes_bajada;bytes_por_s_total;bytes_por_s_subida_nodo;bytes_por_s_bajada_nodo;publish_subida_B;cabecera_mqtt_subida_B;topico_subida_B;protobuf_subida_B;publish_bajada_B;cabecera_mqtt_bajada_B;topico_bajada_B;protobuf_bajada_B;retransmisiones;entregas_medidas;edad_entrega_p50_ms;edad_entrega_p95_ms;edad_entrega_p99_ms
-qos1_rep_k1.5_perdida-5_s3;20;500;0;1;90.0;27511;1993786;41978;5943061;88187.2;1107.7;3301.7;46;23;16;23;47;24;17;23;3447;53803;12532.2;28984.1;35106.6

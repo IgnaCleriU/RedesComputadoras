@@ -2,9 +2,6 @@ __pycache__/
 .venv/
 simulacion/datos/
 
-# Corridas de host/correr.py: se versionan config.json, nodos.csv, serie.csv,
-# nodos_analisis.csv y resumen.csv; los registros crudos y las capturas pesan demasiado.
-resultados/*/*/*.log
-resultados/*/*/*.pcap
-resultados/*/*/fin.ok
-resultados/*/*/fallo.txt
+# Corridas de host/correr.py: no se versionan. Las figuras y tablas que usa la
+# monografía están en docs/resultados/figs/.
+resultados/

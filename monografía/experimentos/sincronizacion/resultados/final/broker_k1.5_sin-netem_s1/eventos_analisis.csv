@@ -1,3 +1,0 @@
-evento;nodo;t_s;dur_s;r_antes;r_al_terminar;r_min;t_recuperacion_s;desfase_nodo_rad;cliente_detecta_s;cliente_reconecta_s;voluntad_llega_s
-broker_cae;0;30.0;5.0;0.9372;0.5989;0.0127;27.7;;1.052;11.051;
-broker_cae;0;120.0;20.0;0.9371;0.0609;0.0041;37.0;;0.043;10.041;

@@ -4,3 +4,4 @@ firmware/sdkconfig.old
 firmware/sdkconfig.defaults.local
 backend/eco
 *.pcap
+resultados/**/*.csv

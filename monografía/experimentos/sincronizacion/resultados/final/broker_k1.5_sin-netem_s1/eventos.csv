@@ -1,5 +1,0 @@
-t_epoch;t_previsto_s;accion;nodo
-1794178898.824;30.0;broker_cae;0
-1794178902.984;35.0;broker_vuelve;0
-1794178987.823;120.0;broker_cae;0
-1794179008.015;140.0;broker_vuelve;0
