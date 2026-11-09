@@ -3,22 +3,6 @@
 
 = Marco teórico
 
-/*
-- Las razón de ser de las redes de computadoras es permitir la existencia de aplicaciones de red
-- El paradigma cliente servidor es el modelo mas utilizado. Explicar un poco, intuititvo
-- Distinguir entre la arquitectura de una red y la arquitectura de una aplicación de red.
-- Meter algo de protocolos de transporte.
-- Hablar de el tipo de aplicaciones que pub/sub, mqtt y protobuf satisfacen y traducirlo a requerimientos.
-  - Definir los que se resuelven con capa de transporte (TCP) y los que se resuelven a nivel de aplicación
-  - Pasar a hablar de qué son los protocolos de capa de aplicación. Distinción entre aplicaciones de red y protocolos de capa de aplicación.
-
-- Fuentes:
-  - Comer cap 20 habla solo de cliente/servidor, no de pub/sub. Tiene buenos conceptos de la capa 7. Habla de capas.
-  - Kurose cap 2: capa 7, aplicaciones y protocolos de capa de aplicación.
-
-NOTE(b-Tomas): En cada sección dejé algunos punteros a fuentes, para quien le toque escribir.
-*/
-
 Las redes de computadoras existen para hacer posibles las aplicaciones de red, es decir, programas que se ejecutan en distintos sistemas terminales y que se comunican entre sí a través de la red. La lógica de estas aplicaciones reside únicamente en los sistemas terminales, mientras que los nodos intermedios operan en la capa de red e inferiores. En consecuencia, quien desarrolla una aplicación no modifica la red, sino que utiliza los servicios que esta ofrece y define cómo se organiza la comunicación entre los extremos. MQTT y Protocol Buffers se ubican en este plano.
 
 La forma predominante de organizar la comunicación a nivel de aplicación es el modelo cliente-servidor @comer2014. En este modelo, un servidor permanece activo en una dirección conocida a la espera de solicitudes, y un cliente lo contacta cuando requiere un servicio, envía una solicitud y aguarda la respuesta. La Web constituye el ejemplo característico, en el que el navegador solicita un recurso y el servidor lo devuelve. Se trata de un modelo orientado a la demanda, en el que la información se transmite únicamente cuando es solicitada y el intercambio es iniciado siempre por la parte que la requiere.
@@ -32,8 +16,6 @@ La conexión TCP, sin embargo, solo garantiza la entrega de una secuencia de byt
 En los sistemas estudiados, el diseño de ese protocolo está condicionado en primer lugar por la forma en que circula la información. Un mismo dato suele interesar a varios consumidores y cada consumidor recibe datos de muchos dispositivos, por lo que resulta conveniente que productores y consumidores puedan comunicarse sin conocerse entre sí ni estar conectados simultáneamente, que es la propuesta del modelo publicador/suscriptor implementado por MQTT. A esto se suma la representación de los datos dentro de cada mensaje, que debe ser interpretada de manera unívoca por equipos heterogéneos y ocupar poco ancho de banda en enlaces que suelen ser limitados, problema del que se ocupa Protocol Buffers.
 
 == Modelo publicador/suscriptor <sec-pubsub>
-
-// Buscar papers asociados al modelo, para tenerlos como fuente en la explicación.
 
 El modelo publicador/suscriptor (_publish/subscribe_) ofrece precisamente la posibilidad de que productores y consumidores de información se comuniquen sin conocerse entre sí, lo que lo hace adecuado para los sistemas descritos. En este esquema de interacción, los suscriptores expresan su interés en un evento o en un patrón de eventos, y son notificados de forma asíncrona de todo evento generado por un publicador que coincida con ese interés @eugster2003pubsub. El modelo básico se apoya en un servicio de notificación de eventos, una abstracción que almacena las suscripciones y entrega cada evento publicado a todos los suscriptores interesados. Las suscripciones permanecen en ese servicio y son invisibles a los publicadores.
 
@@ -70,29 +52,6 @@ La implementación del servicio de eventos admite a su vez distintas arquitectur
 Sobre una red TCP/IP, la arquitectura centralizada se apoya en interacciones cliente-servidor. Tanto los publicadores como los suscriptores establecen la conexión hacia el broker, por lo que todos ellos actúan como clientes, y el broker es el único participante que debe tener una dirección conocida y aceptar conexiones entrantes. Su función es la de un sistema intermedio que mantiene conexiones TCP con cada extremo y retransmite los mensajes entre ellas, de manera análoga a los intermediarios definidos para HTTP @stallings2004. La diferencia con el modelo cliente-servidor aparece una vez registrada la suscripción, ya que el broker entrega cada evento por la conexión que el suscriptor estableció previamente, sin requerir de una solicitud. Esta capacidad de entregar datos por iniciativa del otro extremo es común a cualquier canal bidireccional persistente, como una conexión WebSocket, pero lo que distingue al modelo publicador/suscriptor es que, sobre esos canales, el broker determina a qué suscriptores corresponde cada evento, de modo que publicadores y suscriptores permanecen desacoplados aun cuando cada uno mantiene una conexión punto a punto con el broker.
 
 == MQTT <sec-mqtt>
-
-// Cómo implementa MQTT el modelo pub/sub: broker, tópicos, niveles de QoS, sesiones y seguridad.
-// TODO(casos de uso) Evaluar mencionar el origen de MQTT (1999, IBM y Arcom, monitoreo de oleoductos por enlaces satelitales,
-// report by exception), que explica sus decisiones de diseño. Fuentes: https://mqtt.org/faq/,
-// https://www.processingmagazine.com/mqtt-iiot-evolution/.
-
-/*
-- Mapear cada elemento del modelo pub/sub de Eugster a MQTT: broker = servicio de eventos; un mismo cliente puede publicar y suscribirse.
-  - Todos los participantes son clientes TCP del broker (definición de cliente de Kurose p. 73-74). Retomar lo dicho en la sección anterior.
-- Tópicos jerárquicos y comodines + y # → es la variante "basada en tópicos" de Eugster.
-- Formato del paquete: encabezado fijo (mínimo 2 bytes), longitud restante como entero de longitud variable. Puente con la codificación de Protobuf.
-- QoS 0, 1 y 2 y su intercambio de paquetes (PUBACK; PUBREC/PUBREL/PUBCOMP).
-  - Relacionar con servicio no confirmado / confirmado de Stallings (p. 36).
-- Sesiones (clean session / clean start), mensajes retenidos y Last Will: cómo logra MQTT el desacople temporal.
-  - Analogía posible con la capa de sesión de OSI: control del diálogo y recuperación (Stallings p. 39).
-- Keep-alive: solo definirlo acá; el análisis va en Desarrollo.
-- Seguridad: usuario y contraseña, TLS sobre TCP (Kurose p. 78), certificados de cliente.
-- Novedades de MQTT 5: códigos de razón, propiedades, expiración de sesión, shared subscriptions.
-
-- Fuentes:
-  - OASIS MQTT 5.0 (@mqtt50). Falta en el .bib: MQTT 3.1.1 / ISO/IEC 20922:2016.
-  - Hunkeler, Truong y Stanford-Clark 2008, MQTT-S (Stanford-Clark es co-creador de MQTT). Falta en el .bib.
-*/
 
 MQTT es un protocolo de transporte de mensajes de tipo publicador/suscriptor, basado en una arquitectura cliente-servidor y diseñado para ser liviano, abierto y fácil de implementar @mqtt50. La primera versión estandarizada por OASIS, el consorcio de normalización que publica la especificación, fue la 3.1.1, adoptada también como norma ISO/IEC 20922, y la versión 5.0, en la que se centra este trabajo, incorpora numerosas funcionalidades nuevas sin alterar el núcleo del protocolo. MQTT adopta la arquitectura centralizada descrita en la sección anterior denominando _broker_ al servidor y cliente a todo programa o dispositivo que abre una conexión hacia él para publicar mensajes o suscribirse a ellos, y deja a cada implementación la elección de los mecanismos de autenticación, autorización y cifrado. MQTT delega en la capa de transporte la entrega ordenada y sin pérdidas de los datos, por lo que funciona sobre TCP, TLS o WebSocket, pero no directamente sobre UDP, el protocolo de transporte sin conexión de Internet.
 
@@ -177,23 +136,6 @@ Dado que los campos se identifican por número y no por posición ni por nombre,
 Las mismas decisiones que reducen el tamaño de los mensajes tienen costos. En primer lugar, el formato no es legible por personas, por lo que la depuración requiere herramientas como `protoc --decode` o conversores a JSON. En segundo lugar, no es autodescriptivo: sin el esquema no es posible interpretar los datos, ya que el binario no indica qué mensaje contiene ni qué significa cada campo. En tercer lugar, la codificación no delimita los mensajes, por lo que el protocolo que los transporta debe indicar dónde termina cada uno. Por último, agrega al proyecto un paso de compilación y de generación de código, y resulta menos práctico que JSON para APIs públicas simples o para su uso directo desde navegadores, aunque para ese caso existen alternativas como gRPC-Web.
 
 == Stack MQTT y Protocol Buffers <sec-stack>
-
-// Cómo se combinan: Protobuf como payload de los mensajes MQTT, el esquema compartido entre clientes.
-// TODO(casos de uso) Mencionar que los brokers soportan Protobuf como payload (decode() en reglas de AWS IoT Core, Schema Registry de EMQX,
-// Data Hub de HiveMQ). Fuente: https://docs.aws.amazon.com/iot/latest/developerguide/binary-payloads.html.
-
-/*
-- MQTT trata el payload como bytes opacos: Protobuf entra ahí sin cambios.
-- Contrato entre tópico y esquema: qué mensaje .proto corresponde a cada tópico.
-  - MQTT 5 agrega Content Type y Payload Format Indicator.
-- Eclipse Sparkplug B: especificación industrial que define exactamente esta combinación (MQTT + payload Protobuf + espacio de tópicos estandarizado).
-- Casos: InOrbit Edge SDK, OpenRobOps (definiciones .proto públicas).
-- Volver a la tabla de requerimientos del inicio del capítulo y mostrar cuál cubre cada pieza del stack.
-
-- Fuentes:
-  - @mqtt50, @inorbit-edge-sdk, @openrobops-repo.
-  - Falta en el .bib: Eclipse Sparkplug 3.0; Proos y Carlsson 2020 (IFIP Networking, compara MQTT/AMQP/CoAP con Protobuf/FlatBuffers).
-*/
 
 Las secciones anteriores describieron MQTT y Protocol Buffers por separado. Esta sección analiza cómo se combinan: qué lugar ocupa cada uno en un mensaje, cómo sabe el receptor qué tipo de mensaje recibe, qué implica compartir el esquema entre los participantes y qué requisitos de los sistemas estudiados cubre cada pieza.
 

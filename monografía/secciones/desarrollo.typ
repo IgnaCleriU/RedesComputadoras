@@ -1,14 +1,5 @@
 = Desarrollo
 
-// Requisito de la cátedra: el desarrollo tiene que incluir contenido de ruteo (RIP, EIGRP, OSPF, BGP)
-// y de capa de aplicación (protocolos), siempre relacionado con el tema. No hace falta cubrir todo.
-//
-// Estructura: `==` para cada sección numerada (1., 2., ...), `===` para las subsecciones (1.1., 1.2., ...) y `====` para
-// apartados sin numerar en el índice (como cada caso dentro de un dominio en Casos de uso).
-//
-// El marco teórico explica qué es cada tecnología de la capa 7, mientras que el desarrollo analiza cómo se comporta el stack
-// en las capas de transporte y de red. Luego en diseño experimental se mide.
-
 Este capítulo sigue el recorrido de un mensaje desde el dispositivo hasta el broker. Analiza la conexión TCP y TLS sobre la que viaja MQTT, la capa de red que esa conexión atraviesa y el ruteo por tópicos que realiza el broker en la capa de aplicación (@sec-ruteo-topicos). Examina después cómo emplean el stack sistemas reales (@sec-casos-de-uso), contrasta lo analizado con dos experimentos propios (@sec-exp-mqtt-https y @sec-exp-sincronizacion) y releva el hardware con el que se implementaría una solución (@sec-mapeo-tecnologico).
 
 == MQTT sobre TCP y TLS
@@ -333,10 +324,6 @@ El Experimento 1 no incluyó cortes de conexión, por lo que los dos últimos re
 
 == Ruteo por tópicos y ruteo IP <sec-ruteo-topicos>
 
-// El router decide por dirección IP de destino. el broker decide por tópico.
-// Comparar tablas de ruteo con suscripciones y comodines (+, #).
-//
-
 Las secciones anteriores describieron cómo la red lleva cada segmento desde el dispositivo hasta el broker. Entre el publicador y los
 suscriptores hay, sin embargo, una segunda decisión de encaminamiento, que se toma en la capa de aplicación. Un router que recibe un
 datagrama examina la dirección IP de destino de su encabezado y decide, a partir de su tabla, si lo entrega directamente, a qué otro router
@@ -576,11 +563,6 @@ La @tab-ruteo-topicos-ip resume la comparación.
 
 == Casos de uso <sec-casos-de-uso>
 
-// Organización por dominio y, dentro de cada uno, según el stack. Todos los casos se analizan en los ejes problema,
-// stack (versión de MQTT y formato), mecanismos de MQTT usados, aspectos de red y limitaciones. El énfasis está en MQTT y
-// Protocol Buffers, no en los detalles de cada dominio. Cada actor y cada término se presentan la primera vez que aparecen,
-// y se evita usar con otro sentido el vocabulario del marco teórico (cliente, publicación, suscripción, canal, flujo, orden).
-
 Las secciones anteriores analizaron la combinación de MQTT y Protocol Buffers a partir de las capas y protocolos que atraviesa un mensaje. Esta sección examina cómo la emplean sistemas reales de distintos dominios, con el fin de identificar qué propiedades de cada tecnología aprovechan y qué ventajas y limitaciones aparecen en la práctica. En cada caso se consideran, en la medida en que las fuentes lo permiten, el problema de comunicación que enfrenta, la combinación de protocolo y formato que adopta, los mecanismos de MQTT que utiliza, los aspectos de red involucrados y sus limitaciones. Los mecanismos analizados, como los niveles de QoS o el mensaje de última voluntad, existen tanto en la versión 3.1.1 de MQTT como en la 5.0, por lo que la versión solo se aclara cuando un caso depende de una función que agregó la 5.0.
 
 No todos los casos combinan MQTT y Protocol Buffers. Algunos emplean MQTT con otro formato, y su inclusión permite distinguir el aporte de cada pieza, ya que, como se planteó en la @sec-alternativas, el protocolo de aplicación y el mecanismo de serialización constituyen decisiones independientes. Esa independencia se observa también en sistemas que no se analizan aquí. Zigbee2MQTT, por ejemplo, un programa que conecta a MQTT lámparas, sensores y otros dispositivos domésticos inalámbricos, utiliza MQTT con JSON @zigbee2mqtt, mientras que la aplicación de mensajería Signal utiliza Protocol Buffers sobre WebSocket, sin MQTT @signal-websocket.
@@ -676,5 +658,3 @@ En los datos que se publican con alta frecuencia predomina QoS 0, ya que cada mu
 Los casos también exponen los límites del stack. Del lado de MQTT, el broker conserva estado, y cuando la implementación no permite repartirlo entre múltiples réplicas, como ocurre con Mosquitto, se convierte en el punto de falla de todo el sistema. A gran escala, la sesión resulta una unidad demasiado grande para repartir la carga entre servidores y recuperarse ante fallas, y cuando cada dispositivo mantiene su propia conexión, cada uno asume el costo de su negociación TLS y de su keep-alive. El ruteo por tópicos, por su parte, no permite filtrar según el contenido de los mensajes. Del lado de Protocol Buffers, todo programa que recibe los datos debe disponer del esquema, y la convivencia con formatos más antiguos debilita el acuerdo que establece el esquema.
 
 Por último, varias implementaciones permanecen en MQTT 3.1.1 y resuelven en la aplicación o mediante el tópico funciones que la versión 5.0 incorpora, como indicar el formato de los mensajes o asociar cada respuesta con su solicitud, según se vio en la @sec-caso-robotica. Entre los casos analizados, el servidor de red de ChirpStack es el que más aprovecha las funciones exclusivas de esa versión, mientras que Sparkplug solo las emplea para fijar el comportamiento de la sesión. Ninguno de los casos cuya implementación pudo examinarse utiliza las propiedades que indican el formato o asocian respuestas con solicitudes, lo que sugiere que, al menos en la muestra analizada, las ventajas de la versión 5.0 todavía no se reflejan plenamente en la práctica. En conjunto, los casos indican que el stack aporta sus mayores ventajas en los tramos de alta frecuencia y en los dispositivos que operan detrás de redes ajenas, mientras que sus limitaciones se concentran en el broker y en la distribución del esquema.
-
-// El mapeo tecnológico tiene su propia sección (@sec-mapeo-tecnologico, en secciones/mapeo-tecnologico.typ).

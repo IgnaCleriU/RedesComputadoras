@@ -16,17 +16,9 @@
 
 == Diseño experimental
 
-// Presentación de los dos experimentos y de la estructura común (planteo, implementación, resultados y análisis).
-
 Las secciones anteriores analizaron el stack de forma cualitativa. Esta sección lo contrasta con mediciones propias, en dos experimentos que comparten la misma plataforma. En un escenario de telemetría, el experimento de la @sec-exp-mqtt-https compara MQTT con HTTP y mide el costo en bytes y en latencia de cada camino. El de la @sec-exp-sincronizacion, en cambio, usa solo MQTT con Protocol Buffers en una aplicación en la que cada nodo necesita el dato de todos los demás, y ensaya los mecanismos del stack ante pérdidas, cortes de conexión y caídas del broker. Cada experimento se presenta con la misma estructura, que recorre su planteo, su implementación, sus resultados y el análisis de esos resultados.
 
 === Plataforma común <sec-plataforma-comun>
-
-// Placas ESP32 emuladas con QEMU, broker Mosquitto y backend; restricciones de la emulación.
-// TODO(revisión PR #322) Explicar las herramientas que el Experimento 1 menciona sin definir:
-// QEMU de Espressif, ESP-IDF, lwIP, mbedTLS, esp-mqtt, esp_http_client, nanopb,
-// interfaces TAP, puente de Linux, tc netem, dumpcap y TShark. Citar la documentación
-// de cada una como entradas @online en bibliografia.bib.
 
 Los dos experimentos corren sobre el mismo entorno, montado en una sola computadora (distinta en cada experimento), donde cada nodo es un ESP32 emulado con QEMU.
 
@@ -84,7 +76,7 @@ Antes de las corridas se formularon las siguientes hipótesis, que se contrastan
 
 #subtitulo[Arquitectura]
 
-El experimento corre sobre la plataforma común (@sec-plataforma-comun), con 8 nodos. Cada uno ejecuta un firmware real, por lo que los bytes que se miden son los que producen, sin modificaciones, las bibliotecas que usaría una placa física, que son la pila TCP/IP lwIP, mbedTLS para TLS, esp-mqtt como cliente MQTT y `esp_http_client` como cliente HTTP.
+El experimento corre sobre la plataforma común (@sec-plataforma-comun), con 8 nodos. Cada uno ejecuta un firmware real, por lo que los bytes que se miden son los que producen, sin modificaciones, las bibliotecas que usaría una placa física, que son la pila TCP/IP lwIP @esp-idf-lwip, mbedTLS para TLS, esp-mqtt como cliente MQTT y `esp_http_client` como cliente HTTP.
 
 Se usaron interfaces TAP y no la red de usuario de QEMU porque esta termina las conexiones TCP del nodo dentro del propio emulador, de modo que la red no vería los paquetes tal como los arma el ESP32. Sobre cada interfaz se aplica `tc netem` en ambos sentidos para inyectar pérdida y latencia, y `dumpcap` captura en el puente todo el tráfico de la corrida (@fig-arq-telemetria).
 
