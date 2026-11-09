@@ -88,9 +88,8 @@ contenido frente al propio broker exige cifrar la carga útil en la aplicación,
 Los niveles de calidad de servicio de MQTT, presentados en el marco teórico (@sec-mqtt), plantean una pregunta, ya que el protocolo opera sobre TCP,
 que entrega los datos de forma fiable y ordenada. TCP construye sobre el servicio no confiable de IP un flujo de bytes sin errores, huecos ni
 duplicados que llega en el orden en que se envió @kurose2017, mediante números de secuencia, confirmaciones y retransmisiones. Por eso un mensaje de
-QoS 0 sobre TCP no equivale a un datagrama que puede perderse en el camino, en el Experimento 1 entregó el 100 % de las lecturas con 5 % de pérdida,
-también con QoS 0, y lo que se degradó fue la latencia, con un percentil 99 de unos 3 s por el temporizador de retransmisión y el bloqueo de cabeza de
-línea (@tab-perdida). La confiabilidad de TCP y la de MQTT se refieren, entonces, a cosas distintas, y los niveles de QoS cubren lo que TCP no
+QoS 0 sobre TCP no equivale a un datagrama que puede perderse en el camino: mientras la conexión existe, un segmento perdido se retransmite,
+y lo que se degrada es la latencia y no la entrega, como se verificó en el Experimento 1 (@tab-perdida). La confiabilidad de TCP y la de MQTT se refieren, entonces, a cosas distintas, y los niveles de QoS cubren lo que TCP no
 garantiza, que son tres cosas.
 
 + *Que el mensaje llegó a su destino final.* Un mensaje MQTT atraviesa dos conexiones TCP independientes, la del publicador con el broker y la del broker con cada suscriptor, y el nivel de QoS se aplica por separado en cada tramo.
@@ -123,9 +122,9 @@ se confirma por separado, y el publicador no sabe si el mensaje llegó a los sus
 
 Los reenvíos de QoS 1 y 2 solo funcionan si el estado sobrevive a la conexión, estos ocurren cuando el cliente se reconecta con Clean Start en 0 y el
 broker conservó la sesión, que vence según el Session Expiry Interval @mqtt50. Si la sesión es nueva o expiró, después de un corte QoS 1 y 2 no aportan
-nada frente a QoS 0. Además, dentro de una conexión viva los reintentos de la aplicación se superponen con los de TCP. En el Experimento 1, con pérdida
-de paquetes pero sin cortes, QoS 1 no mejoró la entrega y generó duplicados, 9 por corrida con 1 % de pérdida y 52 con 5 %, porque el cliente reenvía el
-PUBLISH mientras TCP todavía está recuperando el original. Su costo por lectura, sin contar el de abrir la conexión, fue de 202 B contra 140 B de QoS 0 (@tab-costo).
+nada frente a QoS 0. Además, dentro de una conexión viva los reintentos de la aplicación se superponen con los de TCP: si el PUBACK se demora,
+el cliente reenvía el PUBLISH mientras TCP todavía está recuperando el original. Así, QoS 1 no mejora la entrega y puede generar duplicados, como se
+midió en el Experimento 1 (@tab-perdida), y su costo por lectura, sin contar el de abrir la conexión, es de 202 B contra 140 B de QoS 0 (@tab-costo).
 
 La elección del nivel depende de qué ocurre cuando falta un mensaje. Si el siguiente lo reemplaza, como en una lectura periódica, QoS 0 sobre TCP
 alcanza, y su única exposición son los cortes de la conexión. Sparkplug, por otra parte, publica con QoS 0 y suple la confirmación con un número de

@@ -396,7 +396,7 @@ En síntesis, parte de la diferencia entre HTTP y MQTT no se debe al protocolo d
 
 #subtitulo[Pérdida de paquetes]
 
-Con hasta 5 % de pérdida no se perdió ninguna lectura, porque TCP retransmitió cada segmento perdido y ninguna conexión se cortó. MQTT QoS 0 solo perdería lecturas si se cortara la conexión, por ejemplo al vencer el keep-alive, por un _reset_ o porque el nodo se reconecta a la red, y eso no ocurrió con pérdidas aleatorias en corridas de 120 s. En estas condiciones, QoS 1 no mejoró la entrega y solo agregó duplicados, porque esp-mqtt reenvía el PUBLISH si el PUBACK no llega en 1 s, aunque TCP todavía esté recuperando el segmento original. Es lo que se plantea en la @sec-qos-tcp, es decir, que mientras la conexión se mantiene, la confiabilidad la aporta TCP, y que la ventaja de QoS 1 aparece cuando la conexión se corta.
+Con hasta 5 % de pérdida no se perdió ninguna lectura, porque TCP retransmitió cada segmento perdido y ninguna conexión se cortó. MQTT QoS 0 solo perdería lecturas si se cortara la conexión, por ejemplo al vencer el keep-alive, por un _reset_ o porque el nodo se reconecta a la red, y eso no ocurrió con pérdidas aleatorias en corridas de 120 s. En estas condiciones, QoS 1 no mejoró la entrega y solo agregó duplicados (@tab-perdida), porque esp-mqtt reenvía el PUBLISH si el PUBACK no llega en 1 s, aunque TCP todavía esté recuperando el segmento original, tal como se anticipó en la @sec-qos-tcp.
 
 Lo que se degradó fue la cola de la latencia, y la @fig-cdf-perdida muestra escalones en valores fijos:
 
