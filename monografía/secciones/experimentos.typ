@@ -27,7 +27,7 @@
 // interfaces TAP, puente de Linux, tc netem, dumpcap y TShark. Citar la documentación
 // de cada una como entradas @online en bibliografia.bib.
 
-Los dos experimentos corren sobre el mismo entorno, montado en una sola computadora, donde cada nodo es un ESP32 emulado con QEMU.
+Los dos experimentos corren sobre el mismo entorno, montado en una sola computadora (distinta en cada experimento), donde cada nodo es un ESP32 emulado con QEMU.
 
 El ESP32 emulado no tiene WiFi, por lo que QEMU le provee una placa Ethernet emulada. Cada instancia se conecta a una interfaz virtual propia de la computadora anfitriona, y todas se unen en un puente que las comunica con el broker Mosquitto, que corre en la misma computadora. Esta disposición permite aplicar a cada nodo condiciones de red propias con `netem` y capturar todo el tráfico en un único punto.
 
@@ -41,7 +41,7 @@ Este experimento es el caso base de la parte experimental. Mide cuánto cuesta, 
 
 Además de lo presentado en el marco teórico, el análisis de este experimento se apoya en dos mecanismos de TCP y en el protocolo con el que se sincronizan los relojes de los nodos. Se resumen a continuación porque explican buena parte de los resultados.
 
-*Algoritmo de Nagle.* Una aplicación entrega datos a TCP con llamadas a `send()` sobre un _socket_, y TCP decide cómo repartirlos en segmentos. Si cada llamada saliera de inmediato en su propio segmento, una aplicación que escribe de a pocos bytes llenaría la red de segmentos casi vacíos, en los que los 40 bytes de encabezados TCP/IP pesan más que los datos. El algoritmo de Nagle evita eso: mientras haya datos enviados sin confirmar, TCP no envía un segmento más chico que el tamaño máximo, sino que acumula los datos nuevos hasta recibir el ACK pendiente @rfc896. Si no hay nada sin confirmar, el segmento sale enseguida. Así, una escritura aislada no se demora, pero la segunda de dos escrituras seguidas espera el ACK de la primera. La especificación vigente de TCP recomienda implementar Nagle, pero exige que cada aplicación pueda desactivarlo en una conexión @rfc9293, opción que en la interfaz de _sockets_ se llama `TCP_NODELAY`.
+*Algoritmo de Nagle.* Una aplicación entrega datos a TCP con llamadas a `send()` sobre un _socket_, y TCP decide cómo repartirlos en segmentos. Si cada llamada saliera de inmediato en su propio segmento, una aplicación que escribe de a pocos bytes llenaría la red de segmentos casi vacíos, en los que los 40 bytes de encabezados TCP/IP pesan más que los datos. El algoritmo de Nagle evita eso: mientras haya datos enviados sin confirmar, TCP no envía un segmento más chico que el tamaño máximo, sino que acumula los datos nuevos hasta recibir el ACK pendiente @rfc9293. Si no hay nada sin confirmar, el segmento sale enseguida. Así, una escritura aislada no se demora, pero la segunda de dos escrituras seguidas espera el ACK de la primera. La especificación vigente de TCP recomienda implementar Nagle, pero exige que cada aplicación pueda desactivarlo en una conexión @rfc9293, opción que en la interfaz de _sockets_ se llama `TCP_NODELAY`.
 
 *ACK retardado.* Del lado del receptor existe una optimización equivalente. En lugar de confirmar cada segmento apenas llega, el receptor puede esperar, hasta 500 ms según la especificación, para enviar el ACK junto con los datos de su respuesta y ahorrar un paquete @rfc1122. Si el temporizador vence antes de que haya una respuesta, el ACK sale solo. Cada mecanismo tiene sentido por separado, pero combinados pueden bloquearse entre sí como sucedió durante el experimento. 
 
@@ -157,13 +157,13 @@ La lectura se envía por uno de los cuatro caminos de la @tab-transportes. En HT
   caption: [Transportes comparados.],
 ) <tab-transportes>
 
-Los cuatro caminos se corrieron con y sin TLS. Con TLS se usó la misma configuración en el broker y en el backend: TLS 1.2 @rfc5246 con la suite `ECDHE-ECDSA-AES128-GCM-SHA256`, el mismo certificado ECDSA P-256 firmado por una autoridad de certificación propia, que el nodo verifica, y sin reanudación de sesión. El cliente MQTT de ESP-IDF implementa MQTT 3.1.1 @mqtt311, y no la versión 5.0. Para este experimento la diferencia es menor, porque el encabezado fijo es el mismo en ambas versiones y la 5.0 solo agrega a cada PUBLISH un byte con la longitud de sus propiedades.
+Los cuatro caminos se corrieron con y sin TLS. Con TLS se usó la misma configuración en el broker y en el backend: TLS 1.2 @rfc5246 con la suite `ECDHE-ECDSA-AES128-GCM-SHA256`, el mismo certificado ECDSA P-256 firmado por una autoridad de certificación propia, que el nodo verifica, y sin reanudación de sesión. El cliente MQTT de ESP-IDF admite las versiones 3.1.1 y 5.0 @esp-mqtt, y en este experimento se configuró la 3.1.1 @mqtt311. Para este experimento la diferencia es menor, porque el encabezado fijo es el mismo en ambas versiones y la 5.0 solo agrega a cada PUBLISH un byte con la longitud de sus propiedades.
 
 #subtitulo[Firmware]
 
 En cada nodo, una tarea productora crea una lectura por período con la hora sincronizada (`t_us`) y la encola, y otra tarea, la emisora, la saca de la cola, la serializa y la envía. Separar la creación del envío hace que el tiempo que una lectura espera en la cola, por ejemplo mientras el emisor está bloqueado en un handshake o en una retransmisión, quede incluido en la latencia medida.
 
-Se dejaron los valores por defecto de las bibliotecas, que son los que tendría un ESP32 sin ajustes. En MQTT, el keep-alive es de 60 s y un PUBLISH de QoS 1 se reenvía si su PUBACK no llega en 1 s. En HTTP, cada envío tiene hasta tres intentos con un tiempo de espera de 5 s, y el algoritmo de Nagle (@sec-conceptos-exp1) está activo. El cliente MQTT abre la conexión antes de que empiece la medición, mientras que el cliente HTTP la abre recién al enviar la primera lectura.
+Salvo el keep-alive de MQTT, que se fijó en 60 s, más que el período más largo (10 s), para que el cliente no necesite enviar PINGREQ, se dejaron los valores por defecto de las bibliotecas, que son los que tendría un ESP32 sin ajustes. En MQTT, un PUBLISH de QoS 1 se reenvía si su PUBACK no llega en 1 s. En HTTP, cada envío tiene hasta tres intentos con un tiempo de espera de 5 s, y el algoritmo de Nagle (@sec-conceptos-exp1) está activo. El cliente MQTT abre la conexión antes de que empiece la medición, mientras que el cliente HTTP la abre recién al enviar la primera lectura.
 
 La configuración de cada nodo (transporte, TLS, período y serialización) se lee de una partición de la memoria _flash_, de modo que el firmware se compila una sola vez para todas las corridas.
 
@@ -187,7 +187,7 @@ Se tomó una configuración base: 8 nodos, período de envío de 1 s, TLS activa
 
 La pérdida se aplica en cada sentido por separado, de forma aleatoria e independiente por paquete. La latencia se expresa como RTT agregado: la mitad se agrega en cada sentido, como un retardo fijo.
 
-HTTP con una conexión por lectura se corrió con un período base de 10 s en lugar de 1 s. Con criptografía emulada, cada handshake TLS tarda entre 3 y 5 s, de modo que con un período de 1 s la cola del nodo crece sin límite y solo se entrega cerca del 27 % de las lecturas. Por eso, cuando se comparan los cuatro caminos en la base, ese camino aparece con 10 s, y se lo compara además con las corridas de 10 s de los otros tres.
+HTTP con una conexión por lectura se corrió con un período base de 10 s en lugar de 1 s. Con criptografía emulada, cada handshake TLS tarda entre 3 y 4 s, de modo que con un período de 1 s la cola del nodo crece sin límite y solo se entrega cerca del 27 % de las lecturas. Por eso, cuando se comparan los cuatro caminos en la base, ese camino aparece con 10 s, y se lo compara además con las corridas de 10 s de los otros tres.
 
 Además, para verificar la explicación de la latencia de HTTP, se corrió una matriz complementaria con el algoritmo de Nagle activo y desactivado, que se presenta en el análisis (@tab-nagle).
 
@@ -569,7 +569,7 @@ La @tab-hipotesis contrasta las hipótesis del planteo con los resultados.
 
 #subtitulo[Limitaciones]
 
-- *Criptografía emulada.* Los handshakes TLS tardaron entre 3 y 3,8 s en QEMU, mucho más que en un ESP32 físico, por lo que los tiempos de conexión y la latencia de HTTP con una conexión por lectura deben leerse en términos relativos. Los bytes y los paquetes, en cambio, son los del firmware real.
+- *Criptografía emulada.* Los handshakes TLS tardaron entre 3 y 4 s en QEMU, mucho más que en un ESP32 físico, por lo que los tiempos de conexión y la latencia de HTTP con una conexión por lectura deben leerse en términos relativos. Los bytes y los paquetes, en cambio, son los del firmware real.
 - *Reloj.* Las latencias con RTT agregado se corrigieron restando RTT/2. Sin RTT agregado, la incertidumbre absoluta es de 1 ms, del orden de la latencia de MQTT, aunque no afecta las comparaciones entre transportes.
 - *Estado compartido entre corridas.* Las métricas TCP que Linux guarda por destino afectaron las retransmisiones innecesarias, que solo pesan en HTTP con una conexión por lectura.
 - *Un factor a la vez.* No se midieron interacciones entre factores, como pérdida y período o latencia y JSON, salvo la de Nagle y TLS.

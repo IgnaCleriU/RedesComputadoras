@@ -419,11 +419,12 @@
   urldate = {2026-10-31},
 }
 
-@online{chirpstack-gwbridge,
+@online{chirpstack-gwbridge-mqtt,
   author  = {{ChirpStack}},
-  title   = {chirpstack-gateway-bridge: {ChirpStack} Gateway Bridge},
-  url     = {https://github.com/chirpstack/chirpstack-gateway-bridge},
-  urldate = {2026-10-31},
+  title   = {backend.go ({ChirpStack} Gateway Bridge, integración {MQTT})},
+  note    = {Estado retenido y mensaje de última voluntad del gateway},
+  url     = {https://github.com/chirpstack/chirpstack-gateway-bridge/blob/a5ae780f1318ca9678c9e781bd9125340a314406/internal/integration/mqtt/backend.go},
+  urldate = {2026-11-09},
 }
 
 @online{chirpstack-repo,
@@ -441,12 +442,12 @@
   urldate = {2026-10-31},
 }
 
-@online{chirpstack-integrationproto,
+@online{chirpstack-config,
   author  = {{ChirpStack}},
-  title   = {integration.proto},
-  note    = {Definiciones Protobuf de los eventos de integración},
-  url     = {https://github.com/chirpstack/chirpstack/blob/master/api/proto/integration/integration.proto},
-  urldate = {2026-10-31},
+  title   = {config.rs ({ChirpStack}, configuración por defecto)},
+  note    = {La integración {MQTT} usa {JSON} por defecto (\texttt{json: true})},
+  url     = {https://github.com/chirpstack/chirpstack/blob/62b1eb9975ee390798d93c5b51e96bac2272ac56/chirpstack/src/config.rs},
+  urldate = {2026-11-09},
 }
 
 @online{zigbee2mqtt,
