@@ -154,24 +154,16 @@ TCP 1883, sin cifrado, y 8883, sobre TLS, y, cuando una red restrictiva solo dej
 @mqtt50, a cambio de la sobrecarga de ese protocolo adicional.
 
 La contracara de este esquema es que las entradas de la tabla no son permanentes. El NAT no tiene forma de saber si una conexión inactiva sigue en
-uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF (Internet Engineering Task Force), una organización
-internacional abierta de normalización que tiene como objetivos el contribuir a la ingeniería de internet, exige que ese tiempo no sea menor que dos
-horas y cuatro minutos @rfc5382. En las mediciones sobre gateways domésticos que cita el RFC 8323, el promedio para TCP fue seis horas y veintiseis
-minutos @rfc8323, pero se trata de un mínimo recomendado y no de una garantía, para un equipo que no lo cumple, o un firewall intermedio configurado
-con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera.
+uso, por lo que la elimina tras un tiempo sin tráfico. Para las conexiones TCP establecidas, el IETF (Internet Engineering Task Force), una organización internacional abierta de normalización que tiene como objetivo contribuir a la ingeniería de Internet, exige que ese tiempo no sea menor que dos horas y cuatro minutos @rfc5382, y en las mediciones sobre gateways domésticos que cita el RFC 8323 el promedio para TCP fue de seis horas y veintiséis minutos @rfc8323. Se trata, sin embargo, de un mínimo recomendado y no de una garantía, y un equipo que no lo cumple, o un firewall intermedio configurado con un plazo menor, descarta la entrada mucho antes. Si la entrada desaparece mientras la conexión está inactiva, ninguno de los extremos se entera.
 El siguiente segmento del broker hacia el dispositivo se descarta en el NAT, y el siguiente del dispositivo genera una entrada nueva, con otro puerto
 público, que el broker no reconoce como parte de ninguna conexión. El resultado es una conexión que figura como abierta en ambos extremos pero que ya
 no transporta datos, situación especialmente grave para un suscriptor que espera comandos y no transmite por iniciativa propia.
 
-El keep-alive de MQTT, definido en la @sec-mqtt, resuelve también este problema. Al obligar al cliente a enviar algún paquete de control dentro de
+El keep-alive de MQTT, analizado en la @sec-keepalive, resuelve también este problema. Al obligar al cliente a enviar algún paquete de control dentro de
 cada intervalo, aunque sea un PINGREQ, garantiza que la conexión nunca permanezca inactiva más que ese intervalo, y con ello refresca la entrada en
 cada NAT y firewall del trayecto, siempre que el intervalo sea menor que su tiempo de expiración. TCP ofrece un mecanismo análogo, pero es opcional y
 su intervalo predeterminado no debe ser menor que dos horas @rfc1122, un valor demasiado largo frente a los plazos de muchos equipos intermedios.
-Por eso el mantenimiento de la conexión se resuelve en la capa de aplicación, donde el intervalo es configurable por cada cliente. La especificación
-de MQTT indica que su valor depende de la aplicación y que suele ser de algunos minutos @mqtt50, y en los nodos del Experimento 1 (@sec-exp-mqtt-https)
-se usó un intervalo de 60 segundos. Elegirlo implica un compromiso, ya que un intervalo corto mantiene vivas las entradas y detecta antes una conexión
-rota, pero cada PINGREQ y su respuesta consumen ancho de banda y, en los dispositivos móviles, obligan a activar la radio, con el consiguiente gasto de
-energía.
+Por eso el mantenimiento de la conexión se resuelve en la capa de aplicación, donde el intervalo es configurable por cada cliente. La especificación de MQTT indica que su valor depende de la aplicación y que suele ser de algunos minutos @mqtt50. Al compromiso entre detección y tráfico de la @sec-keepalive se suma, en los dispositivos móviles, el gasto de energía, porque cada PINGREQ obliga a activar la radio.
 
 === Ruteo interno <sec-ruteo-interno>
 
@@ -306,11 +298,7 @@ convergido antes de los 90 s. Así, según la duración del corte se distinguen 
 ) <tab-regimenes-corte>
 
 *Cortes de hasta unos pocos segundos.* Son los que produce un IGP cuando la falla se detecta en la interfaz o mediante BFD, o EIGRP cuando cuenta con
-un sucesor factible. TCP los absorbe con uno o dos reintentos y la única consecuencia es una demora adicional del orden del RTO. Es el único régimen
-que cubrió el Experimento 1, y de forma indirecta, ya que inyectó pérdidas aleatorias e independientes y no cortes. Con 5 % de pérdida, la entrega fue
-del 100 % en todos los transportes y no hubo desconexiones de MQTT, pero el percentil 99 de la latencia de MQTT QoS 0 subió a unos 3 s, por pérdidas
-repetidas del mismo segmento con el RTO duplicado en cada intento (@tab-perdida). En este régimen, QoS 1 no mejora la entrega y agrega duplicados,
-porque el cliente reenvía el PUBLISH mientras TCP todavía está recuperando el original, como se discute en la @sec-qos-tcp.
+un sucesor factible. TCP los absorbe con uno o dos reintentos y la única consecuencia es una demora adicional del orden del RTO. Es el único régimen que cubrió el Experimento 1, de forma indirecta, con pérdidas aleatorias en lugar de cortes, y en él la entrega fue completa, aunque la cola de la latencia creció por los reintentos de TCP (@tab-perdida). En este régimen, QoS 1 no mejora la entrega y agrega duplicados (@sec-qos-tcp).
 
 *Cortes menores que una vez y media el keep-alive.* Corresponden, por ejemplo, a una falla que OSPF o EIGRP detectan por la ausencia de Hellos con sus
 temporizadores predeterminados (@tab-convergencia-igp). La conexión sobrevive, pero las lecturas generadas durante el corte se acumulan sin confirmar
