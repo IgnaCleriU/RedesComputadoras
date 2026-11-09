@@ -32,6 +32,7 @@ AZUL, NARANJA, AQUA, AMARILLO = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
 TEXTO, SECUNDARIO, TENUE, GRILLA = "#0b0b0b", "#52514e", "#898781", "#e1e0d9"
 CORTE = "#e1e0d9"
 R_REFERENCIA = 0.937  # r en régimen de la calibración, con K = 1,5 K_c y sin perturbaciones
+TAU_REFERENCIA = 0.255  # h / 2 más unos 5 ms de transporte, con h = 500 ms
 
 plt.rcParams.update({
     "font.size": 9, "axes.edgecolor": TENUE, "axes.labelcolor": SECUNDARIO, "text.color": TEXTO,
@@ -151,11 +152,19 @@ def fig_modelo_rk(base, salida, tabla, sim, w):
     kc = float(teoria.kc_finito(w))
     ax.plot(grilla, [teoria.r_enganchado(w, x * kc) for x in grilla], color=TENUE, label="Teoría sin retardo")
     sim_k = sorted({x[0] for x in filas})
+    umbral = teoria.umbral_con_retardo(w, TAU_REFERENCIA)
+    con_retardo = np.linspace(umbral, 2.2, 120)
+    ax.plot(con_retardo, [teoria.estado_con_retardo(w, x * kc, TAU_REFERENCIA)[1] for x in con_retardo], color=AQUA,
+            label=f"Teoría con retardo ({TAU_REFERENCIA * 1e3:.0f} ms)")
     ax.plot(sim_k, [np.mean([x[2] for x in filas if x[0] == k]) for k in sim_k], ls="none", marker="s", ms=5,
             color=AZUL, label="Simulación (5 semillas)")
-    med = [(float(tabla[f"modelo_k{k}_sin-netem_s1"]["k_veces_kc"]), float(tabla[f"modelo_k{k}_sin-netem_s1"]["r_medio"]))
-           for k in ("0.8", "1.2", "1.5", "2")]
-    ax.plot(*zip(*med), ls="none", marker="o", ms=6, color=NARANJA, label="Emulación")
+    def medidos(prefijo, valores):
+        return [(float(tabla[f"{prefijo}_k{k}_sin-netem_s1"]["k_veces_kc"]), float(tabla[f"{prefijo}_k{k}_sin-netem_s1"]["r_medio"]))
+                for k in valores]
+    ax.plot(*zip(*medidos("modelo", ("0.8", "1.2", "1.5", "2"))), ls="none", marker="o", ms=6, color=NARANJA,
+            label="Emulación, desde fases al azar")
+    ax.plot(*zip(*medidos("umbral", ("1.05", "1.1", "1.15", "1.25"))), ls="none", marker="o", ms=6, mfc="white",
+            mec=NARANJA, mew=1.3, label="Emulación, desde el estado enganchado")
     _ejes_r_k(ax)
     ax.legend(loc="lower right")
     guardar(fig, salida, "02_modelo_r_k")
@@ -227,12 +236,13 @@ def fig_qos(base, salida):
     fig, ax = plt.subplots(figsize=(ANCHO, ALTO))
     ax.axhline(R_REFERENCIA, color=TENUE, ls="--", label="Sin pérdida (referencia)")
     casos = (("qos0_perdida_k1.5_perdida-5_s1", AZUL, "QoS 0, 5 % de pérdida"),
-             ("qos1_perdida_k1.5_perdida-5_s1", NARANJA, "QoS 1, 5 % de pérdida"))
+             ("qos1_perdida_k1.5_perdida-5_s1", NARANJA, "QoS 1, 5 % de pérdida"),
+             ("qos1_sin_perdida_k1.5_sin-netem_s1", AQUA, "QoS 1, sin pérdida"))
     for nombre, color, etiqueta in casos:
         s = serie(base, nombre)
         ax.plot(s["t_s"], s["r"], color=color, label=etiqueta)
     ax.set(xlabel="Tiempo desde el inicio (s)", ylabel="$r$", ylim=(0, 1.02), xlim=(0, 90))
-    ax.legend(ncol=3, loc="upper center", bbox_to_anchor=(0.5, 1.2))
+    ax.legend(ncol=2, loc="upper center", bbox_to_anchor=(0.5, 1.3))
     coma(ax)
     guardar(fig, salida, "07_qos")
 
@@ -255,10 +265,11 @@ def tablas(base, salida, tabla, sim):
         tr = {x["corrida"]: x for x in csv.DictReader(f, delimiter=";")}
     out = ["# Tablas del experimento de sincronización\n"]
     out += ["## Modelo\n", "| K/K_c | r emulación | r simulación (media de 5) | r teoría | Engancha |", "|---|---|---|---|---|"]
-    for k in ("0.8", "1.2", "1.5", "2"):
-        x = tabla[f"modelo_k{k}_sin-netem_s1"]
+    for prefijo, k in (("modelo", "0.8"), ("umbral", "1.05"), ("umbral", "1.1"), ("umbral", "1.15"), ("modelo", "1.2"),
+                       ("umbral", "1.25"), ("modelo", "1.5"), ("modelo", "2")):
+        x = tabla[f"{prefijo}_k{k}_sin-netem_s1"]
         rs = [y[2] for y in filas if abs(y[0] - float(k)) < 1e-9]
-        out.append(f"| {k} | {x['r_medio']} | {np.mean(rs):.4f} | {x['r_teorico'] or '-'} | {x['enganchado']} |")
+        out.append(f"| {k} | {x['r_medio']} | {f'{np.mean(rs):.4f}' if rs else '-'} | {x['r_teorico'] or '-'} | {x['enganchado']} |")
     out += ["\n## Tráfico\n",
             "| Corrida | N | QoS | Alias | Total B/s | Subida B/s·nodo | Bajada B/s·nodo | PUBLISH bajada B | Tópico | Protobuf B | Retrans. | Edad p50 ms | p95 ms | p99 ms |",
             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
